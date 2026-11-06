@@ -51,5 +51,5 @@ python tools/bilgi_bankasi.py --dizinle   # arama dizinini günceller (canlı e�
 ## 6. Öğrenciye verin
 
 Fakülteye özel paket için `node tools/paketle.mjs --fakulte` çalıştırıp klasörü zip'leyin.
-Öğrenci zip'i açar, `KUR.bat`'a çift tıklar. Karnesi ve kaydı öğrencinin bilgisayarında kalır;
+Öğrenci zip'i açar, `KUR.bat`'a (Mac'te `KUR.command`'a) çift tıklar. Karnesi ve kaydı öğrencinin bilgisayarında kalır;
 isterse raporunu size kendisi gönderir.
