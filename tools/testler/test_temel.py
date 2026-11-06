@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import zlib
 
 KOK = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(KOK, "tools"))
@@ -30,7 +31,7 @@ class SahteModel:
         v = [0.0] * self.BOYUT
         m = bilgi_bankasi.kucuk(m)
         for i in range(len(m) - 2):
-            v[hash(m[i:i + 3]) % self.BOYUT] += 1
+            v[zlib.crc32(m[i:i + 3].encode()) % self.BOYUT] += 1
         n = sum(x * x for x in v) ** 0.5 or 1
         return [x / n for x in v]
 
