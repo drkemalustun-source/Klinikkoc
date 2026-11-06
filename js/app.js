@@ -33,7 +33,7 @@
     if (player) { player.destroy(); player = null; }
     lessonScreen.hidden = true;
     home.hidden = false;
-    document.title = 'Akıllı Tahta';
+    document.title = 'KlinikKoç';
     if (location.hash) history.replaceState(null, '', location.pathname);
     const box = $('#catalog');
     if (!catalog.length) {
@@ -65,7 +65,7 @@
 
     home.hidden = true;
     lessonScreen.hidden = false;
-    document.title = lesson.title + ' · Akıllı Tahta';
+    document.title = lesson.title + ' · KlinikKoç';
     history.replaceState(null, '', '#' + lesson.id);
     $('.lesson-name').textContent = lesson.title;
     $('.qa-btn').hidden = false;
@@ -218,8 +218,15 @@
   }
 
   // ---------- Sorular ----------
+  const BLOOM = ['hatirla', 'anla', 'uygula', 'cozumle', 'degerlendir', 'olustur'];
+  const BLOOM_AD = { hatirla: 'Hatırla', anla: 'Anla', uygula: 'Uygula', cozumle: 'Çözümle', degerlendir: 'Değerlendir', olustur: 'Oluştur' };
+  // Sorunun Bloom düzeyi; soruda yoksa yokladığı alt hedefin düzeyi.
+  const bloomOf = (lesson, q) => q.bloom || ((findSubgoal(lesson, q.goal) || {}).bloom) || null;
+  const bloomTag = (lesson, q) => { const b = bloomOf(lesson, q); return b ? ' · ' + BLOOM_AD[b] : ''; };
+
   function renderQuestion(step, p) {
     const q = step.question;
+    if (q.type === 'open') return renderOpenQuestion(step, p);
     qEl.replaceChildren();
     qEl.hidden = false;
     boardEl.classList.add('has-question');
@@ -232,7 +239,7 @@
       : q.kind === 'application' ? 'Yeni örnekte uygula'
       : q.probe && phase === 'once' ? 'Önce sizin yorumunuz'
       : 'Kendini yokla';
-    card.appendChild(el('div', 'q-tag', tag + ' · ' + q.goal));
+    card.appendChild(el('div', 'q-tag', tag + ' · ' + q.goal + bloomTag(p.lesson, q)));
     if (q.scenario) {
       const sc = el('div', 'q-scenario');
       sc.appendChild(el('span', 'q-fiction', 'KURGUSAL OLGU'));
@@ -320,7 +327,8 @@
       const misconceptions = opts.filter((o, i) => chosen[i] && o.misconception).map((o) => o.misconception);
       p.progress.record(step.id, {
         goal: q.goal, correct, phase, hints: hintsUsed, kind: q.kind || 'check',
-        chosen: misconceptions, targets: q.targets || [], review: !!rv
+        chosen: misconceptions, targets: q.targets || [], review: !!rv,
+        bloom: bloomOf(p.lesson, q), type: q.type, score: correct ? 1 : 0, max: 1
       });
       if (rv && rv.counted !== rv.i) { rv.counted = rv.i; if (correct) rv.right++; }
 
@@ -329,6 +337,10 @@
       const whys = opts.map((o, i) => (chosen[i] && o.why ? o.why : null)).filter(Boolean);
       for (const w of whys) feedback.appendChild(el('p', null, w));
       if (q.explanation) feedback.appendChild(el('p', 'q-expl', q.explanation));
+      if (q.modelAnswer) {
+        feedback.appendChild(el('p', 'q-model-h', 'Örnek cevap'));
+        feedback.appendChild(el('p', 'q-model', q.modelAnswer));
+      }
       if (misconceptions.length) {
         const m = (p.lesson.misconceptions || []).filter((x) => misconceptions.includes(x.id));
         for (const x of m) feedback.appendChild(el('p', 'q-misc', 'Not edildi: "' + x.text + '" çıkarımı. Hedefler tablosunda açık kalır; aynı ayrımı yoklayan bir soruyu doğru cevaplayınca kapanır.'));
@@ -344,6 +356,115 @@
       nextBtn.focus();
       p.speakFeedback(AT.feedbackText(q, correct), correct);
     }
+  }
+
+  // Açık uçlu soru: öğrenci cevabını yazar (ya da aklından söyler), sonra örnek cevabı görür ve
+  // rubrik ölçütlerinden hangilerini karşıladığını kendisi işaretler. Puan yalnız bu cihazda kalır.
+  function renderOpenQuestion(step, p) {
+    const q = step.question;
+    qEl.replaceChildren();
+    qEl.hidden = false;
+    boardEl.classList.add('has-question');
+    const phase = p.phaseOf(step);
+    const rv = p.review;
+    let hintsUsed = 0;
+    const card = el('div', 'q-card q-open');
+    const tag = rv ? 'Tekrar ' + (rv.i + 1) + '/' + rv.queue.length : 'Kendi cümlelerinle';
+    card.appendChild(el('div', 'q-tag', tag + ' · ' + q.goal + bloomTag(p.lesson, q)));
+    if (q.scenario) {
+      const sc = el('div', 'q-scenario');
+      sc.appendChild(el('span', 'q-fiction', 'KURGUSAL OLGU'));
+      sc.appendChild(el('p', null, q.scenario));
+      card.appendChild(sc);
+    }
+    card.appendChild(el('h3', 'q-prompt', q.prompt));
+    const ta = el('textarea', 'q-text-answer');
+    ta.rows = 4;
+    ta.placeholder = 'Cevabını buraya yaz. İstersen yazmadan, aklından da cevaplayabilirsin.';
+    try { ta.value = sessionStorage.getItem('at:taslak:' + p.lesson.id + ':' + step.id) || ''; } catch (e) { /* özel pencere */ }
+    ta.addEventListener('input', () => { try { sessionStorage.setItem('at:taslak:' + p.lesson.id + ':' + step.id, ta.value); } catch (e) { /* yok */ } });
+    card.appendChild(ta);
+    const hintBox = el('div', 'q-hints');
+    card.appendChild(hintBox);
+    const result = el('div', 'q-feedback');
+    result.hidden = true;
+    card.appendChild(result);
+
+    const actions = el('div', 'q-actions');
+    const hintBtn = el('button', 'btn ghost', 'İpucu');
+    hintBtn.hidden = !(q.hints && q.hints.length);
+    hintBtn.addEventListener('click', () => {
+      if (hintsUsed >= q.hints.length) return;
+      hintBox.appendChild(el('p', 'q-hint-item', q.hints[hintsUsed]));
+      hintsUsed++;
+      hintBtn.hidden = hintsUsed >= q.hints.length;
+    });
+    const showBtn = el('button', 'btn primary', 'Örnek cevabı göster');
+    const saveBtn = el('button', 'btn primary', 'Puanımı kaydet');
+    saveBtn.hidden = true;
+    const skipBtn = el('button', 'btn ghost', 'Şimdilik geç');
+    const nextBtn = el('button', 'btn primary', 'Devam');
+    nextBtn.hidden = true;
+    const go = () => {
+      qEl.hidden = true;
+      boardEl.classList.remove('has-question');
+      if (!p.playing) { p.playing = true; ui.onPlayState(true); }
+      p.next();
+    };
+    nextBtn.addEventListener('click', go);
+    skipBtn.addEventListener('click', go);
+    actions.append(hintBtn, showBtn, saveBtn, skipBtn, nextBtn);
+    card.appendChild(actions);
+    qEl.appendChild(card);
+    ta.focus();
+
+    const rubric = q.rubric || [];
+    const boxes = [];
+    showBtn.addEventListener('click', () => {
+      ta.readOnly = true;
+      result.hidden = false;
+      result.replaceChildren(el('p', 'q-model-h', 'Öğretmenin örnek cevabı'), el('p', 'q-model', q.modelAnswer || ''));
+      result.appendChild(el('p', 'q-model-h', 'Cevabında bunlar var mıydı? Olanları işaretle.'));
+      const list = el('div', 'q-rubric');
+      for (const r of rubric) {
+        const row = el('label', 'q-rubric-row');
+        const cb = el('input');
+        cb.type = 'checkbox';
+        boxes.push(cb);
+        row.append(cb, el('span', null, r.criterion + (r.required ? ' (olmazsa olmaz)' : '')), el('span', 'q-pts', r.points + ' puan'));
+        list.appendChild(row);
+      }
+      result.appendChild(list);
+      showBtn.hidden = true;
+      hintBtn.hidden = true;
+      saveBtn.hidden = false;
+      saveBtn.focus();
+    });
+    saveBtn.addEventListener('click', () => {
+      const max = rubric.reduce((a, r) => a + r.points, 0) || 1;
+      const score = rubric.reduce((a, r, i) => a + (boxes[i].checked ? r.points : 0), 0);
+      const missed = rubric.filter((r, i) => !boxes[i].checked).map((r) => r.criterion);
+      const requiredOk = rubric.every((r, i) => !r.required || boxes[i].checked);
+      const correct = requiredOk && score / max >= (q.passRatio == null ? 0.6 : q.passRatio);
+      boxes.forEach((b) => { b.disabled = true; });
+      card.classList.add('answered', correct ? 'is-correct' : 'is-wrong');
+      p.progress.record(step.id, {
+        goal: q.goal, correct, phase, hints: hintsUsed, kind: q.kind || 'check', chosen: [], targets: q.targets || [],
+        review: !!rv, bloom: bloomOf(p.lesson, q), type: 'open', score, max, missed
+      });
+      if (rv && rv.counted !== rv.i) { rv.counted = rv.i; if (correct) rv.right++; }
+      try { sessionStorage.removeItem('at:taslak:' + p.lesson.id + ':' + step.id); } catch (e) { /* yok */ }
+      const verdict = el('p', 'q-score', (correct ? 'Yeterli. ' : 'Henüz yeterli değil. ') + score + ' / ' + max + ' puan');
+      result.prepend(verdict);
+      if (!requiredOk) result.appendChild(el('p', null, 'Olmazsa olmaz bir ölçüt eksik kaldı; bu soru aralıklı tekrarda yeniden gelecek.'));
+      if (q.explanation) result.appendChild(el('p', 'q-expl', q.explanation));
+      if (q.sourceRef) result.appendChild(el('p', 'q-src', 'Kaynak: ' + q.sourceRef));
+      saveBtn.hidden = true;
+      skipBtn.hidden = true;
+      nextBtn.hidden = false;
+      nextBtn.focus();
+      p.speakFeedback(AT.feedbackText(q, correct), correct);
+    });
   }
 
   function findSubgoal(lesson, id) {
@@ -389,6 +510,82 @@
       const restart = el('button', 'btn', 'Dersi baştan başlat');
       restart.addEventListener('click', () => { closeDrawer(); player.goTo(0); });
       body.appendChild(restart);
+    }
+
+    if (kind === 'karne') {
+      h.textContent = 'Karnem';
+      const k = AT.karne(player.lesson, player.progress.data);
+      const { pct, difficulty } = AT.karneHelpers;
+      body.appendChild(el('p', 'drawer-note', 'Karne not için değildir. Yalnız bu cihazdaki cevaplarından hesaplanır ve hiçbir yere gönderilmez. Amacı, nerede güçlü olduğunu ve neyi tekrar etmen gerektiğini göstermek.'));
+      if (!k.n) {
+        body.appendChild(el('p', null, 'Henüz cevapladığın soru yok. Bölüm sonlarındaki soruları cevapladıkça karnen burada oluşur.'));
+      } else {
+        const head = el('div', 'karne-head');
+        head.appendChild(el('div', 'karne-big', pct(k.total)));
+        head.appendChild(el('div', 'karne-sub', k.n + ' cevap · ' + k.strong.length + ' güçlü hedef · ' + k.weak.length + ' geliştirilecek hedef'));
+        body.appendChild(head);
+        if (k.weak.length) {
+          const box = el('div', 'goal');
+          box.appendChild(el('h3', null, 'Sıradaki adımın'));
+          for (const id of k.weak) {
+            const g = k.goals.find((x) => x.id === id);
+            const row = el('div', 'subgoal review');
+            row.appendChild(el('span', 'sg-dot'));
+            const t = el('div', 'sg-text');
+            t.appendChild(el('span', 'sg-id', id));
+            t.appendChild(document.createTextNode(' ' + g.text + ' · başarı ' + pct(g.rate)));
+            row.appendChild(t);
+            const si = player.lesson.sections.findIndex((sec) => (sec.goals || []).includes(id));
+            if (si >= 0) {
+              const go = el('button', 'btn small', 'Yeniden dinle');
+              go.addEventListener('click', () => { closeDrawer(); player.goTo(player.sectionStart(si)); });
+              row.appendChild(go);
+            }
+            box.appendChild(row);
+          }
+          body.appendChild(box);
+        }
+        const table = (title, headers, rows, note) => {
+          const box = el('div', 'goal');
+          box.appendChild(el('h3', null, title));
+          const tb = el('table', 'karne-table');
+          const tr = el('tr');
+          for (const x of headers) tr.appendChild(el('th', null, x));
+          tb.appendChild(tr);
+          for (const r of rows) {
+            const row = el('tr');
+            for (const x of r) row.appendChild(el('td', null, String(x)));
+            tb.appendChild(row);
+          }
+          box.appendChild(tb);
+          if (note) box.appendChild(el('p', 'drawer-note', note));
+          body.appendChild(box);
+        };
+        if (k.bloom.length) table('Düşünme düzeyine göre (Bloom)', ['Düzey', 'Cevap', 'Başarı'],
+          k.bloom.map((b) => [AT.BLOOM_AD[b.level], b.n, pct(b.rate)]),
+          'Üst düzeylerde (çözümle, değerlendir, oluştur) başarın belirgin düşükse bilgiyi biliyor ama uygulamakta zorlanıyorsun demektir.');
+        table('Hedefler', ['Hedef', 'Düzey', 'Cevap', 'Başarı', 'İlk denemede'],
+          k.goals.filter((g) => g.n).map((g) => [g.id, AT.BLOOM_AD[g.bloom] || '–', g.n, pct(g.rate), pct(g.first)]));
+        table('Senin için en zor sorular', ['Soru', 'Deneme', 'Başarı', 'Güçlük'],
+          k.items.slice(0, 8).map((it) => [it.prompt.slice(0, 70) + (it.prompt.length > 70 ? '…' : ''), it.n, pct(it.rate), difficulty(it.rate)]),
+          'Güçlük senin cevaplarına göredir; sorunun herkes için zorluğunu göstermez.');
+        if (k.missed.length) table('Açık uçlu cevaplarda en sık eksik kalanlar', ['Ölçüt', 'Kez'], k.missed);
+      }
+      const acts = el('div', 'drawer-actions');
+      const dl = el('button', 'btn', 'Karnemi indir (.md)');
+      dl.addEventListener('click', () => {
+        const blob = new Blob([AT.karneMarkdown(player.lesson, k)], { type: 'text/markdown;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'karne-' + player.lesson.id + '.md';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+      });
+      const back = el('button', 'btn ghost', 'Hedeflere dön');
+      back.addEventListener('click', () => openDrawer('goals'));
+      acts.append(dl, back);
+      body.appendChild(acts);
     }
 
     if (kind === 'goals') {
@@ -443,6 +640,9 @@
         body.appendChild(box);
       }
       const acts = el('div', 'drawer-actions');
+      const krn = el('button', 'btn primary', 'Karnemi göster');
+      krn.addEventListener('click', () => openDrawer('karne'));
+      acts.appendChild(krn);
       const exp = el('button', 'btn', 'Çalışma özetimi indir (.md)');
       exp.addEventListener('click', () => downloadSummary(player));
       const reset = el('button', 'btn ghost', 'Cevaplarımı sıfırla');

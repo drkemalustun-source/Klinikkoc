@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Akıllı Tahta için MCP sunucusu: Claude masaüstü uygulaması tahtayı canlı yönetir.
+"""KlinikKoç için MCP sunucusu: Claude masaüstü uygulaması tahtayı canlı yönetir.
 
 API anahtarı gerekmez. Claude, sizin aboneliğinizle masaüstü uygulamasında çalışır;
 bu dosya ona tahtayı yönetecek araçlar verir (tahtayı aç, ders oku, şekle bak,
@@ -31,16 +31,24 @@ import urllib.request
 import webbrowser
 
 KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PORT = int(os.environ.get("AKILLI_TAHTA_PORT", "8800"))
+sys.path.insert(0, os.path.join(KOK, "tools"))
+import bilgi_bankasi  # noqa: E402
+import karne as karne_  # noqa: E402
+PORT = int(os.environ.get("KLINIK_KOC_PORT", "8810"))
 ADRES = "http://127.0.0.1:%d" % PORT
 SURUM = "0.4.0"
-AD = "akilli-tahta"
+AD = "klinik-koc"
 
-TALIMAT = """Akıllı Tahta: bu bilgisayardaki tarayıcıda açık bir kara tahta. Bu araçlarla
+TALIMAT = """KlinikKoç: bu bilgisayardaki tarayıcıda açık bir kara tahta. Bu araçlarla
 tahtaya yazar, ders görsellerini gösterip işaretler ve Türkçe sesli anlatırsın (Pocket TTS Türkçe Kadın 3 sesi; hazır değilse Piper dfki).
 Eğitmen (İnci ya da Mercan): Bir dersi öğretmeye başlamadan önce egitmen_hazirla aracını çağır. O araç
 dersin eğitmenini, öğretim kurallarını, hedeflerini, öğretmen notlarını ve öğrencinin kaydını verir; bütün
 oturum boyunca o kurallara uy. Öğrencinin ilerlemesini kayit_yaz ile işle, bitişte rapor_yaz ile rapor yaz.
+Bilgi bankası: Cevabından emin değilsen ya da öğrenci ders dışı görünen bir şey sorarsa önce bilgi_ara ile
+dersin kaynaklarında, anlatımında, öğretmen notlarında ve vakalarında ara; bulduğun parçanın kaynağını (sayfa) söyle.
+Vakalar: Dersin vaka kartları varsa (vakalar aracı) vaka_oku ile bir vakayı aç ve dönen vaka kurallarına uy.
+Her cevaplanan soruyu ve vaka adımını kayit_yaz'ın cevaplar alanına işle (Bloom düzeyi ve rubrik puanıyla);
+öğrenci "karnem" derse karne aracını çağır.
 Pilot ölçme testleri (ön/son/gecikmeli) yalnız olcme_testi ve olcme_kaydet araçlarıyla, öğretmenin onayladığı
 sorularla yapılır; test sırasında ipucu ve açıklama verilmez.
 Nasıl çalış:
@@ -116,6 +124,10 @@ ARACLAR = [
                        "bagimsiz_yapti|tekrar_gerekli), tur (yanit|geri_cagirma|uygulama), kanit (tek cümle)}]. "
                        "yanilgilar: [{id, durum (acik|cozuldu), not}]. guven: [{hedef, soru, guven (tahmin|biraz|emin), dogru}]. "
                        "sorular: [{soru, kaynakta_yok}]. testler: [{tur (on|son|gecikmeli), dogru, toplam}]. "
+                       "cevaplar: her cevaplanan soru ve vaka adımı için [{soru (kimlik ya da kısa metin), hedef, bloom, "
+                       "tur (secmeli|acik|vaka_karar|vaka_acik|vaka_veri), puan, en_yuksek (rubrik toplamı; seçmelide 1), "
+                       "ilk_deneme (true/false), ipucu (kullanılan ipucu sayısı), vaka, dugum, tehlikeli (true/false), "
+                       "karsilanan_olcutler [ölçüt metni, kısa], eksik_olcutler [ölçüt metni, kısa]}]. "
                        "mod: once_anlat|once_yanitla. mola: bekleyen nokta metni ya da null. oturum: {egitmen, ozet}. "
                        "Aralıklı tekrar tarihleri otomatik hesaplanır.",
         "inputSchema": {"type": "object", "properties": {
@@ -125,8 +137,47 @@ ARACLAR = [
             "guven": {"type": "array", "items": {"type": "object"}},
             "sorular": {"type": "array", "items": {"type": "object"}},
             "testler": {"type": "array", "items": {"type": "object"}},
+            "cevaplar": {"type": "array", "items": {"type": "object"}},
+            "vaka_sonucu": {"type": "object", "description": "vaka bitince: {vaka, sonuc (iyi|kabul|kotu|yarim), dugum_sayisi, yeniden_anlatilan_bolumler[]}"},
             "mod": {"type": "string"}, "mola": {"type": ["string", "null"]},
             "oturum": {"type": "object"}},
+            "required": ["ogrenci", "ders"]},
+    },
+    {
+        "name": "bilgi_ara",
+        "description": "Bu bilgisayardaki derslerin kaynak metinlerinde (ders notu/makale sayfaları), hazır anlatımlarında, "
+                       "sorularında, öğretmen notlarında ve vaka kartlarında arar. Sözcük araması her zaman açıktır; "
+                       "anlam araması kuruluysa anlamca yakın parçaları da bulur. Her sonuçta kaynak (sayfa) bilgisi vardır.",
+        "inputSchema": {"type": "object", "properties": {
+            "sorgu": {"type": "string", "description": "aranacak soru ya da anahtar sözcükler (Türkçe)"},
+            "ders": {"type": "string", "description": "yalnız bu derste ara (isteğe bağlı)"},
+            "tur": {"type": "string", "enum": ["kaynak", "anlatim", "ogretmen_notu", "vaka", "soru"],
+                    "description": "yalnız bu türde ara (isteğe bağlı)"},
+            "k": {"type": "integer", "description": "en çok kaç sonuç (varsayılan 6, en çok 15)"}},
+            "required": ["sorgu"]},
+    },
+    {
+        "name": "vakalar",
+        "description": "Bir dersin vaka kartlarını listeler (başlık, hedefler, süre, onay durumu). Tanıyı ele vermez.",
+        "inputSchema": {"type": "object", "properties": {"ders": {"type": "string"}}, "required": ["ders"]},
+    },
+    {
+        "name": "vaka_oku",
+        "description": "Bir vaka kartını eğitmen için açar: bütün bulgular, karar düğümleri, doğru cevaplar, rubrikler, "
+                       "örnek cevaplar ve takılınca dönülecek ders bölümleri, ayrıca vakanın nasıl yürütüleceğine dair kurallar. "
+                       "Cevapları öğrenciye önceden gösterme.",
+        "inputSchema": {"type": "object", "properties": {
+            "ders": {"type": "string"}, "vaka": {"type": "string", "description": "vaka kimliği (vakalar aracından)"}},
+            "required": ["ders", "vaka"]},
+    },
+    {
+        "name": "karne",
+        "description": "Öğrencinin karnesini hesaplar: hedef başına başarı, Bloom düzeyine göre başarı, soru başına güçlük, "
+                       "rubrik puanları, vaka sonuçları, tehlikeli seçimler ve tekrar zamanı gelen hedefler. "
+                       "yaz=true ise karneyi öğrencinin bilgisayarına Markdown dosyası olarak da yazar. Karne not için değil, "
+                       "öğrencinin kendini geliştirmesi içindir; hiçbir yere gönderilmez.",
+        "inputSchema": {"type": "object", "properties": {
+            "ogrenci": {"type": "string"}, "ders": {"type": "string"}, "yaz": {"type": "boolean"}},
             "required": ["ogrenci", "ders"]},
     },
     {
@@ -438,7 +489,7 @@ BLOOM_AD = dict(zip(BLOOM, ["hatırla", "anla", "uygula", "çözümle", "değerl
 DURUM_AD = {"ele_alinmadi": "ele alınmadı", "destekle_yapti": "destekle yaptı", "bagimsiz_yapti": "bağımsız yaptı",
             "tekrar_gerekli": "tekrar gerekli", "devam_ediyor": "devam ediyor"}
 TEKRAR_GUN = {1: 1, 2: 3, 3: 7, 4: 21}  # Leitner kutusu → sonraki geri çağırmaya kadar gün
-KAYIT_KOK = os.environ.get("AKILLI_TAHTA_KAYIT") or os.path.join(KOK, "kayitlar")
+KAYIT_KOK = os.environ.get("KLINIK_KOC_KAYIT") or os.path.join(KOK, "kayitlar")
 
 
 def bugun():
@@ -469,7 +520,8 @@ def kayit_yukle(ogrenci, ders):
     if os.path.exists(yol):
         return json.load(open(yol, encoding="utf-8"))
     return {"ogrenci": ogrenci.strip(), "ders": ders, "olusturma": bugun(), "mod": "once_anlat",
-            "hedefler": {}, "yanilgilar": {}, "guven": [], "sorular": [], "testler": [], "oturumlar": [], "mola": None}
+            "hedefler": {}, "yanilgilar": {}, "guven": [], "sorular": [], "testler": [], "oturumlar": [], "mola": None,
+            "cevaplar": [], "vakalar": []}
 
 
 def kayit_kaydet(k):
@@ -531,7 +583,9 @@ def ar_egitmen_hazirla(a):
                     "oturumlar": eg.get("oturumlar"), "arac_seti": eg.get("aracSeti"), "olcme": olcme_ozeti(eg),
                     "gorseller": {k: v.get("aciklama") for k, v in (eg.get("gorseller") or {}).items()}
                     or {k: v.get("caption") for k, v in (d.get("assets") or {}).items()},
-                    "hazir_anlatim_bolumleri": [s["id"] for s in d.get("sections", [])]},
+                    "hazir_anlatim_bolumleri": [s["id"] for s in d.get("sections", [])],
+                    "vakalar": [os.path.splitext(os.path.basename(y))[0]
+                                for y in sorted(glob.glob(ders_yolu(ders, "vakalar", "*.json")))]},
            "bloom_sirasi": BLOOM}
     if not_:
         out["not"] = not_
@@ -603,6 +657,20 @@ def ar_kayit_yaz(a):
         k["sorular"].append(dict(s, tarih=b))
     for t in a.get("testler") or []:
         k["testler"].append(dict(t, tarih=b))
+    for c in a.get("cevaplar") or []:
+        c = dict(c, tarih=b, saat=time.strftime("%H:%M"))
+        if c.get("bloom") and c["bloom"] not in BLOOM:
+            uyarilar.append("Geçersiz Bloom düzeyi: %s" % c["bloom"])
+            c.pop("bloom")
+        try:
+            c["puan"] = float(c.get("puan", 1 if c.get("dogru") else 0))
+            c["en_yuksek"] = float(c.get("en_yuksek") or 1)
+        except (TypeError, ValueError):
+            uyarilar.append("Cevap puanı sayı olmalı: %s" % c.get("soru"))
+            continue
+        k.setdefault("cevaplar", []).append(c)
+    if a.get("vaka_sonucu"):
+        k.setdefault("vakalar", []).append(dict(a["vaka_sonucu"], tarih=b))
     if a.get("mod") in ("once_anlat", "once_yanitla"):
         k["mod"] = a["mod"]
     if "mola" in a:
@@ -661,6 +729,12 @@ def ar_rapor_yaz(a):
                 t.get("tarih"), TEST_AD.get(t.get("tur"), t.get("tur")), " (yarım)" if t.get("yarim_kaldi") else "",
                 t.get("form", "-"), t.get("puan", t.get("dogru")), t.get("toplam"),
                 t.get("emin_ama_yanlis", "-"), ", ".join(t.get("secilen_yanilgilar") or []) or "-"))
+    if k.get("cevaplar"):
+        kr = karne_.hesapla(k, karne_.ders_hedefleri(ders_yolu(ders)), bugun())
+        y += ["", "## Bloom düzeyine göre başarı", "", "| Düzey | Cevap | Başarı |", "| --- | --- | --- |"]
+        y += ["| %s | %d | %s |" % (karne_.BLOOM_AD[b["duzey"]], b["cevap"], karne_.yuzde(b["oran"])) for b in kr["bloom"]]
+        if kr["tehlikeli_secimler"]:
+            y += ["", "Vakalarda hastaya zarar verebilecek seçim sayısı: %d" % len(kr["tehlikeli_secimler"])]
     for baslik, alan in (("Öğrenme güçlükleri", "guclukler"), ("Eğitmen için iyileştirme önerileri", "oneriler"),
                          ("Öğrencinin geri bildirimi", "geri_bildirim")):
         if a.get(alan):
@@ -673,6 +747,115 @@ def ar_rapor_yaz(a):
     open(yol, "w", encoding="utf-8").write("\n".join(y) + "\n")
     return metin({"durum": "yazıldı", "dosya": os.path.relpath(yol, KOK),
                   "not": "Öğrenciye dosyanın yerini söyle; isterse öğretmenine kendisi gönderir."})
+
+
+# ---------- Bilgi bankası ----------
+_MODEL = None
+
+
+def anlam_modeli():
+    global _MODEL
+    if _MODEL is None:
+        try:
+            _MODEL = bilgi_bankasi.AnlamModeli()
+        except Exception as e:  # model bozuksa sözcük aramasıyla sürdür
+            _MODEL = type("Yok", (), {"hazir": False, "neden": str(e)})()
+    return _MODEL
+
+
+def ar_bilgi_ara(a):
+    sorgu = (a.get("sorgu") or "").strip()
+    if not sorgu:
+        raise ValueError("sorgu gerekli")
+    if a.get("ders"):
+        ders_yolu(a["ders"])
+    model = anlam_modeli()
+    # Değişen dersler her aramadan önce yeniden dizinlenir (değişmeyenler saniyenin altında atlanır).
+    bilgi_bankasi.dizinle(model=model, sessiz=True)
+    k = max(1, min(int(a.get("k") or 6), 15))
+    sonuclar = bilgi_bankasi.ara(sorgu, a.get("ders"), a.get("tur"), k, model=model)
+    out = {"sorgu": sorgu, "anlam_aramasi": "açık" if model.hazir else "kapalı (yalnız sözcük araması)",
+           "sonuclar": sonuclar}
+    if not sonuclar:
+        out["not"] = "Sonuç yok. Başka sözcüklerle ya da daha kısa bir sorguyla dene; yine yoksa 'kaynaklarda bulamadım' de."
+    return metin(out)
+
+
+# ---------- Vakalar ----------
+VAKA_TALIMAT = """Vakayı şöyle yürüt (vaka bir sınav değil, klinik akıl yürütme alıştırmasıdır):
+- Önce hastayı tanıt: yaş aralığı, şikâyet (hastanın sözleriyle), öykü ve 'acilis: baslangic' bulguları. Başlığı,
+  tanıyı ve doğru seçenekleri söyleme. Vaka kurgusalsa bir kez "kurgusal vaka" de; öğretmen onayı yoksa "taslak".
+- Düğümleri baslangic'tan başlayarak sırayla aç. Her düğümde önce 'anlat', sonra 'soru'.
+- veri düğümü: Öğrenci hangi muayeneyi isterse yalnız o bulguyu ver. gerekli_bulgular'ın hepsi istenmeden geçme;
+  eksik kalan için önce ipucu ver. İstenmeyen bulguyu kendiliğinden söyleme.
+- karar düğümü: Seçenekleri soru_sor ile tahtada göster, 'dogru' alanını VERME (geri bildirimi sen vereceksin).
+  Seçimden sonra o seçeneğin geribildirim'ini söyle. sonuc dogru ise (gerekce_iste false değilse) "Neden?" diye
+  gerekçesini iste. yanlis ise sıradaki ipucunu ver ve aynı düğümde yeniden sor. tehlikeli ise nedenini sakin ve
+  açık söyle; hastaya ne olacağını anlat. kabul ise neden en iyi seçenek olmadığını söyle ve sonraki'ye geç.
+- acik düğümü: Öğrencinin cevabını rubrik ölçütlerine göre sessizce puanla. Sonra hangi ölçütleri karşıladığını
+  (adıyla) ve eksik kalanları söyle, ardından ornek_cevap'ı "Öğretmenin örnek cevabı" diye göster (tahtada text).
+  Zorunlu ölçüt eksikse bir kez daha denemesini iste.
+- Takılma: Aynı düğümde iki denemede ilerleyemezse ya da "bilmiyorum" derse vakayı beklet: "Bunu birlikte
+  hatırlayalım" de, takilirsa.bolum'u ders_oku ile oku ve o bölümü 2–4 adımda tahtada kısaca yeniden anlat
+  (takilirsa.not'a odaklan). Sonra aynı düğüme dön ve soruyu küçültüp yeniden sor.
+- Her cevaptan sonra kayit_yaz ile cevaplar listesine işle: soru (düğüm başlığı), vaka, dugum, hedef, bloom, tur
+  (vaka_karar|vaka_acik|vaka_veri), puan, en_yuksek (karar: 1, acik: rubrik toplamı, veri: gerekli bulgu sayısı),
+  ilk_deneme, ipucu, tehlikeli, karsilanan_olcutler, eksik_olcutler.
+- son düğümünde 'anlat'ı söyle, kapanis.ozet ve ogrenme_noktalari ile toparla, kayit_yaz'a vaka_sonucu yaz
+  (yeniden_anlatilan_bolumler dahil). Sonra karnesini görmek isteyip istemediğini sor.
+- Görseli göstermeden önce gorsel_bak ile bak; gorsel_aciklama'nın ötesinde yorum yapma."""
+
+
+def vaka_yolu(ders, vaka):
+    if not vaka or any(c in vaka for c in "/\\.") or vaka.startswith("_"):
+        raise ValueError("Geçersiz vaka kimliği")
+    return ders_yolu(ders, "vakalar", vaka + ".json")
+
+
+def ar_vakalar(a):
+    ders = a.get("ders")
+    out = []
+    for yol in sorted(glob.glob(ders_yolu(ders, "vakalar", "*.json"))):
+        try:
+            v = json.load(open(yol, encoding="utf-8"))
+        except ValueError:
+            out.append({"vaka": os.path.basename(yol), "hata": "okunamadı"})
+            continue
+        out.append({"vaka": v.get("id"), "baslik": v.get("baslik"), "duzey": v.get("duzey"), "sure_dk": v.get("sure_dk"),
+                    "hedefler": v.get("hedefler"), "kurgusal": v.get("kurgusal"),
+                    "ogretmen_onayi": bool((v.get("ogretmen_onayi") or {}).get("onaylandi"))})
+    return metin({"ders": ders, "vakalar": out} if out else {"ders": ders, "vakalar": [], "not": "Bu derste vaka kartı yok."})
+
+
+def ar_vaka_oku(a):
+    import vaka_denetle
+    yol = vaka_yolu(a.get("ders"), a.get("vaka"))
+    if not os.path.exists(yol):
+        raise ValueError("Vaka yok. vakalar aracıyla listeye bak.")
+    hatalar, uyarilar, v = vaka_denetle.denetle(yol)
+    if hatalar:
+        return metin({"durum": "kullanılamaz", "hatalar": hatalar,
+                      "not": "Bu vaka kartında hata var; öğrenciye açma. Öğretmen tools/vaka_denetle.py ile düzeltmeli."}, hata=True)
+    return metin({"talimat": VAKA_TALIMAT, "vaka": v, "uyarilar": uyarilar or None})
+
+
+def ar_karne(a):
+    ders = a.get("ders")
+    k = kayit_yukle(a.get("ogrenci"), ders)
+    hedefler = karne_.ders_hedefleri(ders_yolu(ders))
+    sonuc = karne_.hesapla(k, hedefler, bugun())
+    out = {"karne": sonuc}
+    if a.get("yaz"):
+        d = egitmen_json(ders) or {}
+        baslik = d.get("baslik") or ders_json(ders).get("title")
+        klasor = os.path.join(ogrenci_klasoru(k["ogrenci"]), "karneler")
+        os.makedirs(klasor, exist_ok=True)
+        yol = os.path.join(klasor, "%s_%s.md" % (ders, time.strftime("%Y-%m-%d_%H%M")))
+        open(yol, "w", encoding="utf-8").write(karne_.markdown(sonuc, baslik, bugun()))
+        out["dosya"] = os.path.relpath(yol, KOK)
+    out["not"] = ("Öğrenciye karnenin özetini 3–5 cümleyle, cesaretlendirici ve somut söyle: en güçlü hedef, "
+                  "geliştirilecek hedef ve bir sonraki adım. Puanı not gibi sunma. İstersen tahtada table ile göster.")
+    return metin(out)
 
 
 # ---------- Ölçme (pilot) ----------
@@ -912,7 +1095,8 @@ ISLEYICILER = {"egitmen_hazirla": ar_egitmen_hazirla, "kayit_oku": ar_kayit_oku,
                "rapor_yaz": ar_rapor_yaz, "olcme_testi": ar_olcme_testi, "olcme_kaydet": ar_olcme_kaydet,
                "tahtayi_ac": ar_tahtayi_ac, "dersler": ar_dersler, "ders_oku": ar_ders_oku,
                "gorsel_bak": ar_gorsel_bak, "tahta": ar_tahta, "soru_sor": ar_soru_sor,
-               "tahta_durumu": ar_tahta_durumu, "dinle": ar_dinle, "durdur": ar_durdur}
+               "tahta_durumu": ar_tahta_durumu, "dinle": ar_dinle, "durdur": ar_durdur,
+               "bilgi_ara": ar_bilgi_ara, "vakalar": ar_vakalar, "vaka_oku": ar_vaka_oku, "karne": ar_karne}
 
 
 def metin(veri, hata=False):
@@ -936,7 +1120,7 @@ def isle(m):
     if yontem == "initialize":
         return {"protocolVersion": p.get("protocolVersion") or "2025-06-18",
                 "capabilities": {"tools": {}},
-                "serverInfo": {"name": AD, "title": "Akıllı Tahta", "version": SURUM},
+                "serverInfo": {"name": AD, "title": "KlinikKoç", "version": SURUM},
                 "instructions": TALIMAT}
     if yontem == "ping":
         return {}
@@ -1017,7 +1201,7 @@ def kur(kaldir=False):
         print(("Kaldırıldı: " if kaldir else "Eklendi: ") + yol)
     if not kaldir:
         print("\nŞimdi Claude masaüstü uygulamasını TAMAMEN kapatın (saat yanındaki simgeye sağ tık → Quit/Çık)")
-        print("ve yeniden açın. Sohbet kutusunun altındaki araçlar menüsünde 'akilli-tahta' görünmelidir.")
+        print("ve yeniden açın. Sohbet kutusunun altındaki araçlar menüsünde 'klinik-koc' görünmelidir.")
         print("Sonra Claude'a şunu yazın:  Tahtayı aç ve bana Şekil 2'yi anlat.")
 
 

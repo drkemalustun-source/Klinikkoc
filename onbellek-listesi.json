@@ -1,5 +1,5 @@
 {
-  "version": "74325ba88712",
+  "version": "0f5b54434438",
   "files": [
     "./",
     "index.html",
@@ -11,6 +11,7 @@
     "js/anatomi.js",
     "js/board.js",
     "js/player.js",
+    "js/karne.js",
     "js/qa/qa.js",
     "js/qa/bilgi.js",
     "js/qa/saglayici-anthropic.js",

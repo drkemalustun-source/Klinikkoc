@@ -414,3 +414,24 @@ strong { color: var(--accent); font-weight: 700; }
 .an-yazi { fill: var(--chalk); stroke: none; font-family: inherit; }
 .an-etiket.accent .an-yazi { fill: var(--accent); } .an-etiket.warn .an-yazi { fill: var(--warn); }
 .an-etiket.ok .an-yazi { fill: var(--ok); } .an-etiket.info .an-yazi { fill: var(--info); }
+
+/* ---- KlinikKoç: açık uçlu soru, rubrik, karne ---- */
+.q-text-answer {
+  width: 100%; min-height: 6em; margin: .2em 0 .6em; padding: .6em .8em; font: inherit; font-size: .9em; color: var(--chalk);
+  background: var(--board); border: 2px solid var(--board-line); border-radius: 12px; resize: vertical;
+}
+.q-text-answer:focus { outline: none; border-color: var(--accent); }
+.q-model-h { margin: .6em 0 .1em !important; font-size: .78em; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); }
+.q-model { margin: 0; padding: .5em .7em; border-left: 3px solid var(--ok); background: rgba(120,200,150,.08); border-radius: 6px; }
+.q-rubric { display: grid; gap: .35em; margin-top: .3em; }
+.q-rubric-row { display: flex; align-items: center; gap: .6em; min-height: var(--touch); padding: .2em .5em; border-radius: 10px; background: var(--board-2); cursor: pointer; }
+.q-rubric-row input { width: 1.3em; height: 1.3em; flex: none; accent-color: var(--ok); }
+.q-rubric-row span:nth-child(2) { flex: 1; }
+.q-pts { font-size: .75em; color: var(--chalk-dim); }
+.q-score { font-weight: 700; margin-top: 0 !important; }
+.karne-head { display: flex; align-items: baseline; gap: .8em; margin: .4em 0 .8em; }
+.karne-big { font-size: 2.2em; font-weight: 800; color: var(--accent); }
+.karne-sub { color: var(--chalk-dim); font-size: .85em; }
+.karne-table { width: 100%; border-collapse: collapse; font-size: .82em; }
+.karne-table th, .karne-table td { text-align: left; padding: .35em .4em; border-bottom: 1px solid var(--board-line); vertical-align: top; }
+.karne-table th { color: var(--chalk-dim); font-weight: 600; }

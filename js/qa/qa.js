@@ -182,7 +182,7 @@
       + ': ' + (a.caption || a.alt || '')).join('\n');
     const src = lesson.source || {};
     return [
-      'Sen "Akıllı Tahta" adlı çalışma uygulamasında diş hekimliği öğrencilerine yardım eden bir öğretim asistanısın.',
+      'Sen "KlinikKoç" adlı çalışma uygulamasında diş hekimliği öğrencilerine yardım eden bir öğretim asistanısın.',
       'Ders: ' + lesson.title + (lesson.subtitle ? ' — ' + lesson.subtitle : ''),
       'Ana kaynak: ' + (src.citation || '') + (src.doi ? ' doi:' + src.doi : ''),
       '',

@@ -1,7 +1,7 @@
 /* Çevrimdışı çalışma. İlk açılışta onbellek-listesi.json'daki tüm dosyalar
  * (oynatıcı + dersler + görseller + varsa ses) indirilir. Liste tools/paketle.mjs ile üretilir;
  * içindeki "version" değişince eski önbellek silinir. */
-const PREFIX = 'akilli-tahta-';
+const PREFIX = 'klinik-koc-';
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {

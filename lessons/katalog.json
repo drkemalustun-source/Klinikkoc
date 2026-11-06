@@ -12,13 +12,13 @@
     },
     {
       "id": "tanitim",
-      "title": "Akıllı Tahta nasıl kullanılır?",
+      "title": "KlinikKoç nasıl kullanılır?",
       "subtitle": "Oynatıcıyı ve ders dosyası yazmayı tanıtan kısa örnek ders",
       "level": "Herkes",
       "estimatedMinutes": 4,
       "path": "lessons/tanitim/",
-      "steps": 13,
-      "questions": 4
+      "steps": 14,
+      "questions": 5
     }
   ]
 }

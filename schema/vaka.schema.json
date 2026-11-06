@@ -1,0 +1,462 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/drkemalustun-source/klinik-koc/schema/vaka.schema.json",
+  "title": "KlinikKoç vaka kartı",
+  "description": "Dallanan bir klinik vaka. Her dosya lessons/<ders>/vakalar/<vaka>.json içinde durur. Eğitmen vakayı düğüm düğüm açar: öğrenci bulguları ister, karar verir, gerekçesini söyler; takıldığı yerde ilgili ders bölümüne döner. Ayrıntılı açıklama: belgeler/vaka-karti.md",
+  "type": "object",
+  "required": [
+    "surum",
+    "id",
+    "baslik",
+    "ders",
+    "kurgusal",
+    "dagitim",
+    "hedefler",
+    "hasta",
+    "basvuru",
+    "bulgular",
+    "baslangic",
+    "dugumler"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "surum": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "description": "Dosya adıyla aynı olmalı (uzantısız)."
+    },
+    "baslik": {
+      "type": "string",
+      "description": "Tanıyı ele vermeyen kısa başlık, ör. 'Ağrılı dişeti, ateş ve halsizlik'."
+    },
+    "ders": {
+      "type": "string",
+      "description": "Vakanın bağlı olduğu dersin kimliği."
+    },
+    "duzey": {
+      "type": "string",
+      "description": "Ör. 'Lisans, 4. sınıf'."
+    },
+    "sure_dk": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "konu_etiketleri": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "kurgusal": {
+      "type": "boolean",
+      "description": "true: uydurma örnek vaka. false: gerçek bir hastadan uyarlanmış vaka (anonimlik bölümü zorunlu)."
+    },
+    "dagitim": {
+      "enum": [
+        "acik",
+        "fakulte"
+      ],
+      "description": "acik: açık depoda paylaşılabilir. fakulte: yalnız fakülte paketinde (açık depoya giremez)."
+    },
+    "anonimlik": {
+      "type": "object",
+      "description": "Gerçek hastadan uyarlanan her vakada zorunlu. Ayrıntı: belgeler/anonimlestirme.md",
+      "required": [
+        "kimliksizlestirildi",
+        "egitim_onayi",
+        "denetleyen",
+        "tarih"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kimliksizlestirildi": {
+          "type": "boolean",
+          "description": "Ad, tarih, protokol no, yüz, dövme, takı vb. bütün tanıtıcılar çıkarıldı."
+        },
+        "egitim_onayi": {
+          "type": "boolean",
+          "description": "Hastanın eğitimde kullanım için onamı var."
+        },
+        "gorseller_denetlendi": {
+          "type": "boolean",
+          "description": "Fotoğraf/röntgen dosya adları ve içindeki bilgiler (EXIF, film üstü yazı) temizlendi."
+        },
+        "denetleyen": {
+          "type": "string",
+          "description": "Denetimi yapan öğretmenin adı ya da baş harfleri."
+        },
+        "tarih": {
+          "type": "string",
+          "format": "date"
+        },
+        "not": {
+          "type": "string"
+        }
+      }
+    },
+    "ogretmen_onayi": {
+      "type": "object",
+      "description": "Klinik içeriğin öğretmen tarafından gözden geçirildiği. Onaysız vaka öğrenciye 'taslak' diye gösterilir.",
+      "properties": {
+        "onaylandi": {
+          "type": "boolean"
+        },
+        "onaylayan": {
+          "type": "string"
+        },
+        "tarih": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "hedefler": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      },
+      "description": "Dersin alt hedef kimlikleri (ders.json goals[].subgoals[].id ya da egitmen.json hedefler[].id)."
+    },
+    "hasta": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "yas_araligi": {
+          "type": "string",
+          "pattern": "^[0-9]{1,2}0-[0-9]{1,2}9$|^[0-9]{1,3}\\+$",
+          "description": "Tam yaş değil, on yıllık aralık: '20-29', '60-69' ya da '90+'."
+        },
+        "cinsiyet": {
+          "enum": [
+            "kadın",
+            "erkek",
+            "belirtilmedi"
+          ]
+        },
+        "sistemik": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Sistemik durum ve ilaçlar; 'yok' da yazılabilir."
+        },
+        "aliskanliklar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "basvuru": {
+      "type": "object",
+      "required": [
+        "sikayet"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "sikayet": {
+          "type": "string",
+          "description": "Hastanın kendi sözleriyle başvuru nedeni."
+        },
+        "oyku": {
+          "type": "string"
+        }
+      }
+    },
+    "bulgular": {
+      "type": "array",
+      "description": "Vakadaki bütün bilgiler. 'acilis' baslangic olanlar vaka açılınca söylenir; istenince olanlar ancak öğrenci o muayeneyi isterse verilir (veri toplama becerisi).",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "tur",
+          "metin"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "tur": {
+            "enum": [
+              "anamnez",
+              "klinik",
+              "radyografik",
+              "laboratuvar",
+              "fotograf",
+              "diger"
+            ]
+          },
+          "baslik": {
+            "type": "string",
+            "description": "Öğrencinin isteyeceği muayenenin adı, ör. 'Sondalama derinlikleri'."
+          },
+          "metin": {
+            "type": "string"
+          },
+          "gorsel": {
+            "type": "string",
+            "description": "Ders klasörüne göre yol, ör. vakalar/gorseller/v1-on.jpg"
+          },
+          "gorsel_aciklama": {
+            "type": "string",
+            "description": "Görselde ne görüldüğü (öğretmenin yazdığı; eğitmen bunun ötesinde yorum yapmaz)."
+          },
+          "acilis": {
+            "enum": [
+              "baslangic",
+              "istenince"
+            ],
+            "default": "istenince"
+          }
+        }
+      }
+    },
+    "baslangic": {
+      "type": "string",
+      "description": "İlk düğümün kimliği."
+    },
+    "dugumler": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/dugum"
+      }
+    },
+    "kapanis": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ozet": {
+          "type": "string",
+          "description": "Vakanın doğru akıl yürütmesinin 3–5 cümlelik özeti."
+        },
+        "ogrenme_noktalari": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "kaynak": {
+      "type": "string",
+      "description": "Vakanın dayandığı ders notu/kaynak sayfası, ör. 'Ders notu s. 6–7'."
+    },
+    "yanilgilar": {
+      "type": "array",
+      "description": "Bu vakaya özgü yanılgılar. Seçeneklerdeki 'yanilgi' kimliği burada ya da dersin egitmen.json yanilgilar listesinde olmalı.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "metin"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "metin": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "bloom": {
+      "enum": [
+        "hatirla",
+        "anla",
+        "uygula",
+        "cozumle",
+        "degerlendir",
+        "olustur"
+      ]
+    },
+    "rubrik": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Açık uçlu cevabın puanlama ölçütleri. Her ölçüt ayrı puanlanır; toplam = en yüksek puan.",
+      "items": {
+        "type": "object",
+        "required": [
+          "olcut",
+          "puan"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "olcut": {
+            "type": "string",
+            "description": "Cevapta aranan tek bir öğe, ör. 'Ateş ve lenfadenopatiyi sistemik tutulum olarak yorumlar'."
+          },
+          "puan": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "zorunlu": {
+            "type": "boolean",
+            "description": "Bu ölçüt karşılanmadan cevap yeterli sayılmaz."
+          }
+        }
+      }
+    },
+    "secenek": {
+      "type": "object",
+      "required": [
+        "metin",
+        "sonuc"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "metin": {
+          "type": "string"
+        },
+        "sonuc": {
+          "enum": [
+            "dogru",
+            "kabul",
+            "yanlis",
+            "tehlikeli"
+          ],
+          "description": "kabul: savunulabilir ama en iyisi değil. tehlikeli: hastaya zarar verebilecek seçim (karnede ayrıca gösterilir)."
+        },
+        "geribildirim": {
+          "type": "string",
+          "description": "Bu seçimden sonra söylenecek kısa açıklama."
+        },
+        "sonraki": {
+          "type": "string",
+          "description": "Seçimden sonra gidilecek düğüm. Yanlış seçimde verilmezse öğrenci aynı düğümde yeniden dener."
+        },
+        "yanilgi": {
+          "type": "string",
+          "description": "Bu seçimin gösterdiği yanılgının kimliği (egitmen.json yanilgilar)."
+        }
+      }
+    },
+    "dugum": {
+      "type": "object",
+      "required": [
+        "id",
+        "tur"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "tur": {
+          "enum": [
+            "karar",
+            "acik",
+            "veri",
+            "bilgi",
+            "son"
+          ],
+          "description": "karar: seçenekli. acik: öğrenci kendi cümleleriyle cevaplar (rubrikle puanlanır). veri: öğrenci hangi muayeneleri isteyeceğini söyler. bilgi: anlatılır, soru yok. son: vakanın bir sonu."
+        },
+        "baslik": {
+          "type": "string"
+        },
+        "anlat": {
+          "type": "string",
+          "description": "Düğüm açılırken söylenecek metin (yeni bilgi, gidişat)."
+        },
+        "soru": {
+          "type": "string"
+        },
+        "hedef": {
+          "type": "string",
+          "description": "Düğümün yokladığı alt hedef."
+        },
+        "bloom": {
+          "$ref": "#/$defs/bloom"
+        },
+        "acilan_bulgular": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Bu düğüme gelince açılan bulgular."
+        },
+        "gerekli_bulgular": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "veri düğümünde: öğrencinin istemesi beklenen muayeneler."
+        },
+        "secenekler": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/secenek"
+          }
+        },
+        "gerekce_iste": {
+          "type": "boolean",
+          "description": "Doğru seçimden sonra 'neden?' diye sorulsun (varsayılan: evet)."
+        },
+        "rubrik": {
+          "$ref": "#/$defs/rubrik"
+        },
+        "ornek_cevap": {
+          "type": "string",
+          "description": "Öğretmenin örnek cevabı; öğrenci cevabını verdikten sonra gösterilir."
+        },
+        "ipuclari": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Kademeli ipuçları, en hafifinden en belirgine."
+        },
+        "takilirsa": {
+          "type": "object",
+          "description": "Öğrenci iki denemede ilerleyemezse: eğitmen vakayı bekletir, dersin bu bölümünü kısaca yeniden anlatır, sonra vakaya döner.",
+          "additionalProperties": false,
+          "properties": {
+            "bolum": {
+              "type": "string",
+              "description": "ders.json bölüm kimliği."
+            },
+            "sayfa": {
+              "type": "integer",
+              "description": "Kaynağın (ders notunun) sayfası."
+            },
+            "not": {
+              "type": "string",
+              "description": "Yeniden anlatırken nelere odaklanılacağı."
+            }
+          }
+        },
+        "sonraki": {
+          "type": "string",
+          "description": "acik, veri ve bilgi düğümlerinde sıradaki düğüm."
+        },
+        "sonuc": {
+          "enum": [
+            "iyi",
+            "kabul",
+            "kotu"
+          ],
+          "description": "son düğümünde vakanın nasıl bittiği."
+        }
+      }
+    }
+  }
+}

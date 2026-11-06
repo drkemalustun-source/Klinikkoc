@@ -8,7 +8,7 @@ bilgisayarınızda üretilir ve gösterilir.
 ## Nasıl çalışır
 
 ```
-Claude masaüstü  →  tools/tahta-mcp.py  →  tools/sunucu.py (localhost:8800)  →  canli.html (tarayıcı)
+Claude masaüstü  →  tools/tahta-mcp.py  →  tools/sunucu.py (localhost:8810)  →  canli.html (tarayıcı)
  (siz yazarsınız)    (tahta araçları)       (komut kuyruğu, Piper sesi)          (tahta + ses + soru kartı)
 ```
 
@@ -106,6 +106,6 @@ Tahtanın üst çubuğunda **mikrofon** tuşu var (klavyede **M**).
 | Belirti | Çözüm |
 |---|---|
 | Claude'da "akilli-tahta" araçları görünmüyor | Claude'u sistem tepsisinden tamamen kapatıp açın; `--kur` komutunu yeniden çalıştırın |
-| "Tahta sayfası açık değil" | Claude'a "tahtayı aç" deyin ya da tarayıcıda `http://localhost:8800/canli.html` açın |
+| "Tahta sayfası açık değil" | Claude'a "tahtayı aç" deyin ya da tarayıcıda `http://localhost:8810/canli.html` açın |
 | Yazılar geliyor, ses yok | Tahtada "başlat" düğmesine dokunun; bilgisayarın sesini denetleyin |
 | Sol üstteki nokta kırmızı | Sunucu penceresi kapanmış; Claude'a "tahtayı aç" deyin |

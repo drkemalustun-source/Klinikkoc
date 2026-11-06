@@ -37,7 +37,10 @@
       "description": "Hedef kitle, örn. 'Lisans 5. sınıf'."
     },
     "distribution": {
-      "enum": ["open", "faculty"],
+      "enum": [
+        "open",
+        "faculty"
+      ],
       "description": "open (varsayılan): açık pakete ve depoya girer. faculty: yalnız fakülte içi pakete girer (telifli görseller içerebilir); paketle.mjs ancak --fakulte ile kataloğa ekler."
     },
     "estimatedMinutes": {
@@ -235,6 +238,10 @@
               "sourceRef": {
                 "type": "string",
                 "description": "Kaynakta sayfa/bölüm, örn. 's. 6, Defect configuration'."
+              },
+              "bloom": {
+                "$ref": "#/$defs/bloom",
+                "description": "Bu alt hedefin hedef Bloom düzeyi (öğretmen onaylar)."
               }
             }
           }
@@ -498,8 +505,16 @@
           },
           "then": {
             "anyOf": [
-              { "required": ["shapes"] },
-              { "required": ["template"] }
+              {
+                "required": [
+                  "shapes"
+                ]
+              },
+              {
+                "required": [
+                  "template"
+                ]
+              }
             ]
           }
         },
@@ -532,8 +547,10 @@
           "enum": [
             "single",
             "multiple",
-            "truefalse"
-          ]
+            "truefalse",
+            "open"
+          ],
+          "description": "open: açık uçlu. Öğrenci cevabını yazar, sonra örnek cevabı görür ve rubrikle kendini puanlar (canlı modda eğitmen puanlar)."
         },
         "goal": {
           "type": "string",
@@ -611,8 +628,61 @@
             "type": "string"
           },
           "description": "Bu sorunun doğrudan yokladığı yanılgı kimlikleri; doğru cevap onları kapatır."
+        },
+        "bloom": {
+          "$ref": "#/$defs/bloom",
+          "description": "Sorunun yokladığı Bloom düzeyi."
+        },
+        "rubric": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Puanlama ölçütleri (açık uçlu sorularda zorunlu).",
+          "items": {
+            "type": "object",
+            "required": [
+              "criterion",
+              "points"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "criterion": {
+                "type": "string",
+                "description": "Cevapta aranan tek bir öğe."
+              },
+              "points": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 5
+              },
+              "required": {
+                "type": "boolean",
+                "description": "Bu ölçüt karşılanmadan cevap yeterli sayılmaz."
+              }
+            }
+          }
+        },
+        "modelAnswer": {
+          "type": "string",
+          "description": "Öğretmenin örnek cevabı; öğrenci cevap verdikten sonra gösterilir (açık uçlu sorularda zorunlu)."
+        },
+        "passRatio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Açık uçlu soruda yeterli sayılmak için gereken puan oranı (varsayılan 0.6)."
         }
       }
+    },
+    "bloom": {
+      "enum": [
+        "hatirla",
+        "anla",
+        "uygula",
+        "cozumle",
+        "degerlendir",
+        "olustur"
+      ],
+      "description": "Bloom düzeyi: hatırla, anla, uygula, çözümle, değerlendir, oluştur."
     }
   }
 }

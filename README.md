@@ -30,7 +30,7 @@ Konuşma tanıma ve seslendirme motorlarını aynı cümlelerle karşılaştıra
 Adım adım kullanım: [`ses-testi/KILAVUZ.md`](ses-testi/KILAVUZ.md). Kısaca:
 
 ```sh
-python3 tools/sunucu.py            # http://localhost:8800/ses-testi/ açılır
+python3 tools/sunucu.py            # http://localhost:8810/ses-testi/ açılır
 python3 tools/sunucu.py --kur-duyu # isteğe bağlı: Duyu-small için Python paketleri
 ```
 
@@ -160,7 +160,7 @@ makalede bulmak için küçük bir terim sözlüğü taşır. İleride bir vekt�
 (ya da yalnız uygulamanın adresini yazın). 8 GB bellekli bir bilgisayarda `qwen2.5:3b` gibi küçük bir model çalışır.
 
 **Karşılaştırma sayfası** (`qa-testi/`): aynı soruları iki modele sorar; süre, token, maliyet ve 1–5 puanlarla rapor çıkarır.
-`python3 tools/sunucu.py` ile açıp `http://localhost:8800/qa-testi/` adresine gidin.
+`python3 tools/sunucu.py` ile açıp `http://localhost:8810/qa-testi/` adresine gidin.
 
 **Sağlayıcı eklemek** tek dosyadır: `js/qa/saglayici-*.js` örneklerine bakın (`AT.qa.registerProvider`).
 

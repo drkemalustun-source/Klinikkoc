@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Akıllı Tahta yerel sunucusu.
+"""KlinikKoç yerel sunucusu.
 
 Ne yapar:
-  1. Proje klasörünü http://localhost:8800 adresinde yayınlar. Mikrofon, model önbelleği ve
+  1. Proje klasörünü http://localhost:8810 adresinde yayınlar. Mikrofon, model önbelleği ve
      Piper sesleri tarayıcıda yalnızca "güvenli" bir adreste (localhost dahil) çalışır;
      index.html'e çift tıklayarak açmak bunlar için yetmez.
   2. İsteğe bağlı: Duyu-small konuşma tanıma modelini bu bilgisayarda çalıştırır
@@ -205,7 +205,7 @@ class Canli:
             if not self.bagli():
                 return {"durum": "bağlı değil",
                         "hata": "Tahta sayfası açık değil. tahtayi_ac aracını çağırın ya da "
-                                "tarayıcıda http://localhost:8800/canli.html adresini açın."}
+                                "tarayıcıda http://localhost:8810/canli.html adresini açın."}
             self.sayac += 1
             no = self.sayac
             if komut.get("tur") == "dur":
@@ -464,8 +464,8 @@ def kur_duyu():
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Akıllı Tahta yerel sunucusu")
-    ap.add_argument("--port", type=int, default=8800)
+    ap = argparse.ArgumentParser(description="KlinikKoç yerel sunucusu")
+    ap.add_argument("--port", type=int, default=8810)
     ap.add_argument("--kur-duyu", action="store_true", help="Duyu için gereken paketleri kur ve çık")
     ap.add_argument("--acma", action="store_true", help="tarayıcıyı kendiliğinden açma")
     ap.add_argument("--sayfa", default="ses-testi/", help="açılacak sayfa (varsayılan: ses testi)")
@@ -474,7 +474,7 @@ def main():
         sys.exit(kur_duyu())
     sunucu = http.server.ThreadingHTTPServer(("127.0.0.1", a.port), Isleyici)
     adres = "http://localhost:%d/%s" % (a.port, a.sayfa)
-    print("Akıllı Tahta sunucusu çalışıyor: " + adres)
+    print("KlinikKoç sunucusu çalışıyor: " + adres)
     print("Kapatmak için bu pencerede Ctrl+C'ye basın.")
     d = DUYU.durum()
     print("Duyu-small: " + ("hazır (ilk kullanımda yüklenecek)" if d["kurulu"] else "kurulu değil. " + d["neden"]))

@@ -28,7 +28,7 @@ Toplam süre yaklaşık 30–45 dakikadır. İlk açılışta modellerin indiril
 3. Şu komutu yazıp Enter'a basın:
    - Mac: `python3 tools/sunucu.py`
    - Windows: `python tools\sunucu.py`
-4. Tarayıcıda `http://localhost:8800/ses-testi/` açılır. Varsayılan tarayıcınız Chrome değilse bu adresi Chrome'a yapıştırın.
+4. Tarayıcıda `http://localhost:8810/ses-testi/` açılır. Varsayılan tarayıcınız Chrome değilse bu adresi Chrome'a yapıştırın.
 5. Test boyunca Terminal penceresini kapatmayın. İşiniz bitince Terminal'de **Ctrl+C**'ye basarak sunucuyu kapatın.
 
 ### Duyu-small için (isteğe bağlı, önerilir)
@@ -85,7 +85,7 @@ Hazırlıktan sonra Wi‑Fi'yi kapatın, **Tarayıcı · Google sunucusu** motor
 - **Mikrofon izni sorulmadı ya da reddedildi:** Adres çubuğunun solundaki simgeye tıklayıp mikrofona izin verin, sayfayı yenileyin.
 - **"Bu sayfa güvenli bir adreste açılmamış":** Sayfayı dosyaya çift tıklayarak açmışsınız. 2. bölümdeki gibi sunucuyla açın.
 - **"Python sunucusu bulunamadı" (Duyu kartında):** Sayfa sunucu olmadan açılmış ya da Terminal kapanmış.
-- **"Address already in use":** 8800 numaralı kapı dolu. `python3 tools/sunucu.py --port 8801` ile açın.
+- **"Address already in use":** 8810 numaralı kapı dolu. `python3 tools/sunucu.py --port 8811` ile açın.
 - **"Model indirilemedi":** İnternet bağlantısını kontrol edin. Üniversite ağı huggingface.co sitesini engelliyorsa
   testi evde ya da telefonun internetiyle yapın.
 - **Sayfa çok yavaşladı:** Whisper ekran kartı yoksa işlemcide çalışır ve yavaştır. "small" yerine "base" ile deneyin.

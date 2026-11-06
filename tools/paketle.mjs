@@ -61,12 +61,15 @@ function check(value, s, path, out) {
 function lint(id, lesson, dir) {
   if (lesson.id !== id) err(id, `id '${lesson.id}' klasör adıyla aynı olmalı`);
   const subgoals = new Set();
+  const subgoalBloom = new Map();
   for (const g of lesson.goals) for (const s of g.subgoals || []) {
     if (subgoals.has(s.id)) err(id, `alt hedef tekrarı: ${s.id}`);
     subgoals.add(s.id);
+    if (s.bloom) subgoalBloom.set(s.id, s.bloom);
   }
   const covered = new Set();
   const asked = new Set();
+  let bloomMissing = 0;
   const stepIds = new Set();
   for (const sec of lesson.sections) {
     for (const g of sec.goals || []) {
@@ -89,7 +92,14 @@ function lint(id, lesson, dir) {
         if (!subgoals.has(q.goal)) err(id, `${where}: soru bilinmeyen alt hedefe bağlı (${q.goal})`);
         asked.add(q.goal);
         if (q.type === 'truefalse' && typeof q.answer !== 'boolean') err(id, `${where}: truefalse sorusunda 'answer' true/false olmalı`);
-        if (q.type !== 'truefalse') {
+        const BLOOM = ['hatirla', 'anla', 'uygula', 'cozumle', 'degerlendir', 'olustur'];
+        if (q.bloom && !BLOOM.includes(q.bloom)) err(id, `${where}: geçersiz Bloom düzeyi '${q.bloom}'`);
+        if (!q.bloom && !subgoalBloom.get(q.goal)) bloomMissing++;
+        if (q.type === 'open') {
+          if (!(q.rubric || []).length) err(id, `${where}: açık uçlu soruda rubric (puanlama ölçütleri) zorunlu`);
+          if (!q.modelAnswer) err(id, `${where}: açık uçlu soruda modelAnswer (örnek cevap) zorunlu`);
+          for (const r of q.rubric || []) if (!r.criterion || !Number.isInteger(r.points) || r.points < 1 || r.points > 5) err(id, `${where}: rubrik ölçütünde criterion ve 1–5 arası points olmalı`);
+        } else if (q.type !== 'truefalse') {
           const n = (q.options || []).filter((o) => o.correct).length;
           if ((q.options || []).length < 2) err(id, `${where}: en az iki seçenek olmalı`);
           if (q.type === 'single' && n !== 1) err(id, `${where}: tek cevaplı soruda tam bir doğru seçenek olmalı (${n} var)`);
@@ -129,6 +139,9 @@ function lint(id, lesson, dir) {
   for (const g of subgoals) {
     if (!covered.has(g)) warn(id, `alt hedef ${g} hiçbir bölümde işlenmiyor`);
     if (!asked.has(g)) warn(id, `alt hedef ${g} için soru yok`);
+  }
+  if (bloomMissing) {
+    warn(id, `${bloomMissing} soruda ne sorunun ne alt hedefin Bloom düzeyi (bloom) var; karnede düzeye göre başarı eksik kalır`);
   }
   for (const [k, a] of Object.entries(lesson.assets || {})) {
     if (!/^(https?:|data:)/.test(a.src) && !existsSync(join(dir, a.src))) err(id, `görsel dosyası yok: ${k} -> ${a.src}`);
@@ -193,7 +206,7 @@ writeFileSync(join(LESSONS, 'katalog.json'), JSON.stringify(cat, null, 2) + '\n'
 writeFileSync(join(LESSONS, 'katalog.js'), `/* Otomatik üretildi: tools/paketle.mjs */\nAT.registerCatalog(${JSON.stringify(cat)});\n`);
 
 const shell = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'css/tahta.css',
-  'js/core.js', 'js/speech.js', 'js/anatomi.js', 'js/board.js', 'js/player.js', 'js/qa/qa.js', 'js/qa/bilgi.js', 'js/qa/saglayici-anthropic.js', 'js/qa/saglayici-ollama.js', 'js/qa/saglayici-openai.js', 'js/app.js',
+  'js/core.js', 'js/speech.js', 'js/anatomi.js', 'js/board.js', 'js/player.js', 'js/karne.js', 'js/qa/qa.js', 'js/qa/bilgi.js', 'js/qa/saglayici-anthropic.js', 'js/qa/saglayici-ollama.js', 'js/qa/saglayici-openai.js', 'js/app.js',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'lessons/katalog.json', 'lessons/katalog.js'];
 const files = [...new Set([...shell, ...cacheFiles])];
 const hash = createHash('sha256');
