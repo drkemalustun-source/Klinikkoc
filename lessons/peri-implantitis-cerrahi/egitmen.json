@@ -1,0 +1,364 @@
+{
+ "surum": 1,
+ "baslik": "Peri-implantitiste cerrahi tedavinin etkinliğini etkileyen faktörler",
+ "duzey": "Uzmanlık",
+ "dagitim": "acik",
+ "egitmen": "mercan",
+ "izinliEgitmenler": [
+  "mercan"
+ ],
+ "kaynak": {
+  "baslik": "Ramanauskaite A, Zhou W, Cafferata EA, Schwarz F. Factors influencing the effectiveness of surgical therapy of peri-implantitis. Periodontol 2000. 2026;00:1–21.",
+  "tur": "makale (anlatı derlemesi)",
+  "doi": "10.1111/prd.70052",
+  "lisans": "CC BY 4.0",
+  "sayfaSayisi": 21,
+  "sayfaMetni": "kaynak/sayfa-{nn}.txt",
+  "okumaNotu": "Sayfa metinleri PDF'den çıkarılmıştır; tablo ve şekiller için ders görsellerine bak. Ek Tablo S1 pakette yoktur; okunmuş sayılmaz."
+ },
+ "hedefler": [
+  {
+   "id": "H1.a",
+   "baslik": "Derlemenin tasarımı ve kapsamı",
+   "kaynak": "PDF s. 1, 2, 3; bölüm Abstract; 2; 2.1",
+   "sayfalar": [
+    1,
+    2,
+    3
+   ],
+   "bloom": "anla",
+   "ogretmenKontrolu": "Anlatı derlemesini içerdiği RCT ile eşitlememe."
+  },
+  {
+   "id": "H1.b",
+   "baslik": "Kanıt çeşitliliği ve genelleme sınırı",
+   "kaynak": "PDF s. 2, 3; bölüm 2.1; 3.2",
+   "sayfalar": [
+    2,
+    3
+   ],
+   "bloom": "degerlendir",
+   "ogretmenKontrolu": "Farklı tasarım/takip/sonuç tanımlarını tek homojen kanıt saymama."
+  },
+  {
+   "id": "H2.a",
+   "baslik": "Klinik ve radyografik sonuç ayrımı",
+   "kaynak": "PDF s. 2, 3, 4; bölüm 1; 3.2",
+   "sayfalar": [
+    2,
+    3,
+    4
+   ],
+   "bloom": "cozumle",
+   "ogretmenKontrolu": "Radyografik dolum, inflamasyon çözülmesi ve yumuşak doku sonucu ayrı."
+  },
+  {
+   "id": "H2.b",
+   "baslik": "Başarı tanımı ve bağlam",
+   "kaynak": "PDF s. 2, 3; bölüm 1; 3.2",
+   "sayfalar": [
+    2,
+    3
+   ],
+   "bloom": "degerlendir",
+   "ogretmenKontrolu": "Bileşik başarı, takip, hasta/implant birimi; PD eşiğinin klinik bağlamı."
+  },
+  {
+   "id": "H3.a",
+   "baslik": "Defekt morfolojisi ve gerekçe",
+   "kaynak": "PDF s. 5, 6; bölüm 3.5",
+   "sayfalar": [
+    5,
+    6
+   ],
+   "bloom": "cozumle",
+   "ogretmenKontrolu": "Duvar/çevrelenme ile yaklaşımın gerekçesi; evrensel garanti değil."
+  },
+  {
+   "id": "H3.b",
+   "baslik": "Seçim ve materyal bağlamının sınırı",
+   "kaynak": "PDF s. 5, 6, 7; bölüm 3.5",
+   "sayfalar": [
+    5,
+    6,
+    7
+   ],
+   "bloom": "degerlendir",
+   "ogretmenKontrolu": "Seçim belirsizliği ve materyal/çalışma farklılıkları; tek morfoloji sonucuyla tüm durumları kapatmama."
+  },
+  {
+   "id": "H4.a",
+   "baslik": "Başlangıç hastalık şiddeti",
+   "kaynak": "PDF s. 10, 11; bölüm 4.1",
+   "sayfalar": [
+    10,
+    11
+   ],
+   "bloom": "cozumle",
+   "ogretmenKontrolu": "Başlangıç şiddetini takip bulgusuyla karıştırmama."
+  },
+  {
+   "id": "H4.b",
+   "baslik": "Keratinize mukoza",
+   "kaynak": "PDF s. 11; bölüm 4.2",
+   "sayfalar": [
+    11
+   ],
+   "bloom": "degerlendir",
+   "ogretmenKontrolu": "Sonuçla ilişkinin kapsamı; ilişki ve nedenselliği ayırma."
+  },
+  {
+   "id": "H4.c",
+   "baslik": "İmplant konumu",
+   "kaynak": "PDF s. 11, 12; bölüm 4.3",
+   "sayfalar": [
+    11,
+    12
+   ],
+   "bloom": "cozumle",
+   "ogretmenKontrolu": "Konumla ilgili sınırlı/çelişen bulguları koşulsuzlaştırmama."
+  },
+  {
+   "id": "H4.d",
+   "baslik": "İmplant yüzeyi",
+   "kaynak": "PDF s. 12; bölüm 4.4",
+   "sayfalar": [
+    12
+   ],
+   "bloom": "cozumle",
+   "ogretmenKontrolu": "Yüzey özelliklerinin sonuçla ilişkisinin kapsamı."
+  },
+  {
+   "id": "H4.e",
+   "baslik": "Cerrahi sonrası klinik göstergeler",
+   "kaynak": "PDF s. 12, 13; bölüm 4.5",
+   "sayfalar": [
+    12,
+    13
+   ],
+   "bloom": "cozumle",
+   "ogretmenKontrolu": "Rezidüel bulguların takipteki anlamı, başlangıçla ayrımı."
+  },
+  {
+   "id": "H4.f",
+   "baslik": "Protez tipi",
+   "kaynak": "PDF s. 13; bölüm 4.6",
+   "sayfalar": [
+    13
+   ],
+   "bloom": "cozumle",
+   "ogretmenKontrolu": "Protez tipiyle ilişkiyi ilgili çalışma bağlamında yorumlama."
+  },
+  {
+   "id": "H4.g",
+   "baslik": "Makrofaj polarizasyonu",
+   "kaynak": "PDF s. 13, 14; bölüm 4.7",
+   "sayfalar": [
+    13,
+    14
+   ],
+   "bloom": "degerlendir",
+   "ogretmenKontrolu": "Gelişmekte olan kanıtı yerleşik klinik müdahale saymama."
+  },
+  {
+   "id": "H5.a",
+   "baslik": "Periodontitis öyküsü, sigara ve cinsiyet",
+   "kaynak": "PDF s. 14, 15, 16, 17; bölüm 5.1–5.3; 6",
+   "sayfalar": [
+    14,
+    15,
+    16,
+    17
+   ],
+   "bloom": "degerlendir",
+   "ogretmenKontrolu": "Tutarsız cerrahi sonuç kanıtını genel zararsızlık/etkisizlik diye yorumlamama."
+  },
+  {
+   "id": "H5.b",
+   "baslik": "Destekleyici bakım ve uyum",
+   "kaynak": "PDF s. 16, 17; bölüm 5.4",
+   "sayfalar": [
+    16,
+    17
+   ],
+   "bloom": "cozumle",
+   "ogretmenKontrolu": "Bakım/uyum bulgularını diğer hasta faktörleriyle aynı kesinlikte sunmama."
+  },
+  {
+   "id": "H6.a",
+   "baslik": "Flep tasarımı",
+   "kaynak": "PDF s. 3; bölüm 3.1",
+   "sayfalar": [
+    3
+   ],
+   "bloom": "degerlendir",
+   "ogretmenKontrolu": "Klinik gereksinim ve sınırlı karşılaştırmalı kanıt."
+  },
+  {
+   "id": "H6.b",
+   "baslik": "Greft materyali",
+   "kaynak": "PDF s. 4, 5; bölüm 3.3.1",
+   "sayfalar": [
+    4,
+    5
+   ],
+   "bloom": "degerlendir",
+   "ogretmenKontrolu": "Materyal üstünlüğünün özel iddiası, karşılaştırıcı ve sonuç ölçütü ayrı incelenir; allogreft/otogreft/ksenogreft birbirinin yerine geçmez."
+  },
+  {
+   "id": "H6.c",
+   "baslik": "Biyolojik yardımcılar",
+   "kaynak": "PDF s. 4, 5, 17; bölüm 3.3.1; 6",
+   "sayfalar": [
+    4,
+    5,
+    17
+   ],
+   "bloom": "degerlendir",
+   "ogretmenKontrolu": "Kısıtlı/kısa dönem bulgular ve ayrıntılı bölüm–sonuç ifadesi arasındaki gerilim."
+  },
+  {
+   "id": "H6.d",
+   "baslik": "Membran",
+   "kaynak": "PDF s. 5; bölüm 3.4",
+   "sayfalar": [
+    5
+   ],
+   "bloom": "cozumle",
+   "ogretmenKontrolu": "Defekt ve komplikasyon bağlamıyla sınırlı fayda yorumu."
+  },
+  {
+   "id": "H6.e",
+   "baslik": "İyileşme modu",
+   "kaynak": "PDF s. 6, 7, 8; bölüm 3.6",
+   "sayfalar": [
+    6,
+    7,
+    8
+   ],
+   "bloom": "cozumle",
+   "ogretmenKontrolu": "Submerged/non-submerged karşılaştırmasında eşlik eden protokol farkları ve sınırlılık."
+  },
+  {
+   "id": "H6.f",
+   "baslik": "Sistemik antibiyotik",
+   "kaynak": "PDF s. 8, 9; bölüm 3.7",
+   "sayfalar": [
+    8,
+    9
+   ],
+   "bloom": "degerlendir",
+   "ogretmenKontrolu": "Kısa/uzun dönem ve tedavi tipleri; rutin evrensel üstünlük çıkarımı yok."
+  },
+  {
+   "id": "H6.g",
+   "baslik": "Operatörle ilişkili faktörler",
+   "kaynak": "PDF s. 9, 10; bölüm 3.8",
+   "sayfalar": [
+    9,
+    10
+   ],
+   "bloom": "anla",
+   "ogretmenKontrolu": "Deneyim/teknik/olgu karmaşıklığını nedensellik iddiasını büyütmeden ele alma."
+  }
+ ],
+ "ogretmenNotlari": [
+  {
+   "id": "M1",
+   "kural": "Anlatı derlemesindeki tasarım, sonuç ölçütü, örneklem birimi ve takip heterojenliği korunur; ilişki nedenselliğe, sınırlı bulgu evrensel reçeteye çevrilmez."
+  },
+  {
+   "id": "M2",
+   "kural": "Ek Tablo S1 bu pakette yoktur; içeriği okunmuş sayılmaz. Atıf verilen başka çalışmalar doğrudan okunmuş sayılmaz."
+  }
+ ],
+ "yanilgilar": [
+  {
+   "id": "Y1",
+   "hedef": "H1.b",
+   "metin": "Retrospektif bir çalışmada bulunan anlamlı odds oranı, o faktörün başarısızlığa yol açtığını kanıtlar."
+  },
+  {
+   "id": "Y2",
+   "hedef": "H2.a",
+   "metin": "Rekonstrüktif tedavi, enflamasyonun klinik bulgularını açık flep debridmanından daha iyi giderir."
+  },
+  {
+   "id": "Y3",
+   "hedef": "H2.b",
+   "metin": "5 mm sondlama derinliği eşiği her klinik durumda katı biçimde uygulanmalıdır."
+  },
+  {
+   "id": "Y4",
+   "hedef": "H6.b",
+   "metin": "Ksenogreft her defekt ve her hastada koşulsuz olarak en iyi greft materyalidir."
+  },
+  {
+   "id": "Y5",
+   "hedef": "H6.d",
+   "metin": "Bariyer membran, rekonstrüktif tedavide her defekt tipinde belirgin klinik yarar sağlar."
+  },
+  {
+   "id": "Y6",
+   "hedef": "H6.f",
+   "metin": "Cerrahi peri-implantitis tedavisinde sistemik antibiyotik rutin olarak verilmelidir."
+  },
+  {
+   "id": "Y7",
+   "hedef": "H5.a",
+   "metin": "Periodontitis öyküsü ve sigara, cerrahi tedavi sonucunu tutarlı biçimde kötüleştirdiği kanıtlanmış faktörlerdir."
+  },
+  {
+   "id": "Y8",
+   "hedef": "H4.g",
+   "metin": "Makrofaj polarizasyonunun cerrahi başarıyı belirlediği kanıtlanmıştır ve bugün tedavi hedefi olarak kullanılır."
+  }
+ ],
+ "oturumlar": [
+  {
+   "id": "G1",
+   "baslik": "Makaleyi ve başarıyı birlikte okuma",
+   "hedefler": [
+    "H1.a",
+    "H1.b",
+    "H2.a",
+    "H2.b"
+   ]
+  },
+  {
+   "id": "G2",
+   "baslik": "Defekt ve cerrahi tercihlerin gerekçesi",
+   "hedefler": [
+    "H3.a",
+    "H3.b",
+    "H6.a",
+    "H6.b",
+    "H6.c",
+    "H6.d",
+    "H6.e",
+    "H6.f",
+    "H6.g"
+   ]
+  },
+  {
+   "id": "G3",
+   "baslik": "Lokal/hasta faktörleri ve takip",
+   "hedefler": [
+    "H4.a",
+    "H4.b",
+    "H4.c",
+    "H4.d",
+    "H4.e",
+    "H4.f",
+    "H4.g",
+    "H5.a",
+    "H5.b"
+   ]
+  }
+ ],
+ "aracSeti": "makale-inceleme",
+ "olcme": {
+  "durum": "taslak bekleniyor",
+  "not": "Pilot için ön/son/gecikmeli test soruları öğretmen onayından sonra eklenir."
+ }
+}

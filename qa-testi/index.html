@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <base href="../">
+  <title>Soru-Cevap Karşılaştırma</title>
+  <link rel="stylesheet" href="ses-testi/test.css">
+  <link rel="stylesheet" href="qa-testi/karsilastir.css">
+</head>
+<body>
+  <header class="top">
+    <h1>Soru-cevap karşılaştırması</h1>
+    <p class="help">Aynı soruları iki modele sorar; cevapları, süreyi, token sayısını ve maliyeti yan yana gösterir.
+      Her cevabı kaynak parçalarına bakarak 1–5 arası puanlayın. Sonuçlar yalnız bu tarayıcıdadır; siz indirmedikçe hiçbir yere gönderilmez.
+      API anahtarı uygulamanın Ayarlar ekranında girilen anahtardır.</p>
+  </header>
+  <main>
+    <section>
+      <h2>1. Modeller</h2>
+      <div class="engines" id="sides"></div>
+    </section>
+    <section>
+      <h2>2. Sorular</h2>
+      <p class="help">Değiştirebilir ya da ekleyebilirsiniz (her satır bir soru). Son satırdaki soru bilerek kaynak dışıdır: iyi bir model "kaynaklarda yok" demelidir.</p>
+      <textarea id="questions" rows="11"></textarea>
+      <div class="actions">
+        <button class="primary" id="run">Hepsini sor</button>
+        <button id="stop" disabled>Durdur</button>
+        <span class="muted" id="status"></span>
+      </div>
+    </section>
+    <section>
+      <h2>3. Cevaplar ve puanlar</h2>
+      <details class="glossary">
+        <summary>Puanlama</summary>
+        <dl>
+          <dt>Kaynağa bağlılık</dt><dd>5: her bilgi verilen parçalarda var ve doğru etiketlenmiş. 3: çoğu var, biri dayanaksız. 1: kaynakta olmayan bilgi ya da yanlış bilgi.</dd>
+          <dt>Anlaşılırlık</dt><dd>Türkçe sade ve doğru mu, terimler dersle uyumlu mu, öğrenciye yararlı mı?</dd>
+        </dl>
+      </details>
+      <div id="results"></div>
+    </section>
+    <section>
+      <h2>4. Özet</h2>
+      <div id="summary"></div>
+      <div class="actions">
+        <button id="exportMd">Raporu indir (.md)</button>
+        <button id="exportJson">Ham sonuçları indir (.json)</button>
+      </div>
+    </section>
+  </main>
+  <script src="config.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/qa/qa.js"></script>
+  <script src="js/qa/bilgi.js"></script>
+  <script src="js/qa/saglayici-anthropic.js"></script>
+  <script src="js/qa/saglayici-ollama.js"></script>
+  <script src="js/qa/saglayici-openai.js"></script>
+  <script src="qa-testi/karsilastir.js"></script>
+</body>
+</html>

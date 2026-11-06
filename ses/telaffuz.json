@@ -1,0 +1,45 @@
+{
+ "aciklama": "Telaffuz sözlüğü. Metin seslendirilmeden önce bu sözlükten geçer. 'yazim' metindeki biçim, 'okunus' seslendiricinin okuyacağı biçimdir. Kayıt sözcüğün başında aranır, sözcüğün geri kalanı (ek) korunur; yalnız tam sözcük eşleşsin istenirse \"tam\": true eklenir. Büyük-küçük harf fark etmez. Test sayfasında düzenleyip buraya kaydedebilirsiniz.",
+ "entries": [
+  {
+   "yazim": "follow-up",
+   "okunus": "falov ap"
+  },
+  {
+   "yazim": "primary outcome",
+   "okunus": "prayımeri autkam"
+  },
+  {
+   "yazim": "radiographic bone fill",
+   "okunus": "radyografik bon fil"
+  },
+  {
+   "yazim": "bone fill",
+   "okunus": "bon fil"
+  },
+  {
+   "yazim": "Er:YAG",
+   "okunus": "er yag"
+  },
+  {
+   "yazim": "RKÇ",
+   "okunus": "randomize kontrollü çalışma",
+   "tam": true
+  },
+  {
+   "yazim": "BOP",
+   "okunus": "sondlamada kanama",
+   "tam": true
+  },
+  {
+   "yazim": "PD",
+   "okunus": "sondlama derinliği",
+   "tam": true
+  },
+  {
+   "yazim": "mm",
+   "okunus": "milimetre",
+   "tam": true
+  }
+ ]
+}

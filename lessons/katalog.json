@@ -1,0 +1,24 @@
+{
+  "lessons": [
+    {
+      "id": "peri-implantitis-cerrahi",
+      "title": "Peri-implantitiste cerrahi tedavinin etkinliğini etkileyen faktörler",
+      "subtitle": "Ramanauskaite ve ark., Periodontology 2000, 2026 · pilot ders",
+      "level": "Uzmanlık / ileri lisans",
+      "estimatedMinutes": 90,
+      "path": "lessons/peri-implantitis-cerrahi/",
+      "steps": 87,
+      "questions": 32
+    },
+    {
+      "id": "tanitim",
+      "title": "Akıllı Tahta nasıl kullanılır?",
+      "subtitle": "Oynatıcıyı ve ders dosyası yazmayı tanıtan kısa örnek ders",
+      "level": "Herkes",
+      "estimatedMinutes": 4,
+      "path": "lessons/tanitim/",
+      "steps": 13,
+      "questions": 4
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.zip
+
+# Öğrencinin cihazında oluşan kayıtlar ve karneler: asla depoya girmez.
+kayitlar/
+
+# Her bilgisayarda yeniden üretilen dosyalar
+tools/.sesler/
+.ses-ortami/
+.dizin/
+.modeller/
+lessons/*/audio/
+
+# ÖZEL İÇERİK: kendi notlarınızı, vakalarınızı ve hasta görsellerinizi buraya koyun.
+# Bu klasördeki hiçbir şey açık depoya yüklenmez (bkz. belgeler/ozel-icerik.md).
+ozel/

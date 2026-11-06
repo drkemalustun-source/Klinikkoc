@@ -1,0 +1,196 @@
+{
+ "aciklama": "Ses testi cümleleri. Sayılar yazıyla yazılır (kelime hata oranı hesabında '12' ile 'on iki' farkı çıkmasın). 'terimler' tanıma ve okuma doğruluğu ayrıca ölçülen terimlerdir.",
+ "cumleler": [
+  {
+   "id": "C01",
+   "metin": "Peri-implantitis, implant çevresindeki dokularda enflamasyon ve ilerleyici kemik kaybıyla seyreden bir hastalıktır.",
+   "terimler": [
+    "peri-implantitis",
+    "enflamasyon",
+    "kemik kaybı"
+   ],
+   "tur": "makale"
+  },
+  {
+   "id": "C02",
+   "metin": "Peri-implant mukozitte enflamasyon yalnızca yumuşak dokuyla sınırlıdır ve kemik kaybı görülmez.",
+   "terimler": [
+    "peri-implant mukozit",
+    "yumuşak doku",
+    "kemik kaybı"
+   ],
+   "tur": "makale"
+  },
+  {
+   "id": "C03",
+   "metin": "Cerrahi tedaviden önce sondlama derinliği, sondlamada kanama ve süpürasyon kaydedilmelidir.",
+   "terimler": [
+    "sondlama derinliği",
+    "sondlamada kanama",
+    "süpürasyon"
+   ],
+   "tur": "makale"
+  },
+  {
+   "id": "C04",
+   "metin": "Açık flep debridmanında implant yüzeyi temizlenir, ancak kemik defekti doldurulmaz.",
+   "terimler": [
+    "açık flep debridmanı",
+    "implant yüzeyi",
+    "kemik defekti"
+   ],
+   "tur": "makale"
+  },
+  {
+   "id": "C05",
+   "metin": "Rekonstrüktif tedavide kemik içi defekt ksenogreft ve kolajen membranla doldurulabilir.",
+   "terimler": [
+    "rekonstrüktif tedavi",
+    "kemik içi defekt",
+    "ksenogreft",
+    "kolajen membran"
+   ],
+   "tur": "makale"
+  },
+  {
+   "id": "C06",
+   "metin": "İmplantoplasti, açıkta kalan implant yivlerinin düzleştirilip parlatılmasıdır.",
+   "terimler": [
+    "implantoplasti",
+    "implant yivleri"
+   ],
+   "tur": "makale"
+  },
+  {
+   "id": "C07",
+   "metin": "Randomize kontrollü çalışmalarda rekonstrüktif tedavi daha fazla radyografik dolum sağlamıştır.",
+   "terimler": [
+    "randomize kontrollü çalışma",
+    "rekonstrüktif tedavi",
+    "radyografik dolum"
+   ],
+   "tur": "makale"
+  },
+  {
+   "id": "C08",
+   "metin": "Bu çalışmada primary outcome, on iki ayda ölçülen radiographic bone fill idi.",
+   "terimler": [
+    "primary outcome",
+    "radiographic bone fill"
+   ],
+   "tur": "karisik"
+  },
+  {
+   "id": "C09",
+   "metin": "Follow-up süresi üç yıla uzayınca iki grup arasındaki fark kayboldu.",
+   "terimler": [
+    "follow-up"
+   ],
+   "tur": "karisik"
+  },
+  {
+   "id": "C10",
+   "metin": "Dört duvarlı çembersel defektler rejeneratif tedaviye en iyi yanıtı veren defektlerdir.",
+   "terimler": [
+    "dört duvarlı",
+    "çembersel defekt",
+    "rejeneratif tedavi"
+   ],
+   "tur": "makale"
+  },
+  {
+   "id": "C11",
+   "metin": "Keratinize mukoza genişliği iki milimetrenin altındaysa yumuşak doku grefti düşünülebilir.",
+   "terimler": [
+    "keratinize mukoza",
+    "milimetre",
+    "yumuşak doku grefti"
+   ],
+   "tur": "makale"
+  },
+  {
+   "id": "C12",
+   "metin": "Titanyum yüzeyin dekontaminasyonu için Er:YAG lazer, hava tozu sistemleri ve klorheksidin kullanılmıştır.",
+   "terimler": [
+    "titanyum",
+    "dekontaminasyon",
+    "Er:YAG lazer",
+    "klorheksidin"
+   ],
+   "tur": "karisik"
+  },
+  {
+   "id": "C13",
+   "metin": "Porphyromonas gingivalis ve Treponema denticola, peri-implantitis lezyonlarında sık bulunan bakterilerdendir.",
+   "terimler": [
+    "Porphyromonas gingivalis",
+    "Treponema denticola",
+    "peri-implantitis"
+   ],
+   "tur": "latince"
+  },
+  {
+   "id": "C14",
+   "metin": "Sistemik amoksisilin, modifiye yüzeyli implantlarda kısa dönemde yarar sağlamış, ancak bu etki kalıcı olmamıştır.",
+   "terimler": [
+    "sistemik amoksisilin",
+    "modifiye yüzey"
+   ],
+   "tur": "makale"
+  },
+  {
+   "id": "C15",
+   "metin": "Granülasyon dokusunda proenflamatuar makrofajlar baskınsa enflamasyon daha uzun sürebilir.",
+   "terimler": [
+    "granülasyon dokusu",
+    "proenflamatuar makrofaj",
+    "enflamasyon"
+   ],
+   "tur": "makale"
+  },
+  {
+   "id": "C16",
+   "metin": "Hastanın idame programına uyumu, uzun dönem başarıyı en çok etkileyen faktörlerden biridir.",
+   "terimler": [
+    "idame"
+   ],
+   "tur": "makale"
+  },
+  {
+   "id": "C17",
+   "metin": "Suprakrestal bileşeni olan defektlerde rezektif ve rekonstrüktif yaklaşımlar birlikte uygulanabilir.",
+   "terimler": [
+    "suprakrestal",
+    "rezektif",
+    "rekonstrüktif"
+   ],
+   "tur": "makale"
+  },
+  {
+   "id": "C18",
+   "metin": "Osseointegrasyon kaybı olan implantta mobilite varsa implantın çıkarılması gerekir.",
+   "terimler": [
+    "osseointegrasyon",
+    "mobilite"
+   ],
+   "tur": "makale"
+  },
+  {
+   "id": "C19",
+   "metin": "Hasta, diş fırçalarken implantın çevresinde kanama olduğunu ve ağzında kötü bir tat hissettiğini söylüyor.",
+   "terimler": [
+    "implant",
+    "kanama"
+   ],
+   "tur": "gunluk"
+  },
+  {
+   "id": "C20",
+   "metin": "Lütfen ağzınızı biraz daha açın; şimdi implantın çevresindeki cep derinliğini ölçeceğim.",
+   "terimler": [
+    "cep derinliği"
+   ],
+   "tur": "gunluk"
+  }
+ ]
+}

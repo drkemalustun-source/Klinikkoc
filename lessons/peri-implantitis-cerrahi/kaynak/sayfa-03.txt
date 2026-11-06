@@ -1,0 +1,204 @@
+well as studies pooling different therapeutic modalities, were con-
+
+adequately debride and decontaminate the implant surface.17 Thus,
+
+sidered. The search was limited to human studies. Case reports, ex-
+
+in practice, a greater flap elevation is typically needed around peri-­
+
+pert opinions, preclinical studies, and articles not available in English
+
+implantitis sites than around periodontitis sites.
+
+were excluded.
+
+Interestingly, a novel flapless surgical approach has been ex-
+
+The initial electronic search identified 916 records (353 in PubMed,
+
+plored recently as an alternative to traditional flap elevation. In a
+
+281 in EMBASE, and 282 in the Cochrane Library). After screening ti-
+
+large prospective case series including 117 patients (338 implants), a
+
+tles and abstracts, 76 articles were selected for full-­text evaluation,
+
+flapless surgical access (pocket curettage without raising a flap) led
+
+and 54 articles reporting on 39 original studies were included in this
+
+to disease resolution at 54.4% of implants over a follow-­up period
+
+review. All included studies are summarized in Table S1 and were cate-
+
+of 5 years.18 While this flapless approach achieved only moderate
+
+gorized according to the surgical treatment modality:
+
+success, it suggests that less invasive surgical strategies might be
+viable in certain scenarios, provided that rigorous decontamination
+
+a. Studies reporting on non-­reconstructive/resective therapy:
+
+and maintenance are ensured. Nonetheless, controlled studies are
+
+n = 15 articles/12 studies—including 4 RCTs, 6 retrospective, and
+
+needed to validate the efficacy of such minimally invasive or flapless
+
+2 prospective clinical studies.
+
+techniques.
+
+b. Studies reporting on reconstructive therapy: n = 34 articles/22
+studies – including 13 RCTs, 3 retrospective, and 6 prospective
+clinical studies.
+c. Studies pooling different surgical treatment modalities: n = 5 arti-
+
+3.2 | Efficacy of reconstructive
+versus non-­reconstructive therapy
+
+cles/5 studies—including 5 retrospective studies.
+d. From the included studies, 4 RCTs directly compared reconstructive versus non-­reconstructive treatment approaches.
+
+Several
+
+studies
+
+have
+
+compared
+
+non-­reconstructive
+
+(open-­
+
+flap debridement or resective) approaches to reconstructive
+(regenerative) approaches in the surgical management of peri-­
+
+3
+
+|
+
+S U RG I C A L FAC TO R S
+
+3.1 | Flap design
+
+implantitis. According to four RCTs that directly compared these
+modalities, treatment success (based on varying composite success
+definitions) over 12 months to 3 years ranged from 13.5% to 85%
+of implants treated with reconstructive therapy, and from 5% to
+90% of implants treated with open-­flap debridement (Table S1;
+
+Flap design during surgical peri-­implantitis treatment should provide
+
+Figure 1).19–24 For example, in two 12-­month RCTs, reconstructive
+
+adequate access to the defect while minimizing surgical trauma and
+
+groups showed significantly greater radiographic defect fill,
+
+postoperative discomfort for patients. Table S1 summarizes the
+
+whereas clinical parameters (reductions in BOP, PD, and mid-­buccal
+
+incision techniques and flap designs used in the included studies.
+
+recession) were comparable between reconstructive and open-­flap
+
+For the non-­reconstructive/resective treatment modalities, the
+
+groups. 20,22 One RCT did report a higher postoperative soft-­tissue
+
+majority of studies employed a conventional full-­thickness access
+
+level (less recession) at 12 months when reconstructive measures
+
+flap, typically a mid-­crestal incision often combined with relieving
+
+were used, but this benefit was not maintained at 3 years. 23,24
+
+vertical incisions to ensure adequate visibility and instrumentation
+
+These findings are corroborated by meta-­analyses indicating
+
+of the defect. In most cases of non-­reconstructive surgery, the flaps
+
+that adjunctive reconstructive measures yield significantly greater
+
+were repositioned apically or sutured to allow pocket elimination
+
+radiographic defect fill than open-­flap debridement alone, while
+
+and secondary intention healing of soft tissues.
+
+achieving similar reductions in inflammation (BOP and PD).1,11,13
+
+For reconstructive therapies, most studies likewise utilized full-­
+
+In terms of soft-­tissue level changes, one meta-­analysis found that
+
+thickness flaps with broad access, aiming for primary wound closure
+
+reconstructive therapy conferred an advantage in maintaining
+
+over the augmented defect. Flaps were generally repositioned to
+
+postoperative soft-­tissue levels compared with non-­reconstructive
+
+cover the regenerative materials and sutured for tension-­free pri-
+
+approaches (weighted mean difference in recession: −1.35 mm in
+
+mary closure (often requiring periosteal releasing incisions). Notably,
+
+favor of regeneration). 25
+
+3 studies did not clearly specify the exact flap design utilized.
+
+In summary, reconstructive surgical therapy tends to improve
+
+In periodontitis therapy, there has been a focus on minimally
+
+hard-­tissue outcomes (bone fill) and may better preserve soft-­tissue
+
+invasive interventions that limit flap elevation to reduce surgical
+
+levels, but it does not appear to result in superior resolution of
+
+trauma and enhance flap stability. Such strategies include papilla-­
+
+peri-­implant inflammation compared with open-­flap debridement
+
+preservation techniques, the entire papilla-­preservation flap, and
+
+alone. Thus, when choosing between reconstructive or resective
+
+other designs intended to restrict flap extent.14–16 Among the in-
+
+approaches, clinicians must weigh the goal of defect fill against
+
+cluded peri-­implantitis studies, no studies explicitly reported the
+
+the complexity and cost of reconstructive procedures, acknowl-
+
+use of a minimally invasive flap design. It should be pointed out
+
+edging that improvements in clinical parameters (pocket depth re-
+
+that compared with periodontitis, peri-­implantitis lesions are often
+
+duction, bleeding elimination) are likely to be similar between the
+
+significantly larger and frequently require circumferential access to
+
+approaches.
+
+16000757, 0, Downloaded from https://onlinelibrary.wiley.com/doi/10.1111/prd.70052 by Turkey Cochrane Evidence Aid, Wiley Online Library on [11/09/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+| 3
+
+RAMANAUSKAITE et al.
+
+

@@ -1,0 +1,16 @@
+textarea { width: 100%; font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+.side label { display: grid; grid-template-columns: 7em 1fr; gap: 8px; align-items: center; font-size: .9rem; }
+.side input, .side select { width: 100%; }
+.qrow { border-top: 1px solid var(--line); padding: 12px 0; }
+.qrow h3 { margin: 0 0 8px; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 760px) { .pair { grid-template-columns: 1fr; } }
+.ans { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.ans .txt { white-space: pre-wrap; }
+.ans .meta { color: var(--muted); font-size: .82rem; }
+.ans .err { color: var(--bad); }
+.ans .rate { display: flex; flex-wrap: wrap; gap: 10px; font-size: .88rem; }
+.passages { font-size: .82rem; color: var(--muted); }
+.passages li { margin: 4px 0; }
+table.sum { border-collapse: collapse; width: 100%; }
+table.sum th, table.sum td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; }

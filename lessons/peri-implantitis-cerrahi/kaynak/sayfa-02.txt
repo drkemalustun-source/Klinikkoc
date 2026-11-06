@@ -1,0 +1,143 @@
+|
+
+RAMANAUSKAITE et al.
+
+surgically. Findings concerning the influence of a history of periodontitis, smoking
+status, and gender remain inconsistent.
+Conclusions: Outcomes of surgical peri-­implantitis treatment are determined
+by a complex interplay of defect morphology, disease severity, implant surface
+characteristics, surgical expertise, and patient adherence to supportive care.
+Clinical Relevance: Clinically, careful case selection, defect-­specific surgical planning,
+and strict postoperative maintenance are essential to enhance predictability and long-­
+term stability.
+KEYWORDS
+
+Peri-­implantitis, surgery, therapeutic outcomes, treatmet success
+
+1
+
+|
+
+I NTRO D U C TI O N
+
+periods of 1–7 years. 2 Despite initial improvements, recurrence
+or persistence of inflammation necessitating additional surgical
+
+Owing to the inconsistent efficacy of non-­surgical approaches for
+
+interventions or even implant removal is not uncommon. 2,11–12
+
+peri-­implantitis management, surgical intervention is required in
+
+Multiple patient-­ and implant-­related factors have been identified
+
+the majority of cases.1 Following implant surface decontamina-
+
+as determinants of surgical peri-­implantitis treatment outcomes.
+
+tion, several surgical strategies can be employed, including non-­
+
+Therefore, the aim of this narrative review is to provide an overview
+
+reconstructive therapy, resective procedures involving hard-­ and/
+
+of the factors influencing the effectiveness of surgical therapy for
+
+or soft-­tissue removal, and reconstructive techniques utilizing bone
+
+peri-­implantitis.
+
+grafting procedures. 2,3 The choice of surgical approach is largely
+determined by the morphology of the peri-­implant bone defect.4
+Accordingly, more favorable outcomes of reconstructive therapy
+
+2
+
+|
+
+LITE R AT U R E S E A RC H S TR ATEG Y
+
+have been reported in the presence of a contained defect configuration (i.e., supported by 3-­ to 4-­walls) compared with non-­contained
+
+A comprehensive literature search was conducted for this narrative
+
+defects.5,6
+
+review using electronic databases (PubMed, EMBASE, and the
+
+The primary objective of surgical peri-­implantitis treatment
+
+Cochrane Library) to identify relevant studies published between
+
+is to re-­establish peri-­implant tissue health and ensure the long-­
+
+January 2010 and November 2025. A combination of Medical
+
+term stability of the implant-­surrounding hard and soft tissues.7,8
+
+Subject Headings (MeSH) and free-­text terms was used:
+
+Reconstructive procedures additionally aim to regenerate lost bone,
+promote re-­osseointegration, and maintain stable peri-­implant soft-­
+tissue levels postoperatively.9 According to current clinical practice
+guidelines, treatment success—regardless of the therapeutic modality—is defined by the absence of inflammation (bleeding on probing (BOP) at ≤1 site and no suppuration (Sup) together with shallow
+probing depths (PD ≤5 mm)).7 It should be acknowledged, however,
+that rigidly applying a PD cut-­off of 5 mm can be misleading in certain clinical situations, as deeper PD values (6–7 mm) may be com-
+
+Search terms
+(“Peri-­implantitis” OR “Periimplantitis” OR “Peri implantitis” OR
+“Peri-­implant disease”)
+AND (“Surgical treatment” OR “Surgery” OR “Surgical therapy”
+OR “Surgical debridement”
+OR “Reconstructive therapy” OR “Regenerative” OR “Resective”
+OR “Implantoplasty”)
+AND (“Effectiveness” OR “Outcomes” OR “Clinical outcomes”
+OR “Success” OR “Implant survival”)
+
+patible with peri-­implant health in cases with deep implant insertion
+or thick supracrestal soft tissues.10
+Overall, surgical therapy for peri-­implantitis is consistently
+
+2.1 | Inclusion and exclusion criteria
+
+associated with considerable improvements in clinical signs of inflammation (reduced BOP, PD, and suppuration), though no par-
+
+Randomized controlled trials (RCTs), prospective controlled clini-
+
+ticular surgical modality has demonstrated clear superiority.1,11–13
+
+cal trials (CCTs), and prospective or retrospective case series with
+
+Reconstructive approaches, however, tend to yield more favorable
+
+a follow-­up period of at least 6 months reporting on the associa-
+
+outcomes in terms of radiographic defect fill and postoperative
+
+tion between local, patient-­related, and surgery-­related factors and
+
+1,11,13
+
+Reported treatment success rates, based
+
+the outcomes of surgical peri-­implantitis treatment were included.
+
+on different success criteria, vary considerably—ranging from 33%
+
+soft-­tissue stability.
+
+Studies with a minimum of 10 patients (five per group in controlled
+
+to 75% of patients for non-­reconstructive approaches and 11% to
+
+studies) were considered. All surgical treatment approaches, includ-
+
+66.6% of patients for reconstructive approaches over follow-­up
+
+ing non-­reconstructive/resective and reconstructive techniques, as
+
+16000757, 0, Downloaded from https://onlinelibrary.wiley.com/doi/10.1111/prd.70052 by Turkey Cochrane Evidence Aid, Wiley Online Library on [11/09/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+2
+
+

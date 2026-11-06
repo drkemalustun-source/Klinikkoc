@@ -1,0 +1,618 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://akilli-tahta.local/schema/ders.schema.json",
+  "title": "Akıllı Tahta ders dosyası",
+  "description": "Bir dersin anlatım metnini, tahta komutlarını ve sorularını tanımlar. Oynatıcıdan bağımsızdır.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "id",
+    "title",
+    "language",
+    "goals",
+    "sections"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "Klasör adıyla aynı kısa kimlik."
+    },
+    "title": {
+      "type": "string"
+    },
+    "subtitle": {
+      "type": "string"
+    },
+    "language": {
+      "type": "string",
+      "description": "BCP 47 dil kodu, örn. tr-TR."
+    },
+    "level": {
+      "type": "string",
+      "description": "Hedef kitle, örn. 'Lisans 5. sınıf'."
+    },
+    "distribution": {
+      "enum": ["open", "faculty"],
+      "description": "open (varsayılan): açık pakete ve depoya girer. faculty: yalnız fakülte içi pakete girer (telifli görseller içerebilir); paketle.mjs ancak --fakulte ile kataloğa ekler."
+    },
+    "estimatedMinutes": {
+      "type": "number"
+    },
+    "authors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "source": {
+      "type": "object",
+      "description": "Dersin dayandığı kaynak ve lisansı.",
+      "properties": {
+        "citation": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string",
+          "description": "Tahta köşesindeki kaynak etiketi (ör. \"Makale\", \"Ders notu\"). Yoksa \"Makale\"."
+        },
+        "doi": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "license": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "audio": {
+      "type": "object",
+      "description": "İsteğe bağlı önceden üretilmiş ses (örn. Piper). Yoksa tarayıcı seslendirmesi kullanılır.",
+      "properties": {
+        "manifest": {
+          "type": "string",
+          "description": "Ders klasörüne göre ses manifesti yolu (tools/ses-uret.py üretir)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "knowledge": {
+      "type": "object",
+      "description": "Canlı soru-cevap için kaynak dizini (tools/dizin-uret.py). Verilmezse ders klasöründeki kaynak-dizini.json aranır.",
+      "properties": {
+        "index": {
+          "type": "string",
+          "description": "Ders klasörüne göre dizin dosyası yolu."
+        }
+      },
+      "additionalProperties": false
+    },
+    "assets": {
+      "type": "object",
+      "description": "Tahtada gösterilecek görseller. Anahtar, komutlarda 'asset' olarak kullanılır.",
+      "additionalProperties": {
+        "$ref": "#/$defs/asset"
+      }
+    },
+    "goals": {
+      "type": "array",
+      "description": "Öğrenme hedefleri: ana hedef ve alt hedefler. Sorular alt hedeflere bağlanır.",
+      "items": {
+        "$ref": "#/$defs/goal"
+      }
+    },
+    "sections": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/section"
+      }
+    },
+    "sessions": {
+      "type": "array",
+      "description": "Yaklaşık 30 dakikalık çalışma dilimleri. Dilim değişince oynatıcı durur ve mola önerir.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "sections"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "minutes": {
+            "type": "number"
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "misconceptions": {
+      "type": "array",
+      "description": "İzlenen özel yanlış çıkarımlar. Çeldiricilerin 'misconception' alanı ve soruların 'targets' alanı bu kimliklere bağlanır.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "goal"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "goal": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "asset": {
+      "type": "object",
+      "required": [
+        "src"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "src": {
+          "type": "string",
+          "description": "Ders klasörüne göre yol."
+        },
+        "alt": {
+          "type": "string"
+        },
+        "caption": {
+          "type": "string"
+        },
+        "credit": {
+          "type": "string",
+          "description": "Kaynak ve lisans satırı."
+        },
+        "open": {
+          "type": "boolean",
+          "description": "false ise görsel açık lisanslı değildir: canlı soru-cevapta model bu görseli doğrudan gösteremez, yalnız uyarlayarak çizebilir. Varsayılan true."
+        },
+        "license": {
+          "type": "string",
+          "description": "Görselin lisansı (ör. CC BY 4.0)."
+        }
+      }
+    },
+    "goal": {
+      "type": "object",
+      "required": [
+        "id",
+        "title"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "subgoals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "text"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "sourceRef": {
+                "type": "string",
+                "description": "Kaynakta sayfa/bölüm, örn. 's. 6, Defect configuration'."
+              }
+            }
+          }
+        }
+      }
+    },
+    "section": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "steps"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "goals": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Bu bölümün işlediği alt hedef kimlikleri."
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/step"
+          }
+        }
+      }
+    },
+    "step": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Ders içinde benzersiz; ses dosyaları bu kimlikle adlandırılır."
+        },
+        "say": {
+          "type": "string",
+          "description": "Seslendirilecek metin. {1}, {2} gibi işaretler, aynı numaralı 'cue' taşıyan tahta komutlarının o anda çalışmasını sağlar."
+        },
+        "board": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/command"
+          }
+        },
+        "question": {
+          "$ref": "#/$defs/question"
+        },
+        "pauseAfter": {
+          "type": "number",
+          "description": "Adımdan sonra bekleme (saniye)."
+        },
+        "sourceRef": {
+          "type": "string",
+          "description": "Adımın dayandığı yer, örn. 's. 6 · 3.5'."
+        },
+        "basis": {
+          "enum": [
+            "source",
+            "inference",
+            "example"
+          ],
+          "description": "source: makale söylüyor · inference: öğretici yorumu · example: kurgusal örnek."
+        }
+      }
+    },
+    "command": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "description": "Tahta komutu. 'cue' verilmezse adım başında çalışır.",
+      "properties": {
+        "type": {
+          "enum": [
+            "clear",
+            "title",
+            "bullets",
+            "point",
+            "text",
+            "term",
+            "image",
+            "highlight",
+            "unhighlight",
+            "zoom",
+            "unzoom",
+            "table",
+            "flow",
+            "draw",
+            "compare"
+          ]
+        },
+        "cue": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "title"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "text"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "bullets"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "items"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "point"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "text"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "text"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "text"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "term"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "term",
+              "definition"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "image"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "asset"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "highlight"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "region"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "zoom"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "region"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "table"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "headers",
+              "rows"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "flow"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "nodes"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "draw"
+              }
+            }
+          },
+          "then": {
+            "anyOf": [
+              { "required": ["shapes"] },
+              { "required": ["template"] }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "compare"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "columns"
+            ]
+          }
+        }
+      ]
+    },
+    "question": {
+      "type": "object",
+      "required": [
+        "type",
+        "prompt",
+        "goal"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "single",
+            "multiple",
+            "truefalse"
+          ]
+        },
+        "goal": {
+          "type": "string",
+          "description": "Yoklanan alt hedef kimliği."
+        },
+        "prompt": {
+          "type": "string"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "text": {
+                "type": "string"
+              },
+              "correct": {
+                "type": "boolean"
+              },
+              "why": {
+                "type": "string",
+                "description": "Bu seçenek seçilince gösterilen açıklama."
+              },
+              "misconception": {
+                "type": "string",
+                "description": "Bu çeldirici seçilirse açılan yanılgı kimliği."
+              }
+            }
+          }
+        },
+        "answer": {
+          "type": "boolean",
+          "description": "truefalse için doğru cevap."
+        },
+        "explanation": {
+          "type": "string",
+          "description": "Cevaptan sonra seslendirilen genel açıklama."
+        },
+        "sourceRef": {
+          "type": "string"
+        },
+        "review": {
+          "type": "string",
+          "description": "Yanlış cevapta dönülecek adımın kimliği (ör. ilgili şeklin gösterildiği adım). Verilmezse oynatıcı, aynı bölümde sorunun kaynağına (sourceRef) en çok uyan, tercihen görselli anlatım adımını seçer."
+        },
+        "probe": {
+          "type": "boolean",
+          "description": "Yoklama sorusu. 'Önce ben yanıtlayayım' modunda bölüm anlatımından önce, diğer modda sonra sorulur."
+        },
+        "kind": {
+          "enum": [
+            "check",
+            "application"
+          ],
+          "description": "application: kurgusal yeni bir olguda uygulama."
+        },
+        "scenario": {
+          "type": "string",
+          "description": "Kurgusal olgu metni (uygulama soruları için). Tahtada 'KURGUSAL' etiketiyle gösterilir."
+        },
+        "hints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Kademeli ipuçları; kaç tanesinin kullanıldığı kaydedilir."
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Bu sorunun doğrudan yokladığı yanılgı kimlikleri; doğru cevap onları kapatır."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ses Testi</title>
+  <link rel="stylesheet" href="test.css">
+</head>
+<body>
+  <header class="top">
+    <h1>Ses testi</h1>
+    <p>Konuşma tanıma (sesi yazıya çevirme) ve seslendirme (yazıyı sese çevirme) motorlarını aynı cümlelerle karşılaştırır.
+      Sonuçlar yalnızca bu tarayıcıda saklanır; siz <em>Sonuçlar</em> bölümünden dosya olarak indirmedikçe hiçbir yere gönderilmez.</p>
+    <p class="warn" id="originWarn" hidden>Bu sayfa güvenli bir adreste açılmamış. Mikrofon ve model önbelleği çalışmaz.
+      Lütfen proje klasöründe <code>python3 tools/sunucu.py</code> komutunu çalıştırın; sayfa <code>http://localhost:8800/ses-testi/</code> adresinde açılır.</p>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="hazirlik" aria-selected="true">1. Hazırlık</button>
+      <button role="tab" data-tab="kayit">2. Kayıt</button>
+      <button role="tab" data-tab="stt">3. Konuşma tanıma</button>
+      <button role="tab" data-tab="tts">4. Seslendirme</button>
+      <button role="tab" data-tab="sozluk">5. Telaffuz sözlüğü</button>
+      <button role="tab" data-tab="sonuc">6. Sonuçlar</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- 1. Hazırlık -->
+    <section class="tab" id="hazirlik">
+      <h2>Motorları seçin ve hazırlayın</h2>
+      <p class="help">"Hazırla" düğmesi gereken modelleri indirir. İlk seferde birkaç dakika sürebilir; sonra tarayıcıda saklanır.
+        Hazırlama süresi ve indirilen boyut ölçülür. Bir motor bu cihazda çalışmıyorsa nedeni yanında yazar.</p>
+      <h3>Konuşma tanıma</h3>
+      <div class="engines" id="sttEngines"></div>
+      <h3>Seslendirme</h3>
+      <div class="engines" id="ttsEngines"></div>
+      <div class="actions">
+        <button class="primary" id="prepareAll">Seçilenleri hazırla</button>
+        <span class="muted" id="prepareNote"></span>
+      </div>
+      <details class="glossary">
+        <summary>Terimler</summary>
+        <dl>
+          <dt>Kelime hata oranı (WER)</dt><dd>Yanlış, eksik ya da fazla yazılan kelimelerin doğru metindeki kelime sayısına oranı. Düşük olan iyidir; %10 her on kelimede bir hata demektir.</dd>
+          <dt>Karakter hata oranı (CER)</dt><dd>Aynı hesap harf düzeyinde. Ek ve yazım farklarını daha yumuşak ölçer.</dd>
+          <dt>Gecikme</dt><dd>Konuşma bittikten sonra yazının gelmesine kadar geçen süre.</dd>
+          <dt>WebGPU / WASM</dt><dd>Modelin ekran kartında (hızlı) ya da işlemcide (daha yavaş) çalışması.</dd>
+          <dt>Cihaz içi</dt><dd>Ses ya da metin bilgisayardan çıkmadan işlenir.</dd>
+        </dl>
+      </details>
+    </section>
+
+    <!-- 2. Kayıt -->
+    <section class="tab" id="kayit" hidden>
+      <h2>Cümleleri bir kez okuyun</h2>
+      <p class="help">Her cümlenin yanındaki <strong>Kaydet</strong> düğmesine basın, cümleyi normal hızınızla okuyun, bitince <strong>Durdur</strong>'a basın.
+        Tüm motorlar bu kayıtları dinler; böylece karşılaştırma aynı koşullarda yapılır. Kayıtlar bu tarayıcıda saklanır.</p>
+      <div class="meter" aria-hidden="true"><div class="meter-fill" id="meterFill"></div></div>
+      <ol class="sentences" id="recList"></ol>
+      <div class="actions">
+        <button id="exportRec">Kayıtları dosyaya kaydet</button>
+        <label class="btn">Kayıt dosyası yükle<input type="file" id="importRec" accept=".json,application/json" hidden></label>
+        <button class="ghost" id="clearRec">Tüm kayıtları sil</button>
+      </div>
+    </section>
+
+    <!-- 3. Konuşma tanıma -->
+    <section class="tab" id="stt" hidden>
+      <h2>Konuşma tanıma karşılaştırması</h2>
+      <p class="help">Hazırlanan her motor kayıtların hepsini dinler. Tarayıcının kendi tanıyıcısı kaydı gerçek zamanlı dinlediği için
+        onun turu kayıt süresi kadar sürer. Bu sırada sekmeyi açık tutun.</p>
+      <p class="warn small">Dikkat: <strong>Tarayıcı · Google sunucusu</strong> seçiliyse kayıtlarınız Google'a gönderilir.</p>
+      <label class="check"><input type="checkbox" id="liveMode"> Tarayıcı tanıyıcısı kayıttan çalışmıyorsa: cümleleri canlı okuyacağım (mikrofon)</label>
+      <div class="actions">
+        <button class="primary" id="runStt">Değerlendirmeyi başlat</button>
+        <button class="ghost" id="stopStt" hidden>Durdur</button>
+        <span class="muted" id="sttProgress"></span>
+      </div>
+      <div id="sttSummary"></div>
+      <div id="sttDetail"></div>
+    </section>
+
+    <!-- 4. Seslendirme -->
+    <section class="tab" id="tts" hidden>
+      <h2>Seslendirme puanlaması</h2>
+      <p class="help">Her cümleyi her sesle dinleyip iki puan verin: <strong>Anlaşılırlık</strong> (söyleneni kolayca anlıyor musunuz?) ve
+        <strong>Doğallık</strong> (insan sesine ne kadar yakın?). 1 çok kötü, 5 çok iyi. Yanlış okunan terim varsa işaretleyin.
+        Hepsini puanlamanız gerekmez; en az 6–8 cümle yeterli bir fikir verir.</p>
+      <div class="row">
+        <label>Hız <input type="range" id="ttsRate" min="0.7" max="1.3" step="0.05" value="1"> <span id="ttsRateVal">1,00</span></label>
+        <label class="check"><input type="checkbox" id="useDict" checked> Telaffuz sözlüğünü uygula</label>
+        <label class="check"><input type="checkbox" id="blindMode"> Kör puanlama (ses adlarını gizle)</label>
+      </div>
+      <div id="ttsTable"></div>
+    </section>
+
+    <!-- 5. Telaffuz sözlüğü -->
+    <section class="tab" id="sozluk" hidden>
+      <h2>Telaffuz sözlüğü</h2>
+      <p class="help">Seslendirici bir terimi yanlış okuyorsa buraya nasıl okunması gerektiğini yazın. Metin seslendirilmeden önce bu sözlükten geçer.
+        Kayıt sözcüğün başında aranır, ek korunur: "implantoplasti → implanto plasti" yazarsanız "implantoplastinin" de düzelir.
+        <em>Tam sözcük</em> işaretliyse yalnız sözcüğün tamamı eşleşir (kısaltmalar için).</p>
+      <table class="dict"><thead><tr><th>Yazım</th><th>Okunuş</th><th>Tam sözcük</th><th></th></tr></thead><tbody id="dictBody"></tbody></table>
+      <div class="actions">
+        <button id="dictAdd">Satır ekle</button>
+        <button class="primary" id="dictSave">Kaydet</button>
+        <button id="dictDownload">telaffuz.json olarak indir</button>
+        <button class="ghost" id="dictReset">Dosyadaki sözlüğe dön</button>
+      </div>
+      <div class="row">
+        <input type="text" id="dictTry" class="grow" value="Peri-implantitis tedavisinde implantoplasti ve açık flep debridmanı, follow-up süresi on iki aydı.">
+        <select id="dictVoice"></select>
+        <button id="dictSpeak">Dinle</button>
+      </div>
+      <p class="muted small" id="dictPreview"></p>
+    </section>
+
+    <!-- 6. Sonuçlar -->
+    <section class="tab" id="sonuc" hidden>
+      <h2>Sonuçlar</h2>
+      <p class="help">Aşağıdaki tablolar bu tarayıcıda yaptığınız testlerin özetidir. <strong>Raporu indir</strong> ile tek bir dosya alın ve bana gönderin;
+        öneriyi bu dosyaya göre yazacağım. Dosyada ses kaydı yoktur, yalnız sonuçlar ve cihaz bilgisi vardır.</p>
+      <div id="resultTables"></div>
+      <div class="actions">
+        <button class="primary" id="downloadReport">Raporu indir</button>
+        <button id="copyReport">Rapor metnini kopyala</button>
+        <button class="ghost" id="clearResults">Sonuçları sıfırla</button>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script src="../js/ses/ses.js"></script>
+  <script src="../js/ses/tts-tarayici.js"></script>
+  <script src="../js/ses/tts-piper.js"></script>
+  <script src="../js/ses/stt-tarayici.js"></script>
+  <script src="../js/ses/stt-whisper.js"></script>
+  <script src="../js/ses/stt-duyu.js"></script>
+  <script src="test.js"></script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+ "_aciklama": "Tahtanın sesi. Eski erkek sese dönmek için motor satırını \"piper\" yapın. motor=pocket: Pocket TTS Türkçe (wite-tech, CC-BY-4.0), ses: female_1/2/3, male_1/2/3. yedek: Pocket hazır değilken ya da hata verirse kullanılan Piper sesi. tarayici_ses: internetsiz tarayıcı sesi (öğrenci cihazı).",
+ "motor": "pocket",
+ "ses": "female_3",
+ "tohum": 1,
+ "yedek": "tr_TR-dfki-medium",
+ "tarayici_ses": "tr_TR-ilkiz-medium"
+}

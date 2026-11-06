@@ -1,0 +1,200 @@
+versus 29% of those without.76 Similarly, radiographic marginal
+
+consequence of a history of periodontitis, which, as discussed in
+
+bone level at 1 year was positively associated with the risk of fur-
+
+the previous section, may also favor disease recurrence following
+
+ther disease deterioration (OR = 1.4; 95% CI: 1.1–1.7; p = 0.01).76
+
+surgical peri-­implantitis therapy.
+
+Consistent outcomes were reported in another 5-­year longitudinal investigation, which showed that the presence of residual PD
+≥5 mm (at 3 or 4 sites) in patients treated with non-­reconstructive
+
+4.7 | Macrophage polarization
+
+surgical approach, significantly increased the risk of further disease
+progression (p = 0.028).79 Notably, disease progression among implants with circumferential residual PDs increased from 23% during
+
+Multiple studies have highlighted the pivotal role of macrophage
+polarization in the immunopathology of peri-­implantitis.84–86 During
+
+the first 5 years to 53% between the 5-­ and 10-­year follow-­ups. 80
+
+the onset and progression of peri-­implant disease, monocytes are re-
+
+Moreover, a retrospective analysis including 50 patients with 95
+
+cruited in response to damage-­ or pathogen-­associated signals and
+
+implants followed for 2.0 to 10.8 years after non-­reconstructive
+
+differentiate toward distinct functional macrophage subsets, most
+
+surgical treatment, found that the probability of no further bone
+
+notably the classically activated M1 (pro-­inflammatory) or the alter-
+
+loss was 77% in the absence of BOP and 83% when PD was ≤5 mm
+
+natively activated M2 (anti-­inflammatory) phenotypes, depending
+
+at follow-­up.77 When both conditions were met (no BOP and PD
+
+on tissue-­specific microenvironmental stimuli.86,87 M1 macrophages
+
+≤5 mm), the probability of no additional bone loss was 78%.
+
+77
+
+are a major source of pro-­inflammatory cytokines, including inter-
+
+In summary, residual peri-­implant pockets, persistent BOP, and
+
+leukin (IL)-­1β, IL-­6, IL-­12 and tumor necrosis factor (TNF)-­α , and
+
+unfavorable bone levels after surgery strongly predict disease recur-
+
+are key contributors of persistent inflammation and peri-­implant
+
+rence, underscoring the importance of achieving thorough disease
+
+tissue breakdown.88,89 In contrast, M2 macrophages promote in-
+
+resolution at early follow-­up visits.
+
+flammation resolution and tissue repair through the expression “anti-­
+inflammatory” mediators such as arginase (ARG)-­1, IL-­4, IL-­10, IL-­35,
+and transforming growth factor (TGF)-­β1, while supporting the clear-
+
+4.6 | Type of prosthesis
+
+ance of apoptotic cells and maintaining mucosal homeostasis.90–93
+
+Consistent with this paradigm, peri-­implantitis lesions—priProsthetic design has been identified as a potential factor influencing
+
+marily characterized by immunohistochemical and immunofluo-
+
+peri-­implant health and surgical outcomes. Previous clinical studies
+
+rescent analyses—exhibit a marked shift toward M1 polarization,
+
+have shown that implants supporting removable prostheses carry
+
+while presenting an increased M1/M2 detection ratio in peripheral
+
+a higher risk of peri-­implant disease compared with those restored
+
+blood, as assessed by flow cytometry using phenotype-­specific
+
+using fixed reconstructions.81–83
+
+surface markers, which positively correlates with plaque index,
+bleeding on probing, and probing depth.94 Clinical data further
+demonstrate a progressive increase in M1 expression with peri-­
+
+4.6.1 | Pooled various surgical therapies
+
+implantitis progression, where sites showing marginal bone loss
+exceeding 50% of the implant length present a significantly higher
+
+Two retrospective studies have further reported on the influence
+
+percentage of CD80 + M1 macrophage immunodetection than
+
+of prosthetic design on the treatment outcomes of surgical
+
+moderate or early peri-­implantitis lesions. 85 Experimental models
+
+peri-­implantitis therapy, following either non-­reconstructive
+
+of peri-­implantitis corroborate this M1-­p redominant response,95
+
+56,59
+
+characterized by upregulated expression of the M1-­associated
+
+or reconstructive approaches.
+follow-­up
+
+of
+
+In one study, after a mean
+
+30.80 ± 19.62 months,
+
+implants
+
+supporting
+
+marker inducible nitric oxide synthase (iNOS) and the cytokines
+
+overdentures had 3.6-­fold higher odds of requiring surgical
+
+IL-­1β, IL-­6 , and TNF-­α , together with the reduced expression of
+
+retreatment compared with those supporting single crowns
+
+the M2-­associated marker CD206 and the inflammation–resolving
+
+(multilevel analysis, OR = 3.59, p = 0.003). In another retrospective
+
+mediators Arg-­1 and IL-­10 within peri-­implant lesions.96,97 In this
+
+analysis, disease recurrence (i.e., bone loss >1 mm, or the need
+
+context, the therapeutic inhibition of M1 polarization, attenuat-
+
+for surgical retreatment, or implant loss/removal) was evaluated
+
+ing peri-­implant inflammation and bone loss, provides additional
+
+over a mean follow-­up of 3.06 ± 1.52 years. 59 In this study, fixed
+
+relevant evidence that supports the central pathogenic role of M1
+
+complete prostheses were associated with significantly higher odds
+
+macrophages.94,95 Suppressing M1 activity leads to reduced peri-­
+
+of recurrence (univariate analysis: OR = 9.45, p = 0.024) compared
+
+implant tissue levels of IL-­1β, IL-­6 , and TNF-­α expression, while
+
+with single implant-­supported crowns or fixed partial dentures;
+
+upregulating osteogenic markers such as alkaline phosphatase,
+
+however, this association was not retained in the multivariate
+
+Runx2, and osteocalcin. This phenotypic shift not only dampens
+
+model. 59 The higher risk for disease recurrence associated with
+
+chronic inflammation but also limits bone resorption across multi-
+
+removable and full-­arch restorations may be partly explained by
+
+ple peri-­implantitis models.95,98–99
+
+the greater difficulty in achieving and maintaining effective plaque
+
+A retrospective clinical study further investigated macrophage
+
+control compared with fixed prostheses. Furthermore, in the
+
+polarization in granulation tissue samples collected from 14 pa-
+
+majority of cases, edentulism leading to full-­arch restorations is a
+
+tients undergoing surgical combined therapy for peri-­implantitis.
+
+16000757, 0, Downloaded from https://onlinelibrary.wiley.com/doi/10.1111/prd.70052 by Turkey Cochrane Evidence Aid, Wiley Online Library on [11/09/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+| 13
+
+RAMANAUSKAITE et al.
+
+

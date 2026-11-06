@@ -1,0 +1,228 @@
+{
+  "version": "3.0",
+  "frozen": true,
+  "subgoals": [
+    {
+      "id": "H1.a",
+      "parent": "H1",
+      "label": "Derlemenin tasarımı ve kapsamı",
+      "pages": [
+        1,
+        2,
+        3
+      ],
+      "section": "Abstract; 2; 2.1"
+    },
+    {
+      "id": "H1.b",
+      "parent": "H1",
+      "label": "Kanıt çeşitliliği ve genelleme sınırı",
+      "pages": [
+        2,
+        3
+      ],
+      "section": "2.1; 3.2"
+    },
+    {
+      "id": "H2.a",
+      "parent": "H2",
+      "label": "Klinik ve radyografik sonuç ayrımı",
+      "pages": [
+        2,
+        3,
+        4
+      ],
+      "section": "1; 3.2"
+    },
+    {
+      "id": "H2.b",
+      "parent": "H2",
+      "label": "Başarı tanımı ve bağlam",
+      "pages": [
+        2,
+        3
+      ],
+      "section": "1; 3.2"
+    },
+    {
+      "id": "H3.a",
+      "parent": "H3",
+      "label": "Defekt morfolojisi ve gerekçe",
+      "pages": [
+        5,
+        6
+      ],
+      "section": "3.5"
+    },
+    {
+      "id": "H3.b",
+      "parent": "H3",
+      "label": "Seçim ve materyal bağlamının sınırı",
+      "pages": [
+        5,
+        6,
+        7
+      ],
+      "section": "3.5"
+    },
+    {
+      "id": "H4.a",
+      "parent": "H4",
+      "label": "Başlangıç hastalık şiddeti",
+      "pages": [
+        10,
+        11
+      ],
+      "section": "4.1"
+    },
+    {
+      "id": "H4.b",
+      "parent": "H4",
+      "label": "Keratinize mukoza",
+      "pages": [
+        11
+      ],
+      "section": "4.2"
+    },
+    {
+      "id": "H4.c",
+      "parent": "H4",
+      "label": "İmplant konumu",
+      "pages": [
+        11,
+        12
+      ],
+      "section": "4.3"
+    },
+    {
+      "id": "H4.d",
+      "parent": "H4",
+      "label": "İmplant yüzeyi",
+      "pages": [
+        12
+      ],
+      "section": "4.4"
+    },
+    {
+      "id": "H4.e",
+      "parent": "H4",
+      "label": "Cerrahi sonrası klinik göstergeler",
+      "pages": [
+        12,
+        13
+      ],
+      "section": "4.5"
+    },
+    {
+      "id": "H4.f",
+      "parent": "H4",
+      "label": "Protez tipi",
+      "pages": [
+        13
+      ],
+      "section": "4.6"
+    },
+    {
+      "id": "H4.g",
+      "parent": "H4",
+      "label": "Makrofaj polarizasyonu",
+      "pages": [
+        13,
+        14
+      ],
+      "section": "4.7"
+    },
+    {
+      "id": "H5.a",
+      "parent": "H5",
+      "label": "Periodontitis öyküsü, sigara ve cinsiyet",
+      "pages": [
+        14,
+        15,
+        16,
+        17
+      ],
+      "section": "5.1–5.3; 6"
+    },
+    {
+      "id": "H5.b",
+      "parent": "H5",
+      "label": "Destekleyici bakım ve uyum",
+      "pages": [
+        16,
+        17
+      ],
+      "section": "5.4"
+    },
+    {
+      "id": "H6.a",
+      "parent": "H6",
+      "label": "Flep tasarımı",
+      "pages": [
+        3
+      ],
+      "section": "3.1"
+    },
+    {
+      "id": "H6.b",
+      "parent": "H6",
+      "label": "Greft materyali",
+      "pages": [
+        4,
+        5
+      ],
+      "section": "3.3.1"
+    },
+    {
+      "id": "H6.c",
+      "parent": "H6",
+      "label": "Biyolojik yardımcılar",
+      "pages": [
+        4,
+        5,
+        17
+      ],
+      "section": "3.3.1; 6"
+    },
+    {
+      "id": "H6.d",
+      "parent": "H6",
+      "label": "Membran",
+      "pages": [
+        5
+      ],
+      "section": "3.4"
+    },
+    {
+      "id": "H6.e",
+      "parent": "H6",
+      "label": "İyileşme modu",
+      "pages": [
+        6,
+        7,
+        8
+      ],
+      "section": "3.6"
+    },
+    {
+      "id": "H6.f",
+      "parent": "H6",
+      "label": "Sistemik antibiyotik",
+      "pages": [
+        8,
+        9
+      ],
+      "section": "3.7"
+    },
+    {
+      "id": "H6.g",
+      "parent": "H6",
+      "label": "Operatörle ilişkili faktörler",
+      "pages": [
+        9,
+        10
+      ],
+      "section": "3.8"
+    }
+  ]
+}

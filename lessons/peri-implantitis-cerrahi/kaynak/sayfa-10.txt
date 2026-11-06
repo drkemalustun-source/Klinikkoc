@@ -1,0 +1,221 @@
+|
+
+RAMANAUSKAITE et al.
+
+procedural standardization, there was significant variability in treat-
+
+peri-­implantitis treatment, defined as no progressive bone loss
+
+ment success rates between the four operators after 12 months. The
+
+>1 mm, absence of Sup, no BOP at ≥2 sites, and no PD >5 mm, at
+
+procedures performed by less experienced surgeons were associated
+
+implants with initial bone loss limited to 1–3 mm (70%), compared
+
+with lower success rates (multivariate analysis: OR = 0.12, p = 0.003).56
+
+with only 25% success at those with bone loss of 7–9 mm.58 In the
+
+These findings suggest that experience, individual surgical skills, and
+
+same study, initial bone loss was found to be a significant predictor
+
+intraoperative decision-­making may also affect clinical outcomes.
+
+of treatment failure, defined as implant loss/removal or progressive
+bone loss ≥1 mm, Sup, BOP at 3–4 sites, and PD ≥5 mm, after
+
+3.8.2 | Non-­reconstructive/Resective therapy
+
+12 months (multivariate analysis: OR = 1.48; p = 0.03).58
+Longer-­term studies further confirmed the negative effect of initial bone loss extension upon therapeutic outcomes of surgical ther-
+
+The aforementioned observation supports the results of a prior
+
+apy. In a retrospective study with a mean follow-­up period of 6.4 ± 2.7,
+
+retrospective study, which identified the operators experience
+
+baseline marginal bone loss ≥4 mm significantly increased the risk for
+
+level as a critical determinant of treatment success in resective
+
+further disease progression, defined as bone loss ≥1.0 mm or implant
+
+peri-­implantitis therapy.
+
+58
+
+Specifically, patients treated earlier
+
+loss following non-­reconstructive peri-­implantitis therapy (multivar-
+
+within the observation period experienced significantly higher
+
+iate analysis: OR = 5.15; p = 0.027).62 Similarly, over a 7-­year period,
+
+failure rates compared with those treated later, indicating the
+
+non-­reconstructive peri-­implantitis resulted in significantly higher
+
+development of a learning curve associated with the surgical
+
+implant loss rates at implants featuring initial bone loss ≥60% of im-
+
+peri-­implantitis. 58
+
+management
+
+of
+
+retrospective
+
+analysis
+
+reported
+
+that
+
+Furthermore,
+when
+
+two
+
+another
+
+plant length (hazard ratio [HR] = 4.2; 95% CI: 1.9–9.4; p < 0.001).63
+
+implants
+
+were surgically treated for peri-­implantitis within the same
+session, employing either non-­reconstructive or reconstructive
+
+4.1.2 | Pooled various surgical therapies
+
+approaches, the odds of treatment failure (i.e., radiographic
+bone loss >1.0 mm, the need for surgical retreatment, or implant
+
+When considering studies that pooled different surgical treatment
+
+loss/removal) were significantly increased (multivariate analysis:
+
+modalities, implants with >50% bone loss had a 23.6-­fold increased
+
+OR = 31.68, p = 0.001) over a mean follow-­up of 3 years. 59
+Taken together, surgeon-­related factors, including experience,
+
+risk of failure, defined as positive BOP and/or longitudinal bone loss
+≥0.5 mm and/or PD ≥5 mm, compared with those exhibiting <25%
+
+intraoperative decision-­making process, and case complexity (e.g.,
+
+bone loss (OR = 23.6; p = 0.014).64 Similar outcomes were observed
+
+number of implants treated), appear to affect the success of peri-­
+
+in a retrospective evaluation of 328 implants in 150 patients, with
+
+implantitis surgery, emphasizing the importance of training, proce-
+
+a mean follow-­up of 26 ± 20 months after non-­reconstructive peri-­
+
+dural consistency, and individualized case planning.
+
+implantitis treatment.65 This study reported significantly reduced
+
+treatment success rates, defined as absence of BOP, absence of Sup,
+
+4
+
+|
+
+and PD ≤4 mm, at implants with initial bone loss exceeding 1/3 to
+
+LO C A L FAC TO R S
+
+2/3 of the implant length (OR = 6.5; 95% CI: 1.4–30; p < 0.05).65
+
+4.1 | Initial severity of the disease
+4.1.1 | Non-­reconstructive/Resective therapy
+
+4.1.3 | Non-­reconstructive/Resective therapy and
+pooled various surgical therapies
+
+Numerous studies have highlighted the prognostic relevance of initial
+
+In the same context, baseline PD and Sup have also emerged as
+
+bone loss severity on the effectiveness of surgical peri-­implantitis
+
+critical determinants of success. A sub-­analysis of a 12-­month mul-
+
+treatment. Specifically, 6 months after non-­reconstructive therapy,
+
+ticenter RCT comparing reconstructive versus non-­reconstructive
+
+74% of implants (34/46) with initial bone loss of 2–4 mm, measured
+
+peri-­implantitis therapy identified baseline PD as the strongest
+
+intraoperatively, were classified as healthy, compared with 50% of
+
+predictor of surgical treatment outcomes, regardless of the treat-
+
+implants with initial bone loss of 5–6 mm.60 Among these, implants
+
+ment modality employed. 23 Higher baseline PD was positively
+
+featuring ≥7 mm of bone loss, 7 from 18 were removed by the 3-­
+
+correlated with final PD, postoperative recession, and marginal
+
+month follow-­up.
+
+60
+
+A similar trend was reported in another 6-­
+
+bone gain, but negatively associated with the likelihood of pocket
+
+month prospective case series, where implants with initial bone loss
+
+closure, defined as final PD ≤5 mm (OR = 0.71; 95% CI: 0.54–0.93;
+
+exceeding 7 mm were significantly more likely to present BOP, Sup,
+
+p < 0.05).66 In addition, initial PD >8 mm was negatively associated
+
+and the combination of BOP and PD ≥4 mm or PD ≥6 mm, after non-­
+
+with resective peri-­implantitis treatment success, defined as ab-
+
+reconstructive therapy at follow-­up.
+
+61
+
+Indeed, none of the implants
+
+with initial bone loss ≥7 mm were free of BOP, and 39% had Sup
+at 6 months.
+
+61
+
+sence of BOP and PD ≥6 mm (multivariate analysis: OR = 2.1; 95%
+
+CI: 1.1–3.9; p = 0.05).61 Moreover, implants displaying preopera-
+
+These findings align with a retrospective analysis
+
+tive Sup were more likely to present persistent Sup 6 months after
+
+showing higher success rates at 12 months after non-­reconstructive
+
+resective therapy (OR = 23.3; 95% CI: 1.6–333.3).61 The presence
+
+16000757, 0, Downloaded from https://onlinelibrary.wiley.com/doi/10.1111/prd.70052 by Turkey Cochrane Evidence Aid, Wiley Online Library on [11/09/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+10
+
+

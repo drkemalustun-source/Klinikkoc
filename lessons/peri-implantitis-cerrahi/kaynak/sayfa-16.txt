@@ -1,0 +1,201 @@
+|
+
+RAMANAUSKAITE et al.
+
+assessing the efficacy of reconstructive peri-­implantitis therapy
+
+adjustment in the multivariate model.59 Otherwise, several other
+
+with 5 to 7 years follow-­up of failed to identify smoking as a signifi-
+
+studies evaluating both reconstructive and non-­reconstructive
+
+cant predictor of clinical treatment outcomes.38,44,48
+
+treatment modalities failed to identify any significant association
+between patient gender and therapeutic outcomes of surgical
+treatment of peri-­implantitis.38,43,48,64,80
+
+5.2.2 | Pooled various surgical therapies
+Similar contradictions also arise in studies pooling different surgical approaches. Specifically, a retrospective study including 245
+
+5.4 | Postoperative adherence to
+supportive therapy
+
+patients found that nonsmokers were significantly more likely to
+achieve treatment success (i.e., BOP/Sup, PD <5 mm, and stable
+
+One of the most critical determinants of long-­term success in peri-­
+
+marginal bone levels), than smokers (p = 0.003), and that smoking
+
+implantitis management is the patient's adherence to supportive
+
+was significantly associated with treatment failure (i.e., no treat-
+
+postoperative care (maintenance therapy). Among the included
+
+114
+
+ment success, p = 0.0023).
+
+In a secondary analysis of a RCT com-
+
+studies, relatively few explicitly reported details about mainte-
+
+paring reconstructive and non-­reconstructive approaches, smokers
+
+nance regimens. Thirty studies clearly stated that patients were
+
+presented significantly higher residual PD values after 12 months
+
+enrolled in a structured supportive care program after surgery,
+
+(mean difference 0.6 mm), with smoking emerging as a significant
+
+and from these only 3 studies did not specify the frequency of
+
+predictor of poor clinical outcome (multivariate analysis, OR:0.60,
+
+maintenance visits. Nevertheless, abundant evidence from the
+
+p < 0.05), regardless the treatment modality.66 Supporting this,
+
+literature underscores that inadequate plaque control and infre-
+
+a retrospective analysis showed that smokers had a fourfold in-
+
+quent maintenance are major risk factors for peri-­implantitis and
+
+creased risk of disease recurrence (i.e., PD ≥6 mm + profuse BOP)
+
+its recurrence.102
+
+12 months post-­surgery, independent of the applied surgical tech-
+
+A 5-­year longitudinal study demonstrated that the incidence
+
+nique (OR:4.49, p = 0.003).75 Nevertheless, other studies with
+
+of peri-­implantitis was markedly lower in patients who adhered
+
+mean follow-­up periods of ~3 to 3.5 years reported no association
+
+to supportive maintenance therapy compared with those who did
+
+between smoking status and clinical outcomes after either recon-
+
+not (18% vs. 44%).115 Similarly, over a 20-­year observation period,
+
+structive or non-­reconstructive peri-­implantitis therapy. 23,59,64 In
+
+non-­compliant periodontally compromised patients more frequently
+
+light of these conflicting results, no definitive conclusion can be
+
+exhibited PDs exceeding 6 mm and reduced implant survival rates
+
+drawn regarding the impact of smoking on the success of surgical
+
+compared with compliant individuals.104 Moreover, preoperative
+
+peri-­implantitis treatment.
+
+plaque levels also appear to significantly influence the outcome of
+surgical therapy for peri-­implantitis.37 Specifically, lower baseline
+modified Plaque Index (mPI) values were statistically associated with
+
+5.3 | Gender
+
+treatment success (i.e., absence of profuse BOP, Sup, PD ≤5 mm, and
+no radiographic bone loss ≥1 mm), with each one-­unit increase in
+
+The potential influence of patients' gender on the outcomes of
+
+mPI being associated with reducing the odds of treatment success
+
+surgical peri-­implantitis treatment has been investigated in some
+
+by 87% (odds ratio [OR]: 0.13, p = 0.006).37
+
+studies, with inconsistent findings. In particular, a 12-­month RCT
+
+Several studies have confirmed that poor postoperative plaque
+
+reported that female patients had a significantly higher probability
+
+control negatively affects surgical therapy for peri-­implantitis out-
+
+of disease resolution (i.e., ≤1 site with BOP, absence of Sup, and
+
+comes. Based on an univariate regression analysis, the presence
+
+PD ≤5 mm) following reconstructive peri-­implantitis therapy
+
+of plaque 12 months after non-­reconstructive peri-­implantitis sur-
+
+(multivariate analysis: OR:5.56, p = 0.02).37 On the contrary, two
+
+gery significantly increase the odds of treatment failure (i.e., im-
+
+retrospective studies pooling various surgical treatment approaches
+
+plant loss, or progressive bone loss ≥1 mm + BOP at 3 to 4 sites/
+
+11,75
+
+reported opposite results.
+
+According to one analysis, female
+
+Sup + PD ≥5 mm) (OR:2.92, p = 0.042). 58 Furthermore, over a mean
+
+patients, comprising the majority of the study population (103/132),
+
+6.5 year follow-­up after non-­reconstructive surgical therapy, com-
+
+were approximately one-­third more likely to experience disease
+
+pliant patients —attending all scheduled recall visits— had a sig-
+
+recurrence (i.e., PD ≥6 mm and profuse BOP) compared with male
+
+nificantly lower treatment failure rate, defined as implant removal
+
+75
+
+patients (univariate analysis, OR:0.34, p = 0.01).
+
+However, gender
+
+or further bone loss ≥1.0 mm, compared with non-­compliant pa-
+
+did not remain as a significant factor in the multivariate model.75
+
+tients (i.e., attending fewer than 50% of recall visits; multivariate
+
+Similarly, another retrospective study found that the female gender
+
+analysis: OR:0.15; p = 0.019).62 Interestingly, treatment failure in
+
+significantly increased the risk of treatment failure (i.e., radiographic
+
+non-­compliant patients were comparable to those of erratic com-
+
+bone loss >1 mm, need for surgical retreatment, or implant loss/
+
+pliers, attending more than 15% of recall visits (p = 0.58).62 Likewise,
+
+removal) (univariate analysis, OR:12.60, 95% CI: 1.16–26.14,
+
+a prospective case series assessing resective surgical approach
+
+p = 0.032), but this association also did not remain significant after
+
+showed that presence of plaque at implant sites after 6-­months was
+
+16000757, 0, Downloaded from https://onlinelibrary.wiley.com/doi/10.1111/prd.70052 by Turkey Cochrane Evidence Aid, Wiley Online Library on [11/09/2026]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+16
+
+

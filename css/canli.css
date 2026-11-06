@@ -1,0 +1,44 @@
+/* Canlı tahta (canli.html): tahta.css üzerine küçük eklemeler. */
+#lesson.canli { grid-template-rows: auto minmax(0, 1fr) auto; }
+.canli .topbar { gap: 10px; }
+.canli-dot {
+  flex: none; width: 12px; height: 12px; border-radius: 50%; margin-left: 4px;
+  background: var(--warn); box-shadow: 0 0 0 3px rgba(240,140,122,.18);
+}
+.canli-dot.bagli { background: var(--ok); box-shadow: 0 0 0 3px rgba(127,209,163,.18); }
+.canli-dot.konusuyor { animation: canli-nabiz 1.2s ease-in-out infinite; }
+@keyframes canli-nabiz { 50% { box-shadow: 0 0 0 7px rgba(127,209,163,.05); } }
+.canli .caption:empty::before { content: "Altyazı burada görünür."; color: var(--chalk-dim); }
+
+.canli-baslat {
+  position: fixed; inset: 0; z-index: 50; display: flex; padding: var(--gutter);
+  background: rgba(10,16,13,.88); backdrop-filter: blur(3px);
+}
+.canli-baslat[hidden] { display: none; }
+.canli-baslat .q-card { max-width: 620px; }
+.canli-not { margin: 0; color: var(--chalk-dim); font-size: .8em; }
+
+/* Dikte (mikrofon) tuşu */
+.icon-btn.mik.claude-dinliyor { color: var(--ok); box-shadow: inset 0 0 0 3px var(--ok); animation: claude-dinliyor 1.6s ease-in-out infinite; }
+@keyframes claude-dinliyor { 50% { box-shadow: inset 0 0 0 3px var(--ok), 0 0 0 7px rgba(127,209,163,.15); } }
+.icon-btn.mik.dinliyor { color: var(--board); background: var(--warn); animation: mik-nabiz 1.1s ease-in-out infinite; }
+.icon-btn.mik:disabled { opacity: .35; cursor: not-allowed; }
+@keyframes mik-nabiz { 50% { box-shadow: 0 0 0 8px rgba(240,140,122,.18); } }
+.caption.siz { color: var(--accent); }
+
+/* Duraklat tuşu ve işareti */
+.icon-btn.duraklat .ikon-devam { display: none; }
+.icon-btn.duraklat.duraklatildi .ikon-dur { display: none; }
+.icon-btn.duraklat.duraklatildi .ikon-devam { display: block; }
+.icon-btn.duraklat svg { fill: currentColor; stroke: none; }
+.icon-btn.duraklat.duraklatildi { color: var(--board); background: var(--accent); }
+.icon-btn.duraklat:disabled { opacity: .35; cursor: not-allowed; }
+.canli-durak {
+  position: fixed; left: 50%; top: 84px; transform: translateX(-50%); z-index: 40;
+  padding: .45em 1.1em; border-radius: 999px; font-size: 1.1em; white-space: nowrap;
+  color: var(--board); background: var(--accent); box-shadow: 0 6px 24px rgba(0,0,0,.35);
+}
+.canli-durak[hidden] { display: none; }
+
+.q-opt.canli-secili { border-color: var(--accent); }
+.q-bekle { margin-top: .7em; font-size: .7em; color: var(--chalk-dim); }

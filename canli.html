@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#16201c">
+  <title>Canlı Tahta</title>
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/tahta.css">
+  <link rel="stylesheet" href="css/canli.css">
+</head>
+<body>
+  <!-- Canlı tahta: Claude masaüstü uygulaması tools/tahta-mcp.py üzerinden yönetir.
+       Bu sayfa tools/sunucu.py ile açılır: http://localhost:8800/canli.html -->
+  <section id="lesson" class="screen canli">
+    <header class="topbar">
+      <span class="canli-dot" id="dot" title="Bağlantı"></span>
+      <div class="topbar-titles">
+        <div class="lesson-name" id="dersAdi">Canlı tahta · Claude</div>
+        <div class="section-name" id="durum">Bağlanıyor…</div>
+      </div>
+      <button class="icon-btn mik" id="mik" aria-label="Konuş" title="Konuş: dokunun, konuşun; susunca gönderilir (M)">
+        <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>
+      </button>
+      <button class="icon-btn duraklat" id="duraklat" aria-label="Duraklat" aria-pressed="false" disabled
+              title="Duraklat: anlatımı bekletir, yeniden basınca kaldığı yerden sürer (P ya da Boşluk)">
+        <svg class="ikon-dur" viewBox="0 0 24 24"><rect x="7" y="5" width="3.5" height="14" rx="1"/><rect x="13.5" y="5" width="3.5" height="14" rx="1"/></svg>
+        <svg class="ikon-devam" viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg>
+      </button>
+      <button class="ctrl-btn speed" id="hiz" aria-label="Anlatım hızı" title="Anlatım hızı">1,2×</button>
+      <button class="icon-btn" id="dur" aria-label="Anlatımı durdur" title="Anlatımı durdur (Esc)">
+        <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+      </button>
+      <button class="icon-btn" id="tamEkran" aria-label="Tam ekran" title="Tam ekran (F)">
+        <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+      </button>
+    </header>
+
+    <div class="board" id="board" data-layout="notes">
+      <div class="board-title"></div>
+      <div class="board-body">
+        <div class="board-visual"></div>
+        <div class="board-notes"></div>
+      </div>
+      <div class="question" id="question" hidden></div>
+    </div>
+
+    <div class="canli-durak" id="durakIsaret" role="status" hidden>⏸ Duraklatıldı · devam için ▶, P ya da Boşluk</div>
+    <div class="caption" id="caption" aria-live="polite"></div>
+  </section>
+
+  <div class="canli-baslat" id="baslat">
+    <div class="q-card">
+      <div class="q-tag">Canlı tahta</div>
+      <h3 class="q-prompt">Claude bu tahtayı sizin için yönetecek.</h3>
+      <p class="canli-not">Tarayıcı, sesin çalması için bir kez dokunmanızı ister.</p>
+      <div class="q-actions">
+        <button class="btn" id="baslatPencere">Pencerede başlat</button>
+        <button class="btn primary" id="baslatTam">Tam ekran başlat</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script src="config.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/speech.js"></script>
+  <script src="js/anatomi.js"></script>
+  <script src="js/board.js"></script>
+  <script src="js/canli.js"></script>
+</body>
+</html>
