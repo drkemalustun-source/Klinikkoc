@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/drkemalustun-source/klinik-koc/schema/vaka.schema.json",
+  "$id": "https://github.com/drkemalustun-source/Klinikkoc/schema/vaka.schema.json",
   "title": "KlinikKoç vaka kartı",
   "description": "Dallanan bir klinik vaka. Her dosya lessons/<ders>/vakalar/<vaka>.json içinde durur. Eğitmen vakayı düğüm düğüm açar: öğrenci bulguları ister, karar verir, gerekçesini söyler; takıldığı yerde ilgili ders bölümüne döner. Ayrıntılı açıklama: belgeler/vaka-karti.md",
   "type": "object",

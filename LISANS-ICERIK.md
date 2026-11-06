@@ -6,7 +6,7 @@ rubrikler, vaka kartları, eğitmen yönergeleri (`egitmenler/`) ve belgeler (`b
 lisansıyla paylaşılır. Kaynak gösterdiğiniz sürece kopyalayabilir, uyarlayabilir ve yeniden
 dağıtabilirsiniz.
 
-Atıf örneği: *"KlinikKoç katkıcıları, KlinikKoç (2026), CC BY 4.0, https://github.com/drkemalustun-source/klinik-koc"*
+Atıf örneği: *"KlinikKoç katkıcıları, KlinikKoç (2026), CC BY 4.0, https://github.com/drkemalustun-source/Klinikkoc"*
 
 **Kod** (`js/`, `css/`, `tools/`, HTML dosyaları) MIT lisanslıdır: [LICENSE](LICENSE).
 
