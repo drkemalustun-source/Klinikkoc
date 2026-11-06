@@ -1,0 +1,79 @@
+{
+  "$schema": "../../../schema/vaka.schema.json",
+  "surum": 1,
+  "id": "ozel-vaka-adi",
+  "baslik": "Tanıyı ele vermeyen kısa başlık",
+  "ders": "ozel-ders-adi",
+  "duzey": "Lisans, 4. sınıf",
+  "sure_dk": 15,
+  "konu_etiketleri": [],
+  "kurgusal": false,
+  "dagitim": "fakulte",
+  "anonimlik": {
+    "kimliksizlestirildi": false,
+    "egitim_onayi": false,
+    "gorseller_denetlendi": false,
+    "denetleyen": "",
+    "tarih": "2026-01-01"
+  },
+  "ogretmen_onayi": {"onaylandi": false, "onaylayan": "", "tarih": ""},
+  "kaynak": "Ders notu s. ...",
+  "hedefler": ["H01"],
+  "hasta": {
+    "yas_araligi": "20-29",
+    "cinsiyet": "belirtilmedi",
+    "sistemik": ["..."],
+    "aliskanliklar": ["..."]
+  },
+  "basvuru": {
+    "sikayet": "Hastanın kendi sözleriyle başvuru nedeni",
+    "oyku": "Ne zamandır, nasıl başladı (göreli süreyle: '3 gün önce')"
+  },
+  "bulgular": [
+    {"id": "ilk-gorunum", "tur": "klinik", "baslik": "Ağız içi görünüm", "acilis": "baslangic", "metin": "..."},
+    {"id": "fotograf-1", "tur": "fotograf", "baslik": "Ağız içi fotoğraf", "metin": "...",
+     "gorsel": "vakalar/ozel-vaka-adi/foto-1.jpg", "gorsel_aciklama": "Fotoğrafta görülenler (öğretmenin yazdığı)"},
+    {"id": "sistemik", "tur": "klinik", "baslik": "Ateş ve lenf bezleri", "metin": "..."}
+  ],
+  "yanilgilar": [
+    {"id": "yanilgi-1", "metin": "Bu vakada beklenen yanlış çıkarım"}
+  ],
+  "baslangic": "veri",
+  "dugumler": [
+    {
+      "id": "veri", "tur": "veri", "baslik": "Muayene",
+      "soru": "Tanı koymadan önce neyi muayene etmek istersin? Neden?",
+      "hedef": "H01", "bloom": "uygula",
+      "gerekli_bulgular": ["sistemik"],
+      "ipuclari": ["Hafif ipucu", "Daha belirgin ipucu"],
+      "sonraki": "tani"
+    },
+    {
+      "id": "tani", "tur": "karar", "baslik": "Tanı",
+      "soru": "En olası tanı hangisi?",
+      "hedef": "H01", "bloom": "cozumle",
+      "secenekler": [
+        {"metin": "Doğru tanı", "sonuc": "dogru", "sonraki": "gerekce", "geribildirim": "Neden doğru olduğu"},
+        {"metin": "Sık karıştırılan tanı", "sonuc": "yanlis", "yanilgi": "yanilgi-1", "geribildirim": "Ayırıcı bulgu"},
+        {"metin": "Başka bir tanı", "sonuc": "yanlis", "geribildirim": "Neden uymadığı"}
+      ],
+      "takilirsa": {"bolum": "bolum-kimligi", "sayfa": 1, "not": "Yeniden anlatırken neye odaklanılacağı"}
+    },
+    {
+      "id": "gerekce", "tur": "acik", "baslik": "Gerekçe",
+      "soru": "Bu tanıyı hangi bulgulara dayanarak koydun?",
+      "hedef": "H01", "bloom": "degerlendir",
+      "rubrik": [
+        {"olcut": "Aranan birinci öğe", "puan": 1, "zorunlu": true},
+        {"olcut": "Aranan ikinci öğe", "puan": 1}
+      ],
+      "ornek_cevap": "Öğretmenin örnek cevabı",
+      "sonraki": "son"
+    },
+    {"id": "son", "tur": "son", "sonuc": "iyi", "anlat": "Vakanın nasıl sonuçlandığı"}
+  ],
+  "kapanis": {
+    "ozet": "Doğru akıl yürütmenin 3–5 cümlelik özeti",
+    "ogrenme_noktalari": ["...", "..."]
+  }
+}

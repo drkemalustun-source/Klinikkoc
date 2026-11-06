@@ -15,3 +15,8 @@ lessons/*/audio/
 # ÖZEL İÇERİK: kendi notlarınızı, vakalarınızı ve hasta görsellerinizi buraya koyun.
 # Bu klasördeki hiçbir şey açık depoya yüklenmez (bkz. belgeler/ozel-icerik.md).
 ozel/
+# Adı "ozel-" ile başlayan dersler ve vaka kartları da hiçbir zaman depoya girmez:
+#   lessons/ozel-akut-lezyonlar/      (fakülteye özel ders)
+#   lessons/<ders>/vakalar/ozel-*     (gerçek hastadan uyarlanmış vaka ve görselleri)
+lessons/ozel-*/
+lessons/*/vakalar/ozel-*

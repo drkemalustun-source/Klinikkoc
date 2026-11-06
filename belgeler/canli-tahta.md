@@ -1,4 +1,4 @@
-# Canlı tahta: Claude'un yönettiği tahta
+# Canlı tahta: Claude'un yönettiği eğitmen
 
 Claude masaüstü uygulaması, sizin Claude aboneliğinizle bu bilgisayardaki tahtayı canlı yönetir.
 API anahtarı gerekmez, ek ücret yoktur. Aboneliğinizin kullanım sınırları geçerlidir; uzun bir
@@ -20,7 +20,7 @@ Claude masaüstü  →  tools/tahta-mcp.py  →  tools/sunucu.py (localhost:8810
 ## Kurulum (bir kez)
 
 1. Bu klasörde bir komut istemi açın (klasörün adres çubuğuna `cmd` yazıp Enter).
-2. `python tools/tahta-mcp.py --kur` yazın. Claude'un ayar dosyasına "akilli-tahta" eklenir
+2. `python tools/tahta-mcp.py --kur` yazın. Claude'un ayar dosyasına "klinik-koc" eklenir
    (eski ayar `.yedek` olarak saklanır).
 3. Claude masaüstü uygulamasını **tamamen** kapatın: saatin yanındaki Claude simgesine sağ tık → Çık (Quit).
    Yeniden açın.
@@ -36,7 +36,10 @@ Kaldırma: `python tools/tahta-mcp.py --kaldir`.
 | Araç | Ne yapar |
 |---|---|
 | `egitmen_hazirla` | Dersin eğitmenini (İnci ya da Mercan), kurallarını, hedeflerini ve öğrencinin kaydını yükler |
-| `kayit_yaz` / `kayit_oku` | Öğrencinin ilerlemesini bu bilgisayardaki `kayitlar/` klasörüne yazar ve okur |
+| `kayit_yaz` / `kayit_oku` | Öğrencinin ilerlemesini, her cevabın Bloom düzeyini ve rubrik puanını bu bilgisayardaki `kayitlar/` klasörüne yazar ve okur |
+| `bilgi_ara` | Derslerin kaynak sayfalarında, anlatımında, öğretmen notlarında ve vakalarında arar (sözcük + isteğe bağlı anlam araması; bkz. [bilgi-bankasi.md](bilgi-bankasi.md)) |
+| `vakalar` / `vaka_oku` | Dersin vaka kartlarını listeler; bir vakayı eğitmen için açar (bkz. [vaka-karti.md](vaka-karti.md)) |
+| `karne` | Öğrencinin karnesini hesaplar: hedef ve Bloom düzeyine göre başarı, soru güçlüğü, vaka sonuçları |
 | `rapor_yaz` | Öğretmen için Markdown rapor yazar (`kayitlar/<ad>/raporlar/`) |
 | `olcme_testi` / `olcme_kaydet` | Öğretmenin onayladığı pilot testi (ön / son / gecikmeli) seçenekleri karıştırarak verir; yanıtları puanlayıp kayda yazar |
 | `tahtayi_ac` | Yerel sunucu kapalıysa açar, tahta sayfasını açar ve bağlanmasını bekler |
@@ -65,7 +68,8 @@ dosyalarındadır. Ortak kurallar: kaynağın dışına çıkmamak, öğretmen n
 soru seçmek, açık uçlu yanıtı SOLO'ya göre değerlendirmek, yalnız olgu sorularında "ne kadar eminsin?" diye
 sormak, cevabı erken vermemek, ısrara boyun eğmemek, mola/devam ve rapor.
 
-Başlamak için Claude'a yazın: **"Tahtayı aç, akut periodontal lezyonlar dersine başlayalım. Adım Ayşe."**
+Başlamak için Claude'a yazın: **"Tahtayı aç, peri-implantitis dersine başlayalım. Adım Ayşe."**
+Vaka çalışmak için: **"Bu dersin vakasını çözelim."** Karne için: **"Karnemi göster."**
 Claude önce eğitmeni yükler, kaydınızda tekrar zamanı gelen konu varsa kısa bir tekrarla başlar.
 
 Öğrenci kaydı ve raporlar yalnız bu bilgisayardaki `kayitlar/` klasöründe durur; hiçbir yere gönderilmez.
@@ -105,7 +109,7 @@ Tahtanın üst çubuğunda **mikrofon** tuşu var (klavyede **M**).
 
 | Belirti | Çözüm |
 |---|---|
-| Claude'da "akilli-tahta" araçları görünmüyor | Claude'u sistem tepsisinden tamamen kapatıp açın; `--kur` komutunu yeniden çalıştırın |
+| Claude'da "klinik-koc" araçları görünmüyor | Claude'u sistem tepsisinden tamamen kapatıp açın; `--kur` komutunu yeniden çalıştırın |
 | "Tahta sayfası açık değil" | Claude'a "tahtayı aç" deyin ya da tarayıcıda `http://localhost:8810/canli.html` açın |
 | Yazılar geliyor, ses yok | Tahtada "başlat" düğmesine dokunun; bilgisayarın sesini denetleyin |
 | Sol üstteki nokta kırmızı | Sunucu penceresi kapanmış; Claude'a "tahtayı aç" deyin |

@@ -95,9 +95,15 @@ def ders_kimlikleri():
 
 def _oku(yol):
     try:
-        return json.load(open(yol, encoding="utf-8"))
+        with open(yol, encoding="utf-8") as f:
+            return json.load(f)
     except (OSError, ValueError):
         return None
+
+
+def _metin(yol):
+    with open(yol, encoding="utf-8") as f:
+        return f.read()
 
 
 def ders_parcalari(ders):
@@ -116,7 +122,7 @@ def ders_parcalari(ders):
         if not m or not sablon:
             continue
         no = int(m.group(1))
-        for i, p in enumerate(parcala(open(yol, encoding="utf-8").read())):
+        for i, p in enumerate(parcala(_metin(yol))):
             out.append({"ders": ders, "tur": "kaynak", "baslik": "%s, s. %d" % (kaynak_ad, no),
                         "metin": p, "sayfa": no, "kaynak": "s. %d" % no, "sira": i})
 

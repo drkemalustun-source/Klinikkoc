@@ -1,0 +1,30 @@
+name: Denetim
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  denetim:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Yayın denetimi (özel içerik depoya girmesin)
+        run: python tools/yayin_denetimi.py
+      - name: Dersleri denetle
+        run: |
+          node tools/paketle.mjs
+          git diff --exit-code -- lessons/katalog.json lessons/katalog.js onbellek-listesi.json || (echo "Ders listesi güncel değil: 'node tools/paketle.mjs' çalıştırıp sonucu ekleyin." && exit 1)
+      - name: Vaka kartlarını denetle
+        run: python tools/vaka_denetle.py
+      - name: Testler
+        run: python -m unittest discover -s tools/testler -v
