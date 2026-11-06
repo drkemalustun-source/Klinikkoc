@@ -15,6 +15,7 @@ Git yoksa klasördeki bütün dosyalara, git varsa yalnız depoya girecek dosyal
 """
 import glob
 import json
+import re
 import os
 import subprocess
 import sys
@@ -83,6 +84,15 @@ def denetle():
             if kart and kart.get("kurgusal") is not True:
                 U.append("Gerçek hastadan uyarlanmış vaka açık depoda: %s — öğretmen onayı ve anonimlik kaydını "
                          "yeniden gözden geçirin" % rel)
+        # Oynatıcının vaka paketi (paketle.mjs üretir): --fakulte sonrası özel kart içermemeli
+        for paket in ("vaka-paketi.json", "vaka-paketi.js"):
+            rel = on + paket
+            yol = os.path.join(klasor, paket)
+            if rel not in kume or not os.path.exists(yol):
+                continue
+            metin = open(yol, encoding="utf-8").read()
+            if re.search(r'"dagitim"\s*:\s*"fakulte"', metin) or re.search(r'"id"\s*:\s*"ozel-', metin):
+                H.append("%s fakülteye özel vaka içeriyor: 'node tools/paketle.mjs' (--fakulte olmadan) çalıştırın" % rel)
         # Vaka görselleri yalnız denetimden geçmiş bir karta bağlıysa yayımlanabilir
         bagli = set()
         for v in glob.glob(os.path.join(klasor, "vakalar", "*.json")):

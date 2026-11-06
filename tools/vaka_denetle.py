@@ -69,7 +69,8 @@ def denetle(yol):
     """(hatalar, uyarilar, vaka) döndürür."""
     H, U = [], []
     try:
-        v = json.load(open(yol, encoding="utf-8"))
+        with open(yol, encoding="utf-8") as f:
+            v = json.load(f)
     except ValueError as e:
         return ["JSON okunamadı: %s" % e], [], None
     if not isinstance(v, dict):

@@ -49,6 +49,8 @@ dersin kaynaklarında, anlatımında, öğretmen notlarında ve vakalarında ara
 Vakalar: Dersin vaka kartları varsa (vakalar aracı) vaka_oku ile bir vakayı aç ve dönen vaka kurallarına uy.
 Her cevaplanan soruyu ve vaka adımını kayit_yaz'ın cevaplar alanına işle (Bloom düzeyi ve rubrik puanıyla);
 öğrenci "karnem" derse karne aracını çağır.
+Sözlü sınav provası için sozlu_prova, bütün derslerden zayıf konu tekrarı için tekrar_listesi aracını kullan.
+Karar ağacı: vaka ya da ayırıcı tanı anlatırken tahtada tree komutuyla ağacı adım adım kur.
 Pilot ölçme testleri (ön/son/gecikmeli) yalnız olcme_testi ve olcme_kaydet araçlarıyla, öğretmenin onayladığı
 sorularla yapılır; test sırasında ipucu ve açıklama verilmez.
 Nasıl çalış:
@@ -56,7 +58,7 @@ Nasıl çalış:
   önce gorsel_bak ile görseli gör (işaret koordinatları görselin 0–1 arası oranlarıdır).
 - tahta aracında anlatımı 2–6 adıma böl. Her adımda önce tahta komutları, sonra o adımın anlatımı.
   Anlatım konuşma dilinde, kısa cümlelerle, ders kitabı Türkçesiyle olsun; madde başına en çok ~10 sözcük.
-- Tahtada tek görsel alan vardır (image, table, flow, compare, draw'dan biri); yanında title, bullets,
+- Tahtada tek görsel alan vardır (image, table, flow, compare, draw, tree'den biri); yanında title, bullets,
   term, text notları durabilir. Yeni konuya geçerken {"type":"clear"} ile başla.
 - Ders görselleri dışında görsel kullanma; kendi çizimin için draw komutunu kullan.
 - Bilgi dersin içeriğine dayansın; dersin dışına çıkarsan bunu açıkça söyle.
@@ -81,7 +83,10 @@ KOMUT_SEMASI = {
                    "term{term,definition} | image{asset,caption?} | highlight{region[x,y,g,y] 0–1,label?,color?,shape?:rect|ellipse,id?} | "
                    "unhighlight{id?} | zoom{region} | unzoom | table{title?,headers[],rows[][],caption?} | "
                    "flow{title?,nodes[],direction?:row|column} | compare{title?,columns[{title,items[],color?}]} | "
-                   "draw{title?,viewBox?='0 0 160 90',shapes[{kind:line|arrow|rect|ellipse|path|text, ...}]}. "
+                   "draw{title?,viewBox?='0 0 160 90',shapes[{kind:line|arrow|rect|ellipse|path|text, ...}]} | "
+                   "tree{title?,nodes[{id,text,parent?,edge?,state?:ok|warn|accent|danger|dim}],path?[id],caption?} "
+                   "(klinik karar ağacı: kök düğümün parent'ı yok; edge dala yazılan koşuldur, ör. 'ateş var'; path öğrencinin "
+                   "seçtiği yolu vurgular. Aynı title ile düğüm ekleyerek yeniden gönderirsen ağaç adım adım büyür). "
                    "ANATOMİK ŞABLON (diş/implant çizimi için serbest çizim yerine bunu kullan): "
                    "draw{title?,template:dis|implant,variant?,labels?[{part,text?,side?:sol|sag,color?}] ya da 'hepsi',"
                    "highlight?[part],probe?:true,shapes?[ek şekiller, aynı 160x90 tuvalde]}. Bukkal solda, ~3,4 birim = 1 mm. "
@@ -97,7 +102,7 @@ KOMUT_SEMASI = {
                    "Renkler: chalk, accent, warn, ok. Metinde **kalın** ve _italik_ kullanılabilir.",
     "properties": {"type": {"type": "string", "enum": [
         "clear", "title", "bullets", "point", "text", "term", "image", "highlight", "unhighlight",
-        "zoom", "unzoom", "table", "flow", "compare", "draw"]}},
+        "zoom", "unzoom", "table", "flow", "compare", "draw", "tree"]}},
     "required": ["type"],
     "additionalProperties": True,
 }
@@ -125,7 +130,7 @@ ARACLAR = [
                        "yanilgilar: [{id, durum (acik|cozuldu), not}]. guven: [{hedef, soru, guven (tahmin|biraz|emin), dogru}]. "
                        "sorular: [{soru, kaynakta_yok}]. testler: [{tur (on|son|gecikmeli), dogru, toplam}]. "
                        "cevaplar: her cevaplanan soru ve vaka adımı için [{soru (kimlik ya da kısa metin), hedef, bloom, "
-                       "tur (secmeli|acik|vaka_karar|vaka_acik|vaka_veri), puan, en_yuksek (rubrik toplamı; seçmelide 1), "
+                       "tur (secmeli|acik|sozlu|vaka_karar|vaka_acik|vaka_veri), puan, en_yuksek (rubrik toplamı; seçmelide 1), "
                        "ilk_deneme (true/false), ipucu (kullanılan ipucu sayısı), vaka, dugum, tehlikeli (true/false), "
                        "karsilanan_olcutler [ölçüt metni, kısa], eksik_olcutler [ölçüt metni, kısa]}]. "
                        "mod: once_anlat|once_yanitla. mola: bekleyen nokta metni ya da null. oturum: {egitmen, ozet}. "
@@ -169,6 +174,23 @@ ARACLAR = [
         "inputSchema": {"type": "object", "properties": {
             "ders": {"type": "string"}, "vaka": {"type": "string", "description": "vaka kimliği (vakalar aracından)"}},
             "required": ["ders", "vaka"]},
+    },
+    {
+        "name": "sozlu_prova",
+        "description": "Sözlü sınav provası hazırlar: dersin ve vakalarının açık uçlu sorularını (rubrik ve örnek cevapla), "
+                       "öğrencinin zayıf ve tekrar zamanı gelen hedeflerine göre sıralı verir; sınav hocası gibi yürütme "
+                       "kurallarını da verir. Öğrenci 'sözlü provası', 'sınav provası' derse çağır.",
+        "inputSchema": {"type": "object", "properties": {
+            "ders": {"type": "string"}, "ogrenci": {"type": "string"},
+            "soru_sayisi": {"type": "integer", "description": "1–12, varsayılan 5"}},
+            "required": ["ders"]},
+    },
+    {
+        "name": "tekrar_listesi",
+        "description": "Öğrencinin bütün derslerinden tekrar zamanı gelen, başarısı düşük kalan hedefleri ve açık yanılgıları "
+                       "tek listede, en gecikmiş olandan başlayarak verir; tekrar oturumunun kurallarını da verir. "
+                       "Öğrenci 'tekrar yapalım', 'zayıf konularım' derse ya da oturumun başında ders seçilmemişse çağır.",
+        "inputSchema": {"type": "object", "properties": {"ogrenci": {"type": "string"}}, "required": ["ogrenci"]},
     },
     {
         "name": "karne",
@@ -858,6 +880,109 @@ def ar_karne(a):
     return metin(out)
 
 
+# ---------- Sözlü sınav provası ----------
+SOZLU_TALIMAT = """Bu bir sözlü sınav provası. Sen sınav hocasısın; sakin, saygılı ve kısa konuş. Not vermezsin.
+- Başta söyle: kaç soru soracağını, her soruda önce sesli düşünmesinin serbest olduğunu, sonunda ayrıntılı
+  geri bildirim vereceğini. Sınav sırasında ders anlatma, ipucu verme, cevabı onaylama ya da düzeltme.
+- Soruyu tahtaya yaz (tahta: title + text) ve sesli sor; cevabı dinle aracıyla al. Sessiz kalırsa bir kez
+  "Acele etme, aklına gelenden başla." de; ikinci sessizlikte bir sonraki soruya geç ve bunu not al.
+- Cevap kısa kalırsa gerçek sınavdaki gibi en çok bir izleme sorusu sor ("Neden?", "Ayırıcı tanıda ne düşünürsün?",
+  "Bu hastada bunu hangi bulguya dayanarak söylüyorsun?"). İzleme sorusu yeni bilgi vermemeli.
+- Her cevabı sessizce rubrikle puanla (rubrik yoksa hedefin Bloom düzeyine göre 0–2). Hazır soru azsa hedefler
+  listesinden, hedefin Bloom düzeyinde yeni soru kur; bilgisini ders_oku ya da bilgi_ara ile dersten al ve
+  bu soruların senin kurduğun soru olduğunu kayda geçir (soru metninin başına "[eğitmen]" yaz).
+- Bütün sorular bitince sınav tarzı geri bildirim ver, her soru için üç kısa satır: ne iyiydi, neyi eksik bıraktı
+  (rubrik ölçütüyle), sınavda nasıl daha iyi söylenirdi (yapı: tanım → bulgu → karar → gerekçe; terimi doğru kullan).
+  Sonra genel izlenim: akıl yürütmenin düzeni, terim kullanımı, kendinden eminlik. En önemli tek öneriyi söyle.
+- Her cevabı kayit_yaz'ın cevaplar alanına tur "sozlu" ile işle (soru, hedef, bloom, puan, en_yuksek,
+  karsilanan_olcutler, eksik_olcutler, ilk_deneme: true). Hedef düzeyini (gozlemler) yalnız yardımsız ve
+  yeterli cevaplarda yükselt. Bitince öğrenci isterse karne aracını çağır."""
+
+
+def ar_sozlu_prova(a):
+    ders = a.get("ders")
+    n = max(1, min(int(a.get("soru_sayisi") or 5), 12))
+    d = ders_json(ders)
+    eg = egitmen_json(ders) or {}
+    hedefler = karne_.ders_hedefleri(ders_yolu(ders))
+    oncelik = []
+    if a.get("ogrenci"):
+        k = kayit_yukle(a.get("ogrenci"), ders)
+        kr = karne_.hesapla(k, hedefler, bugun())
+        oncelik = list(dict.fromkeys(kr["gelistirilecek"] + kr["tekrar_zamani_gelen"] + kr["yoklanmayan"]))
+    maddeler = []
+    for sec in d.get("sections", []):
+        for st in sec.get("steps", []):
+            q = st.get("question") or {}
+            if q.get("type") == "open":
+                maddeler.append({"kaynak": "ders", "bolum": sec.get("id"), "soru": q.get("prompt"), "hedef": q.get("goal"),
+                                 "bloom": q.get("bloom"), "rubrik": q.get("rubric"), "ornek_cevap": q.get("modelAnswer")})
+    for yol in sorted(glob.glob(ders_yolu(ders, "vakalar", "*.json"))):
+        try:
+            v = json.load(open(yol, encoding="utf-8"))
+        except ValueError:
+            continue
+        for nd in v.get("dugumler", []):
+            if nd.get("tur") == "acik":
+                maddeler.append({"kaynak": "vaka", "vaka": v.get("id"), "vaka_ozeti": (v.get("basvuru") or {}).get("sikayet"),
+                                 "soru": nd.get("soru"), "hedef": nd.get("hedef"), "bloom": nd.get("bloom"),
+                                 "rubrik": nd.get("rubrik"), "ornek_cevap": nd.get("ornek_cevap")})
+    sira = {h: i for i, h in enumerate(oncelik)}
+    maddeler.sort(key=lambda m: (sira.get(m.get("hedef"), len(sira)),
+                                 -BLOOM.index(m["bloom"]) if m.get("bloom") in BLOOM else 0))
+    secilen = maddeler[:n]
+    return metin({"talimat": SOZLU_TALIMAT, "ders": ders, "soru_sayisi": n, "hazir_sorular": secilen,
+                  "eksik_soru": max(0, n - len(secilen)),
+                  "oncelikli_hedefler": oncelik[:8],
+                  "hedefler": [{"id": h["id"], "baslik": h.get("baslik"), "bloom": h.get("bloom")} for h in hedefler],
+                  "ogretmen_notlari": eg.get("ogretmenNotlari")})
+
+
+# ---------- Dersler arası tekrar ----------
+TEKRAR_TALIMAT = """Bu bir tekrar oturumu: öğrencinin bütün derslerinden, zamanı gelen ve zayıf kalan hedefler.
+- Listenin başından başla; bir oturumda en çok 5 hedef (~10–15 dk). Hangi derslerden geleceğini kısaca söyle.
+- Her hedefte önce anlatma, önce sor (geri çağırma): hedefin Bloom düzeyinde tek bir soru ya da kısa bir vaka
+  sahnesi. Cevaptan sonra kısa düzelt; gerekiyorsa ders_oku ile o bölümden 2–3 cümlelik yeniden anlatım yap.
+- Açık yanılgısı olan hedefte, o yanılgıyı yoklayan bir soru sor; doğru cevaplarsa yanılgıyı kapat.
+- Her cevabı o dersin kaydına kayit_yaz ile işle (ders alanı o dersin kimliği). Böylece sonraki tekrar zamanı güncellenir.
+- Bitince hangi hedeflerin bir sonraki tekrara kaldığını söyle."""
+
+
+def gun_farki(once, sonra):
+    return int((time.mktime(time.strptime(sonra, "%Y-%m-%d")) - time.mktime(time.strptime(once, "%Y-%m-%d")) + 3600) // 86400)
+
+
+def ar_tekrar_listesi(a):
+    klasor = ogrenci_klasoru(a.get("ogrenci"))
+    b = bugun()
+    liste = []
+    for yol in sorted(glob.glob(os.path.join(klasor, "*.json"))):
+        ders = os.path.splitext(os.path.basename(yol))[0]
+        if not os.path.isdir(os.path.join(KOK, "lessons", ders)):
+            continue
+        try:
+            k = json.load(open(yol, encoding="utf-8"))
+            kr = karne_.hesapla(k, karne_.ders_hedefleri(ders_yolu(ders)), b)
+        except (ValueError, KeyError, OSError):
+            continue
+        hb = {h["id"]: h for h in kr["hedefler"]}
+        for hid in dict.fromkeys(kr["tekrar_zamani_gelen"] + kr["gelistirilecek"]):
+            h = hb.get(hid, {})
+            st = h.get("sonraki_tekrar")
+            neden = [x for x, v in (("tekrar zamanı geldi", hid in kr["tekrar_zamani_gelen"]),
+                                    ("başarı düşük", hid in kr["gelistirilecek"])) if v]
+            liste.append({"ders": ders, "hedef": hid, "baslik": h.get("baslik"), "bloom": h.get("hedef_bloom"),
+                          "neden": " · ".join(neden), "basari": h.get("oran"),
+                          "gecikme_gun": gun_farki(st, b) if st and st <= b else 0})
+        for y, v in (k.get("yanilgilar") or {}).items():
+            if v.get("durum") == "acik":
+                liste.append({"ders": ders, "yanilgi": y, "neden": "açık yanılgı", "basari": None, "gecikme_gun": 0})
+    liste.sort(key=lambda x: (-x["gecikme_gun"], x["basari"] if x["basari"] is not None else 1))
+    if not liste:
+        return metin({"ogrenci": a.get("ogrenci"), "liste": [], "not": "Bugün tekrar zamanı gelen ya da zayıf kalan hedef yok."})
+    return metin({"talimat": TEKRAR_TALIMAT, "ogrenci": a.get("ogrenci"), "liste": liste[:20], "toplam": len(liste)})
+
+
 # ---------- Ölçme (pilot) ----------
 TEST_AD = {"on": "Ön test", "son": "Son test", "gecikmeli": "Gecikmeli test"}
 
@@ -1096,7 +1221,8 @@ ISLEYICILER = {"egitmen_hazirla": ar_egitmen_hazirla, "kayit_oku": ar_kayit_oku,
                "tahtayi_ac": ar_tahtayi_ac, "dersler": ar_dersler, "ders_oku": ar_ders_oku,
                "gorsel_bak": ar_gorsel_bak, "tahta": ar_tahta, "soru_sor": ar_soru_sor,
                "tahta_durumu": ar_tahta_durumu, "dinle": ar_dinle, "durdur": ar_durdur,
-               "bilgi_ara": ar_bilgi_ara, "vakalar": ar_vakalar, "vaka_oku": ar_vaka_oku, "karne": ar_karne}
+               "bilgi_ara": ar_bilgi_ara, "vakalar": ar_vakalar, "vaka_oku": ar_vaka_oku, "karne": ar_karne,
+               "sozlu_prova": ar_sozlu_prova, "tekrar_listesi": ar_tekrar_listesi}
 
 
 def metin(veri, hata=False):

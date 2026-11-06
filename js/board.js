@@ -1,5 +1,5 @@
 /* Tahta: ders dosyasındaki komutları ekrana çizer.
- * Komutlar iki bölgeye düşer: görsel alan (image, draw, table, flow, compare)
+ * Komutlar iki bölgeye düşer: görsel alan (image, draw, table, flow, compare, tree)
  * ve not alanı (bullets, point, text, term). title üst başlığı yazar. */
 (function (AT) {
   'use strict';
@@ -268,6 +268,56 @@
       wrap.appendChild(cols);
       this._setVisual(wrap);
       return wrap;
+    }
+
+    // Klinik karar ağacı. nodes düz listedir: {id, text, parent?, edge?, state?: ok|warn|accent|danger|dim}.
+    // path (kimlik listesi) seçilen yolu vurgular. Aynı başlıklı ağaç yeniden gönderilirse yalnız yeni düğümler canlanır.
+    cmd_tree(c, instant) {
+      const nodes = (c.nodes || []).filter((n) => n && n.id != null);
+      const byParent = new Map();
+      const ids = new Set(nodes.map((n) => String(n.id)));
+      for (const n of nodes) {
+        const p = n.parent != null && ids.has(String(n.parent)) ? String(n.parent) : '';
+        if (!byParent.has(p)) byParent.set(p, []);
+        byParent.get(p).push(n);
+      }
+      const path = new Set([].concat(c.path || []).map(String));
+      const key = 'tree|' + (c.title || '');
+      const prev = this.visual.querySelector('.board-tree');
+      const old = prev && prev.dataset.key === key ? prev._ids || new Set() : null;
+      const wrap = el('div', 'board-tree');
+      wrap.dataset.key = key;
+      wrap._ids = ids;
+      if (c.title) wrap.appendChild(rich(el('h3'), c.title));
+      let delay = 0;
+      const build = (pid, depth) => {
+        const kids = byParent.get(pid) || [];
+        if (!kids.length || depth > 12) return null;
+        const ul = el('ul', 'tree-level');
+        for (const n of kids) {
+          const li = el('li', 'tree-item' + (path.has(String(n.id)) ? ' on-path' : ''));
+          if (n.edge) li.appendChild(rich(el('span', 'tree-edge'), n.edge));
+          const box = rich(el('div', 'tree-node ' + (n.state || '')), n.text || '');
+          box.dataset.id = n.id;
+          if (!instant && !(old && old.has(String(n.id)))) {
+            box.classList.add('tree-new');
+            box.style.animationDelay = delay + 's';
+            delay += 0.25;
+          }
+          li.appendChild(box);
+          const sub = build(String(n.id), depth + 1);
+          if (sub) li.appendChild(sub);
+          ul.appendChild(li);
+        }
+        return ul;
+      };
+      const root = build('', 0);
+      if (root) { root.classList.add('tree-root'); wrap.appendChild(root); }
+      if (c.caption) wrap.appendChild(rich(el('p', 'table-caption'), c.caption));
+      this._setVisual(wrap);
+      // Uzun ağaçta son eklenen düğüm görünsün.
+      requestAnimationFrame(() => { const v = this.visual; v.scrollTop = v.scrollHeight; wrap.scrollTop = wrap.scrollHeight; });
+      return old ? null : wrap;
     }
 
     // Basit vektör çizimi; şekiller sırayla "elle çiziliyormuş" gibi belirir.

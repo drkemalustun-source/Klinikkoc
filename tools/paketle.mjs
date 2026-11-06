@@ -11,7 +11,7 @@
  *  2. Dosyadan doğrudan açma (file://) için ders.js ve katalog.js kopyalarını yazar.
  *  3. lessons/katalog.json'u üretir.
  *  4. Çevrimdışı önbellek listesini (onbellek-listesi.json) üretir. */
-import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync, statSync, unlinkSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -177,6 +177,7 @@ for (const id of ids) {
     id, title: lesson.title, subtitle: lesson.subtitle, level: lesson.level,
     estimatedMinutes: lesson.estimatedMinutes, path: `lessons/${id}/`, steps: nSteps, questions: nQ
   });
+  const catEntry = catalog[catalog.length - 1];
   cacheFiles.push(`lessons/${id}/ders.json`, `lessons/${id}/ders.js`);
   for (const a of Object.values(lesson.assets || {})) if (!/^(https?:|data:)/.test(a.src)) cacheFiles.push(`lessons/${id}/${a.src}`);
 
@@ -189,6 +190,34 @@ for (const id of ids) {
     cacheFiles.push(`lessons/${id}/${idx}`, `lessons/${id}/${idx.replace(/\.json$/, '.js')}`);
   }
 
+  // Vaka kartları (lessons/<id>/vakalar/*.json): oynatıcının vaka akışı için tek pakete toplanır.
+  // Açık pakete yalnız dagitim "acik" olan ve adı ozel- ile başlamayan kartlar girer; ötekiler yalnız --fakulte ile.
+  const vdir = join(dir, 'vakalar');
+  const cases = [];
+  if (existsSync(vdir)) {
+    for (const f of readdirSync(vdir).filter((x) => x.endsWith('.json')).sort()) {
+      let c;
+      try { c = JSON.parse(readFileSync(join(vdir, f), 'utf8')); }
+      catch (e) { err(id, `vaka ${f}: JSON okunamadı: ${e.message}`); continue; }
+      const ozel = f.startsWith('ozel-') || c.dagitim !== 'acik';
+      if (ozel && !FAKULTE) continue;
+      const ids = new Set((c.dugumler || []).map((n) => n.id));
+      if (!ids.has(c.baslangic)) { err(id, `vaka ${f}: başlangıç düğümü yok`); continue; }
+      const bad = (c.dugumler || []).flatMap((n) => [n.sonraki, ...(n.secenekler || []).map((o) => o.sonraki)]).filter((x) => x && !ids.has(x));
+      if (bad.length) { err(id, `vaka ${f}: olmayan düğüme bağlantı: ${bad.join(', ')} (ayrıntı: python tools/vaka_denetle.py)`); continue; }
+      delete c.$schema;
+      cases.push(c);
+      for (const b of c.bulgular || []) if (b.gorsel) cacheFiles.push(`lessons/${id}/${b.gorsel}`);
+    }
+  }
+  const vp = join(dir, 'vaka-paketi.json');
+  if (cases.length) {
+    const d = { vakalar: cases };
+    writeFileSync(vp, JSON.stringify(d) + '\n');
+    writeFileSync(join(dir, 'vaka-paketi.js'), `/* tools/paketle.mjs üretti; elle düzenlemeyin. */\nAT.registerLessonData(${JSON.stringify(id + ':vakalar')}, ${JSON.stringify(d)});\n`);
+    cacheFiles.push(`lessons/${id}/vaka-paketi.json`, `lessons/${id}/vaka-paketi.js`);
+  } else for (const x of [vp, join(dir, 'vaka-paketi.js')]) if (existsSync(x)) unlinkSync(x);
+
   if (lesson.audio && lesson.audio.manifest) {
     const mf = join(dir, lesson.audio.manifest);
     if (existsSync(mf)) {
@@ -198,7 +227,8 @@ for (const id of ids) {
       for (const list of Object.values(m.steps)) for (const f of list) if (f) cacheFiles.push(`lessons/${id}/${typeof f === 'string' ? f : f.src}`);
     } else warn(id, `ses manifesti yok (${lesson.audio.manifest}); tarayıcı seslendirmesi kullanılacak`);
   }
-  console.log(`✓ ${id}: ${lesson.sections.length} bölüm, ${nSteps} adım, ${nQ} soru`);
+  if (cases.length) catEntry.cases = cases.length;
+  console.log(`✓ ${id}: ${lesson.sections.length} bölüm, ${nSteps} adım, ${nQ} soru` + (cases.length ? `, ${cases.length} vaka` : ''));
 }
 
 const cat = { lessons: catalog };
@@ -206,7 +236,7 @@ writeFileSync(join(LESSONS, 'katalog.json'), JSON.stringify(cat, null, 2) + '\n'
 writeFileSync(join(LESSONS, 'katalog.js'), `/* Otomatik üretildi: tools/paketle.mjs */\nAT.registerCatalog(${JSON.stringify(cat)});\n`);
 
 const shell = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'css/tahta.css',
-  'js/core.js', 'js/speech.js', 'js/anatomi.js', 'js/board.js', 'js/player.js', 'js/karne.js', 'js/qa/qa.js', 'js/qa/bilgi.js', 'js/qa/saglayici-anthropic.js', 'js/qa/saglayici-ollama.js', 'js/qa/saglayici-openai.js', 'js/app.js',
+  'js/core.js', 'js/speech.js', 'js/anatomi.js', 'js/board.js', 'js/player.js', 'js/karne.js', 'js/vaka.js', 'js/sozlu.js', 'js/qa/qa.js', 'js/qa/bilgi.js', 'js/qa/saglayici-anthropic.js', 'js/qa/saglayici-ollama.js', 'js/qa/saglayici-openai.js', 'js/app.js',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'lessons/katalog.json', 'lessons/katalog.js'];
 const files = [...new Set([...shell, ...cacheFiles])];
 const hash = createHash('sha256');

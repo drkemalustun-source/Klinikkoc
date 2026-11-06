@@ -344,7 +344,8 @@
             "table",
             "flow",
             "draw",
-            "compare"
+            "compare",
+            "tree"
           ]
         },
         "cue": {
@@ -529,6 +530,20 @@
           "then": {
             "required": [
               "columns"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "tree"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "nodes"
             ]
           }
         }

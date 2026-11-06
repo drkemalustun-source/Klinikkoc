@@ -12,6 +12,7 @@
   let player = null;
   let catalog = [];
   let qaState = null;
+  let currentCase = null;
 
   function el(tag, cls, text) {
     const n = document.createElement(tag);
@@ -41,6 +42,7 @@
       catch (e) { box.textContent = 'Ders listesi yüklenemedi: ' + e.message; return; }
     }
     box.replaceChildren();
+    renderTodayReview();
     for (const entry of catalog) {
       const card = el('button', 'lesson-card');
       card.appendChild(el('h2', null, entry.title));
@@ -50,19 +52,109 @@
       card.appendChild(meta);
       const p = AT.prefs.get('progress-hint:' + entry.id);
       if (p) card.appendChild(el('p', 'resume', 'Kaldığınız yer: ' + p));
-      const due = new AT.Progress(entry.id).dueSteps().length;
+      const due = new AT.Progress(entry.id).dueSteps().filter((x) => !x.startsWith('vaka:')).length;
       if (due) card.appendChild(el('p', 'resume due', 'Tekrar zamanı gelen ' + due + ' soru var'));
       card.addEventListener('click', () => openLesson(entry));
       box.appendChild(card);
     }
   }
 
+  // ---------- Dersler arası tekrar ----------
+  // Bütün derslerin bu cihazdaki kayıtlarından tekrar zamanı gelen sorular ve vaka adımları, en eskisi önce.
+  function dueAcross() {
+    const out = [];
+    for (const entry of catalog) {
+      const pr = new AT.Progress(entry.id);
+      const ids = pr.dueSteps();
+      const srs = pr.data.srs || {};
+      const cases = [...new Set(ids.filter((x) => x.startsWith('vaka:') && !(pr.data.answers[x] || {}).correct).map((x) => x.split(':')[1]))];
+      const questions = ids.filter((x) => !x.startsWith('vaka:')).length;
+      if (!questions && !cases.length) continue;
+      out.push({ entry, questions, cases,
+        oldest: Math.min(...ids.map((x) => srs[x].due)) });
+    }
+    return out.sort((a, b) => a.oldest - b.oldest);
+  }
+  let reviewTour = [];
+
+  function renderTodayReview() {
+    const old = $('#todayReview');
+    if (old) old.remove();
+    const list = dueAcross();
+    if (!list.length) return;
+    const nq = list.reduce((a, x) => a + x.questions, 0), nc = list.reduce((a, x) => a + x.cases.length, 0);
+    const box = el('section', 'today-review');
+    box.id = 'todayReview';
+    box.appendChild(el('h2', null, 'Bugünkü tekrar'));
+    box.appendChild(el('p', null, [nq ? nq + ' soru' : null, nc ? nc + ' vaka' : null].filter(Boolean).join(' ve ') + ', ' + list.length + ' dersten. Önce en çok bekleyenler gelir; birkaç dakika sürer, not verilmez.'));
+    const ul = el('ul');
+    for (const x of list) ul.appendChild(el('li', null, x.entry.title + ': ' + [x.questions ? x.questions + ' soru' : null, x.cases.length ? x.cases.length + ' vaka' : null].filter(Boolean).join(', ')));
+    box.appendChild(ul);
+    const go = el('button', 'btn primary', 'Tekrara başla');
+    go.addEventListener('click', () => { reviewTour = list.slice(1).map((x) => x.entry.id); openLesson(list[0].entry, { review: true }); });
+    box.appendChild(go);
+    $('#catalog').before(box);
+  }
+
+  // Vakada zayıf kalan adımı tekrar zamanı gelmişse vakayı yeniden çözmeyi öner.
+  function dueCaseCards(p) {
+    // Yalnız son denemesi yetersiz kalan adımlar: doğru çözülmüş bir vakayı her gün baştan çözdürmeyelim.
+    const ids = new Set(p.progress.dueSteps().filter((x) => x.startsWith('vaka:') && !(p.progress.data.answers[x] || {}).correct).map((x) => x.split(':')[1]));
+    return (p.lesson._cases || []).filter((c) => ids.has(c.id));
+  }
+
+  function showCaseReviewOffer(p, cards) {
+    qEl.replaceChildren();
+    qEl.hidden = false;
+    boardEl.classList.add('has-question');
+    const card = el('div', 'q-card');
+    card.appendChild(el('div', 'q-tag', 'Aralıklı tekrar · vaka'));
+    card.appendChild(el('h3', 'q-prompt', 'Daha önce zorlandığın vaka adımlarının tekrar zamanı geldi.'));
+    const actions = el('div', 'q-actions');
+    const later = el('button', 'btn ghost', 'Sonra');
+    later.addEventListener('click', () => { qEl.hidden = true; boardEl.classList.remove('has-question'); nextInTour(); });
+    actions.appendChild(later);
+    for (const c of cards) {
+      const b = el('button', 'btn primary', 'Yeniden çöz: ' + c.baslik);
+      b.addEventListener('click', () => startCase(c));
+      actions.appendChild(b);
+    }
+    card.appendChild(actions);
+    qEl.appendChild(card);
+  }
+
+  function nextInTour() {
+    if (!reviewTour.length) return false;
+    const id = reviewTour.shift();
+    const entry = catalog.find((c) => c.id === id);
+    if (!entry) return nextInTour();
+    qEl.replaceChildren();
+    qEl.hidden = false;
+    boardEl.classList.add('has-question');
+    const card = el('div', 'q-card');
+    card.appendChild(el('div', 'q-tag', 'Bugünkü tekrar'));
+    card.appendChild(el('h3', 'q-prompt', 'Sıradaki ders: ' + entry.title));
+    const actions = el('div', 'q-actions');
+    const stop = el('button', 'btn ghost', 'Bugünlük yeter');
+    stop.addEventListener('click', () => { reviewTour = []; qEl.hidden = true; boardEl.classList.remove('has-question'); });
+    const go = el('button', 'btn primary', 'Devam et');
+    go.addEventListener('click', () => openLesson(entry, { review: true }));
+    actions.append(stop, go);
+    card.appendChild(actions);
+    qEl.appendChild(card);
+    return true;
+  }
+
   // ---------- Ders ekranı ----------
-  async function openLesson(entry) {
+  async function openLesson(entry, opts = {}) {
     let lesson;
     try { lesson = await AT.loadLesson(entry); }
     catch (e) { toast('Ders açılamadı: ' + e.message); return; }
 
+    lesson._cases = await AT.loadCases(lesson);
+    currentCase = null;
+    $('.cases-btn').hidden = !lesson._cases.length;
+    $('#caseReturn').hidden = true;
     home.hidden = true;
     lessonScreen.hidden = false;
     document.title = lesson.title + ' · KlinikKoç';
@@ -86,8 +178,14 @@
     }
     updateSpeedLabel();
     const due = player.dueQuestions().length;
-    if (hasProbes(lesson) && !player.progress.data.mode) showModeChoice(player);
+    const dueCases = dueCaseCards(player);
+    if (!opts.review) reviewTour = [];
+    if (opts.review && due) player.startReview(player.dueQuestions());
+    else if (opts.review && dueCases.length) showCaseReviewOffer(player, dueCases);
+    else if (opts.review) nextInTour();
+    else if (hasProbes(lesson) && !player.progress.data.mode) showModeChoice(player);
     else if (due) showReviewOffer(player, due);
+    else if (dueCases.length) showCaseReviewOffer(player, dueCases);
     else if (last > 0) toast('Kaldığınız yerden devam: ' + (last + 1) + '. adım. Baştan başlamak için İçindekiler\'i kullanın.');
   }
 
@@ -199,6 +297,12 @@
     onReviewEnd(r) {
       toast('Tekrar bitti: ' + r.queue.length + ' sorudan ' + r.right + ' tanesi ilk denemede doğru.'
         + (r.right < r.queue.length ? ' Yanlış olanlar 10 dakika sonra yeniden sorulabilir.' : ' Sıradaki tekrar Hedefler ekranında görünür.'), 6000);
+      // Oynatıcı bu çağrıdan hemen sonra dersteki yerine döner; öneriyi ondan sonra göster.
+      setTimeout(() => {
+        const cards = player ? dueCaseCards(player) : [];
+        if (cards.length) showCaseReviewOffer(player, cards);
+        else nextInTour();
+      }, 0);
     }
   };
 
@@ -467,6 +571,53 @@
     });
   }
 
+  // ---------- Vaka ----------
+  const caseCtx = () => ({
+    player, qEl, boardEl, toast,
+    onExit: () => { currentCase = null; lessonScreen.classList.remove('case-active'); $('#caseReturn').hidden = true; player.goTo(player.index, { play: false }); },
+    restart: (card) => startCase(card),
+    onReteach: (t, run) => {
+      const si = player.lesson.sections.findIndex((s) => s.id === t.bolum);
+      if (si < 0) { toast('Bu bölüm derste bulunamadı.'); return; }
+      qEl.hidden = true;
+      boardEl.classList.remove('has-question', 'case-mode', 'case-peek');
+      lessonScreen.classList.remove('case-active');
+      currentCase = run;
+      $('#caseReturn').hidden = false;
+      player.goTo(player.sectionStart(si), { play: true });
+      toast('Bölümü dinledikten sonra üstteki "Vakaya dön" düğmesine bas.', 5000);
+    }
+  });
+
+  function startCase(card) {
+    if (!player) return;
+    $('#caseReturn').hidden = true;
+    currentCase = new AT.CaseRun(card, caseCtx());
+    lessonScreen.classList.add('case-active');
+    $('.section-name').textContent = 'Vaka: ' + card.baslik;
+    currentCase.start();
+  }
+
+  function startOral(n = 5) {
+    if (!player) return;
+    const pool = AT.sozluHavuzu(player.lesson, player.progress);
+    if (!pool.length) { toast('Bu derste sözlü prova için açık uçlu soru yok.'); return; }
+    lessonScreen.classList.add('case-active');
+    $('.section-name').textContent = 'Sözlü sınav provası';
+    new AT.OralRun(pool.slice(0, n), {
+      player, qEl, boardEl, toast,
+      onExit: () => { lessonScreen.classList.remove('case-active'); player.goTo(player.index, { play: false }); }
+    }).start();
+  }
+
+  function resumeCase() {
+    if (!currentCase) return;
+    $('#caseReturn').hidden = true;
+    lessonScreen.classList.add('case-active');
+    $('.section-name').textContent = 'Vaka: ' + currentCase.card.baslik;
+    currentCase.resume();
+  }
+
   function findSubgoal(lesson, id) {
     for (const g of lesson.goals || []) {
       if (g.id === id) return g;
@@ -510,6 +661,27 @@
       const restart = el('button', 'btn', 'Dersi baştan başlat');
       restart.addEventListener('click', () => { closeDrawer(); player.goTo(0); });
       body.appendChild(restart);
+    }
+
+    if (kind === 'cases') {
+      h.textContent = 'Vakalar';
+      body.appendChild(el('p', 'drawer-note', 'Bir hastanın başvurusundan kapanışına kadar kararları sen verirsin: hangi muayeneyi isteyeceğini, tanıyı, tedaviyi. Seçtiğin yol tahtada karar ağacı olarak büyür. Takılırsan ilgili ders bölümünü yeniden dinleyebilirsin.'));
+      for (const c of player.lesson._cases) {
+        const son = AT.vakaSonuclari(player.progress, c.id);
+        const last = son[son.length - 1];
+        const box = el('div', 'goal case-item');
+        box.appendChild(el('h3', null, c.baslik));
+        const meta = [c.duzey, c.sure_dk ? '~' + c.sure_dk + ' dk' : null, c.kurgusal ? 'kurgusal' : 'gerçek hastadan, kimliksiz',
+          (c.ogretmen_onayi && c.ogretmen_onayi.onaylandi) ? 'öğretmen onaylı' : 'öğretmen onayı bekliyor'].filter(Boolean).join(' · ');
+        box.appendChild(el('p', 'drawer-note', meta));
+        if (c.hedefler && c.hedefler.length) box.appendChild(el('p', 'drawer-note', 'Hedefler: ' + c.hedefler.join(', ')));
+        if (last) box.appendChild(el('p', 'drawer-note', son.length + ' kez çözdün · son sonuç: ' + (AT.karneHelpers.SON[last.sonuc] || last.sonuc)
+          + (last.tehlikeli ? ' · zarar verebilecek seçim: ' + last.tehlikeli : '')));
+        const go = el('button', 'btn primary small', last ? 'Yeniden çöz' : 'Vakayı başlat');
+        go.addEventListener('click', () => { closeDrawer(); startCase(c); });
+        box.appendChild(go);
+        body.appendChild(box);
+      }
     }
 
     if (kind === 'karne') {
@@ -570,6 +742,10 @@
           k.items.slice(0, 8).map((it) => [it.prompt.slice(0, 70) + (it.prompt.length > 70 ? '…' : ''), it.n, pct(it.rate), difficulty(it.rate)]),
           'Güçlük senin cevaplarına göredir; sorunun herkes için zorluğunu göstermez.');
         if (k.missed.length) table('Açık uçlu cevaplarda en sık eksik kalanlar', ['Ölçüt', 'Kez'], k.missed);
+        if (k.cases.length) table('Vakalar', ['Vaka', 'Çözülme', 'Son sonuç', 'En iyi'],
+          k.cases.map((c) => [c.title, c.n, AT.karneHelpers.SON[c.last.sonuc] || c.last.sonuc, pct(c.best)]));
+        if (k.danger.length) table('Hastaya zarar verebilecek seçimler', ['Nerede', 'Seçimin'], k.danger.map((d) => [d.prompt, d.answer]),
+          'Bu seçimler ayrıca gösterilir; vakayı yeniden çözerken bunlara dikkat et.');
       }
       const acts = el('div', 'drawer-actions');
       const dl = el('button', 'btn', 'Karnemi indir (.md)');
@@ -643,6 +819,9 @@
       const krn = el('button', 'btn primary', 'Karnemi göster');
       krn.addEventListener('click', () => openDrawer('karne'));
       acts.appendChild(krn);
+      const oral = el('button', 'btn', 'Sözlü sınav provası');
+      oral.addEventListener('click', () => { closeDrawer(); startOral(); });
+      acts.appendChild(oral);
       const exp = el('button', 'btn', 'Çalışma özetimi indir (.md)');
       exp.addEventListener('click', () => downloadSummary(player));
       const reset = el('button', 'btn ghost', 'Cevaplarımı sıfırla');
@@ -1084,7 +1263,8 @@
         toast('Hız: ' + player.rate.toFixed(1).replace('.', ',') + '×', 1500);
         break;
       }
-      case 'toc': case 'goals': case 'settings': case 'qa':
+      case 'case-return': resumeCase(); break;
+      case 'toc': case 'goals': case 'settings': case 'qa': case 'cases':
         if (!drawer.hidden && drawer.dataset.kind === act) closeDrawer(); else openDrawer(act);
         break;
       case 'close-drawer': closeDrawer(); break;
@@ -1114,6 +1294,7 @@
   document.addEventListener('keydown', (e) => {
     if (!player || lessonScreen.hidden) return;
     if (e.target.matches('input, select, textarea')) return;
+    if (boardEl.classList.contains('case-mode')) { if (e.key === 'Escape') closeDrawer(); return; }
     if (e.key === ' ' && !e.target.matches('button')) { player.toggle(); e.preventDefault(); }
     else if (e.key === 'ArrowRight' && e.target.id !== 'track') player.next();
     else if (e.key === 'ArrowLeft' && e.target.id !== 'track') player.prev();

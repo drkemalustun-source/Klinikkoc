@@ -8,6 +8,7 @@
   AT.BLOOM = BLOOM;
   AT.BLOOM_AD = BLOOM_AD;
 
+  const SON = { iyi: 'İyi', kabul: 'Kabul edilebilir', kotu: 'Kötü' };
   const ratio = (p, m) => (m ? p / m : null);
   const pct = (x) => (x == null ? '–' : '%' + Math.round(x * 100));
   const difficulty = (p) => (p == null ? '–' : p >= 0.8 ? 'kolay' : p >= 0.5 ? 'orta' : 'zor');
@@ -20,6 +21,11 @@
     const goalBloom = {};
     for (const g of lesson.goals || []) for (const s of g.subgoals || []) goalBloom[s.id] = s.bloom;
     for (const sec of lesson.sections) for (const st of sec.steps) if (st.question) steps[st.id] = { q: st.question, sec };
+    // Vaka düğümleri de soru gibi sayılır (js/vaka.js "vaka:<vaka>:<düğüm>" kimliğiyle kaydeder).
+    for (const c of lesson._cases || []) for (const n of c.dugumler || []) {
+      if (!['veri', 'karar', 'acik'].includes(n.tur)) continue;
+      steps['vaka:' + c.id + ':' + n.id] = { q: { prompt: 'Vaka "' + c.baslik + '": ' + (n.baslik || n.soru || n.id), bloom: n.bloom, type: 'vaka_' + n.tur } };
+    }
     const attempts = (data.attempts || []).filter((a) => steps[a.step]);
     const sum = (xs, f) => xs.reduce((t, x) => t + f(x), 0);
 
@@ -60,7 +66,13 @@
       missed: Object.entries(missed).sort((x, y) => y[1] - x[1]).slice(0, 8),
       strong: goals.filter((g) => g.n >= 2 && g.rate >= 0.8).map((g) => g.id),
       weak: goals.filter((g) => g.n >= 1 && g.rate != null && g.rate < 0.6).map((g) => g.id),
-      untested: goals.filter((g) => !g.n).map((g) => g.id)
+      untested: goals.filter((g) => !g.n).map((g) => g.id),
+      danger: attempts.filter((a) => a.danger).map((a) => ({ step: a.step, answer: a.answer || '', prompt: steps[a.step].q.prompt })),
+      cases: (lesson._cases || []).map((c) => {
+        const son = ((data.vakalar || {})[c.id] || { son: [] }).son;
+        const last = son[son.length - 1];
+        return { id: c.id, title: c.baslik, n: son.length, last: last || null, best: son.reduce((b, x) => Math.max(b, x.en_yuksek ? x.puan / x.en_yuksek : 0), 0) };
+      }).filter((c) => c.n)
     };
   };
 
@@ -82,6 +94,14 @@
       L.push('', '## Soru güçlüğü (senin cevaplarına göre)', '', '| Soru | Hedef | Deneme | p | Güçlük | İpucu |', '|---|---|---|---|---|---|');
       for (const it of k.items) L.push(`| ${it.prompt.replace(/\|/g, '/').slice(0, 80)} | ${it.goal} | ${it.n} | ${it.rate == null ? '–' : it.rate.toFixed(2)} | ${difficulty(it.rate)} | ${it.hints} |`);
     }
+    if (k.cases && k.cases.length) {
+      L.push('', '## Vakalar', '', '| Vaka | Çözülme | Son sonuç | En iyi |', '|---|---|---|---|');
+      for (const c of k.cases) L.push(`| ${c.title.replace(/\|/g, '/')} | ${c.n} | ${SON[c.last.sonuc] || c.last.sonuc} | ${pct(c.best)} |`);
+    }
+    if (k.danger && k.danger.length) {
+      L.push('', '## Hastaya zarar verebilecek seçimler', '');
+      for (const d of k.danger) L.push(`- ${d.prompt}: ${d.answer}`);
+    }
     if (k.missed.length) {
       L.push('', '## Açık uçlu cevaplarda en sık eksik kalanlar', '');
       for (const [c, n] of k.missed) L.push(`- ${c} (${n} kez)`);
@@ -89,5 +109,5 @@
     return L.join('\n') + '\n';
   };
 
-  AT.karneHelpers = { pct, difficulty };
+  AT.karneHelpers = { pct, difficulty, SON };
 })(window.AT = window.AT || {});

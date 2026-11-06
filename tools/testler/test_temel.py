@@ -180,6 +180,17 @@ class McpSunucusu(unittest.TestCase):
                 k = arac("karne", ogrenci="Test Öğrenci", ders="peri-implantitis-cerrahi", yaz=True)
                 self.assertEqual(k["karne"]["cevap_sayisi"], 1)
                 self.assertTrue(os.path.exists(os.path.join(d, "kayit", "test-ogrenci", "karneler")))
+                # Sözlü prova: vakanın açık uçlu düğümü hazır sorular arasında, rubriğiyle
+                s = arac("sozlu_prova", ders="peri-implantitis-cerrahi", ogrenci="Test Öğrenci", soru_sayisi=12)
+                self.assertIn("talimat", s)
+                self.assertTrue(any(m.get("vaka") == "ornek-implant-kanama" and m.get("rubrik") for m in s["hazir_sorular"]))
+                # Dersler arası tekrar: düşük puanlı hedef listeye girer
+                self.assertEqual(arac("tekrar_listesi", ogrenci="Test Öğrenci")["liste"], [])
+                arac("kayit_yaz", ogrenci="Test Öğrenci", ders="peri-implantitis-cerrahi", cevaplar=[
+                    {"soru": "Prognoz", "hedef": "H4.a", "bloom": "cozumle", "tur": "sozlu", "puan": 1, "en_yuksek": 5}])
+                t = arac("tekrar_listesi", ogrenci="Test Öğrenci")
+                self.assertEqual(t["liste"][0]["hedef"], "H4.a")
+                self.assertEqual(t["liste"][0]["ders"], "peri-implantitis-cerrahi")
             finally:
                 p.stdin.close()
                 p.wait(timeout=10)
