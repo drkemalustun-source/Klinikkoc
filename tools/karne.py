@@ -1,4 +1,4 @@
-"""Öğrenci karnesi: öğrencinin kendi kaydından (kayitlar/<ad>/<ders>.json) hesaplanır.
+"""Öğrenci karnesi: öğrencinin kendi kaydından (kalıcı kayıt klasörü/<öğrenci kimliği>/<ders>.json) hesaplanır.
 
 Karne not için değildir; öğrencinin nerede güçlü, nerede tekrar gerektiğini görmesi içindir ve
 yalnız öğrencinin bilgisayarında durur. Hesaplanan ölçüler:
@@ -52,6 +52,8 @@ def ders_hedefleri(ders_klasoru):
 def hesapla(kayit, hedefler, bugun=None):
     cevaplar = kayit.get("cevaplar") or []
     out = {"ogrenci": kayit.get("ogrenci"), "ders": kayit.get("ders"), "cevap_sayisi": len(cevaplar)}
+    if kayit.get("deneme"):
+        out["deneme"] = True  # öğretmen denemesi: karnede ayrı işaretlenir, araştırma aktarımına katılmaz
     toplam_p = sum(c.get("puan", 0) for c in cevaplar)
     toplam_e = sum(c.get("en_yuksek", 1) for c in cevaplar)
     out["genel_oran"] = oran(toplam_p, toplam_e)
@@ -126,6 +128,8 @@ def markdown(k, ders_basligi=None, tarih=None):
              k.get("ogrenci"), tarih or "-", k["cevap_sayisi"], yuzde(k["genel_oran"])), "",
          "> Bu karne not için değildir. Yalnız senin bilgisayarında durur ve hiçbir yere gönderilmez. "
          "Amacı, hangi hedefte güçlü olduğunu ve neyi tekrar etmen gerektiğini göstermektir.", ""]
+    if k.get("deneme"):
+        y += ["> **DENEME KAYDI:** bu bir öğretmen denemesidir; araştırma verisine katılmaz.", ""]
     if k["gelistirilecek"] or k["tekrar_zamani_gelen"]:
         y += ["## Sıradaki adımın", ""]
         if k["tekrar_zamani_gelen"]:

@@ -35,6 +35,9 @@ KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(KOK, "tools"))
 import bilgi_bankasi  # noqa: E402
 import karne as karne_  # noqa: E402
+import kayit_aktar  # noqa: E402
+import kayit_deposu as kd  # noqa: E402
+import veri_yeri  # noqa: E402
 PORT = int(os.environ.get("KLINIK_KOC_PORT", "8810"))
 ADRES = "http://127.0.0.1:%d" % PORT
 SURUM = "0.4.0"
@@ -42,6 +45,11 @@ AD = "klinik-koc"
 
 TALIMAT = """KlinikKoç: bu bilgisayardaki tarayıcıda açık bir kara tahta. Bu araçlarla
 tahtaya yazar, ders görsellerini gösterip işaretler ve Türkçe sesli anlatırsın (Pocket TTS Türkçe Kadın 3 sesi; hazır değilse Piper dfki).
+Öğrenci kimliği: egitmen_hazirla'yı öğrencinin adı ve kısa bir ayırt ediciyle (öğrenci numarasının son 3 hanesi
+ya da takma ad; ayirt alanı) çağır. Araç 'ayirt_gerekli' ya da 'ayni_ad_var' dönerse verdiği talimata uy
+("Bu adla kayıt var, sen misin?"). Dönen kimliği sonraki bütün araçlarda ogrenci alanına yaz. Öğretmen
+deniyorsa ogrenci='deneme' ya da deneme=true ver; deneme kayıtları araştırmaya katılmaz. Kayıtlar yalnız bu
+bilgisayarda durur; kendiliğinden hiçbir yere gönderilmez (öğrenci isterse kayit_disa_aktar).
 Eğitmen (İnci ya da Mercan): Bir dersi öğretmeye başlamadan önce egitmen_hazirla aracını çağır. O araç
 dersin eğitmenini, öğretim kurallarını, hedeflerini, öğretmen notlarını ve öğrencinin kaydını verir; bütün
 oturum boyunca o kurallara uy. Öğrencinin ilerlemesini kayit_yaz ile işle, bitişte rapor_yaz ile rapor yaz.
@@ -137,7 +145,14 @@ ARACLAR = [
                        "Dönen kurallara bütün oturum boyunca uy.",
         "inputSchema": {"type": "object", "properties": {
             "ders": {"type": "string"},
-            "ogrenci": {"type": "string", "description": "öğrencinin adı (kayıt yalnız bu bilgisayarda tutulur)"},
+            "ogrenci": {"type": "string", "description": "öğrencinin adı (ya da daha önce dönen kimliği). Kayıt yalnız "
+                                                         "bu bilgisayarda tutulur."},
+            "ayirt": {"type": "string", "description": "kısa ayırt edici: öğrenci numarasının son 3 hanesi ya da takma ad"},
+            "ogrenci_kimligi": {"type": "string", "description": "'Bu adla kayıt var, sen misin?' sorusuna evet denince "
+                                                                 "o kaydın kimliği"},
+            "yeni_ogrenci": {"type": "boolean", "description": "aynı adlı kayıt öğrencinin değilse true: ayrı kayıt açılır"},
+            "deneme": {"type": "boolean", "description": "öğretmen denemesi: kayıt 'deneme' olarak işaretlenir, "
+                                                         "araştırma aktarımına katılmaz"},
             "egitmen": {"type": "string", "enum": ["inci", "mercan"],
                         "description": "yalnız ders izin veriyorsa başka eğitmen seçmek için"}},
             "required": ["ders"]},
@@ -234,13 +249,41 @@ ARACLAR = [
     {
         "name": "rapor_yaz",
         "description": "Oturum sonunda ya da 'rapor oluştur' denince öğretmen için Markdown rapor yazar (öğrencinin "
-                       "bilgisayarında, kayitlar/<ad>/raporlar/). Hedef tablosu, yanılgılar, güven ve sorular kayıttan "
+                       "bilgisayarında, kalıcı kayıt klasöründe <kimlik>/raporlar/). Hedef tablosu, yanılgılar, güven ve sorular kayıttan "
                        "otomatik gelir; sen ogretmen_ozeti (6–8 cümle) ve isteğe bağlı guclukler, oneriler, geri_bildirim yaz.",
         "inputSchema": {"type": "object", "properties": {
             "ogrenci": {"type": "string"}, "ders": {"type": "string"},
             "ogretmen_ozeti": {"type": "string"}, "guclukler": {"type": "string"},
             "oneriler": {"type": "string"}, "geri_bildirim": {"type": "string"}},
             "required": ["ogrenci", "ders", "ogretmen_ozeti"]},
+    },
+    {
+        "name": "kayit_disa_aktar",
+        "description": "Öğrencinin bu bilgisayardaki bütün kaydını (dersler, raporlar, karneler) TEK dosyaya yazar "
+                       "(varsayılan: masaüstü). Öğrenci başka bilgisayarda çalışmak ya da kaydını saklamak isterse çağır. "
+                       "Hiçbir yere göndermez.",
+        "inputSchema": {"type": "object", "properties": {
+            "ogrenci": {"type": "string"}, "cikti": {"type": "string", "description": "dosya ya da klasör yolu (isteğe bağlı)"}},
+            "required": ["ogrenci"]},
+    },
+    {
+        "name": "kayit_ice_aktar",
+        "description": "kayit_disa_aktar ile yazılmış kayıt dosyasını bu bilgisayara alır. Buradaki kayıt daha yeniyse "
+                       "ona dokunmaz (uzerine=true ile yazar; eski sürüm yedekte kalır).",
+        "inputSchema": {"type": "object", "properties": {
+            "dosya": {"type": "string", "description": "kayıt dosyasının tam yolu"}, "uzerine": {"type": "boolean"}},
+            "required": ["dosya"]},
+    },
+    {
+        "name": "kayit_anonim_aktar",
+        "description": "YALNIZ ÖĞRETMEN İÇİN, öğretmen açıkça isterse: seçilen öğrencilerin (ya da hepsinin) kayıtlarını "
+                       "kimlik bilgisi olmadan (ad, kimlik, ayırt edici ve serbest metin yok; rastgele kod; tarihler gün "
+                       "farkı) tek araştırma dosyasına yazar. Deneme kayıtları varsayılan olarak dışarıda kalır.",
+        "inputSchema": {"type": "object", "properties": {
+            "ogrenciler": {"type": "array", "items": {"type": "string"}, "description": "kimlikler; boşsa hepsi"},
+            "dosyalar": {"type": "array", "items": {"type": "string"},
+                         "description": "öğrencilerin dışa aktardığı kayıt dosyaları (içe almadan anonimleştirilir)"},
+            "deneme_dahil": {"type": "boolean"}, "cikti": {"type": "string"}}},
     },
     {
         "name": "olcme_testi",
@@ -549,7 +592,16 @@ BLOOM_AD = dict(zip(BLOOM, ["hatırla", "anla", "uygula", "çözümle", "değerl
 DURUM_AD = {"ele_alinmadi": "ele alınmadı", "destekle_yapti": "destekle yaptı", "bagimsiz_yapti": "bağımsız yaptı",
             "tekrar_gerekli": "tekrar gerekli", "devam_ediyor": "devam ediyor"}
 TEKRAR_GUN = {1: 1, 2: 3, 3: 7, 4: 21}  # Leitner kutusu → sonraki geri çağırmaya kadar gün
-KAYIT_KOK = os.environ.get("KLINIK_KOC_KAYIT") or os.path.join(KOK, "kayitlar")
+KAYIT_KOK = veri_yeri.kayit_kok()          # kalıcı yer; KLINIK_KOC_KAYIT önce gelir
+ESKI_KAYIT_KOK = os.path.join(KOK, "kayitlar")  # eski sürümlerin yeri: ilk açılışta bir kez kopyalanır
+_DEPO = None
+
+
+def depo():
+    global _DEPO
+    if _DEPO is None or _DEPO.kok != os.path.abspath(KAYIT_KOK):
+        _DEPO = kd.Depo(KAYIT_KOK, None if veri_yeri.kayit_ortamdan_mi() else ESKI_KAYIT_KOK)
+    return _DEPO
 
 
 def bugun():
@@ -561,37 +613,59 @@ def gun_ekle(tarih, gun):
     return time.strftime("%Y-%m-%d", time.localtime(t))
 
 
-def ogrenci_klasoru(ad):
-    ad = (ad or "").strip()
-    if not ad:
-        raise ValueError("ogrenci (öğrencinin adı) gerekli")
-    tr = str.maketrans("çğıöşüÇĞİÖŞÜ ", "cgiosuCGIOSU-")
-    kisa = "".join(c for c in ad.translate(tr).lower() if c.isalnum() or c == "-")[:60] or "ogrenci"
-    return os.path.join(KAYIT_KOK, kisa)
+def ogrenci_kimligi(ogrenci):
+    """Araçların ogrenci alanı (kimlik ya da ad) → kalıcı kimlik. Eski ada göre kayıtlar aynen bulunur."""
+    return depo().coz(ogrenci)
+
+
+def ogrenci_klasoru(ogrenci):
+    return depo().klasor(ogrenci_kimligi(ogrenci))
 
 
 def kayit_yolu(ogrenci, ders):
     ders_yolu(ders)  # kimlik denetimi
-    return os.path.join(ogrenci_klasoru(ogrenci), ders + ".json")
+    return depo().kayit_yolu(ogrenci_kimligi(ogrenci), ders)
 
 
 def kayit_yukle(ogrenci, ders):
-    yol = kayit_yolu(ogrenci, ders)
-    if os.path.exists(yol):
-        return json.load(open(yol, encoding="utf-8"))
-    return {"ogrenci": ogrenci.strip(), "ders": ders, "olusturma": bugun(), "mod": "once_anlat",
-            "hedefler": {}, "yanilgilar": {}, "guven": [], "sorular": [], "testler": [], "oturumlar": [], "mola": None,
-            "cevaplar": [], "vakalar": []}
+    ders_yolu(ders)  # kimlik denetimi
+    d = depo()
+    kimlik = d.coz(ogrenci)
+    k, uyarilar = d.yukle(kimlik, ders)
+    if k is None:
+        bilgi = d.defter()["ogrenciler"].get(kimlik) or {}
+        k = {"ogrenci": bilgi.get("ad") or (ogrenci or "").strip(), "ders": ders, "olusturma": bugun(),
+             "mod": "once_anlat", "hedefler": {}, "yanilgilar": {}, "guven": [], "sorular": [], "testler": [],
+             "oturumlar": [], "mola": None, "cevaplar": [], "vakalar": []}
+        if bilgi.get("ayirt"):
+            k["tohum"] = kimlik  # ölçme testinde seçenek sırası bu kimliğe bağlı kalır
+    k["ogrenci_kimligi"] = kimlik
+    if d.deneme_mi(kimlik) or kd.deneme_adi_mi(k.get("ogrenci")):
+        k["deneme"] = True
+    k["_kimlik"] = kimlik
+    if uyarilar:
+        k["_uyarilar"] = uyarilar
+    return k
 
 
 def kayit_kaydet(k):
-    yol = kayit_yolu(k["ogrenci"], k["ders"])
-    os.makedirs(os.path.dirname(yol), exist_ok=True)
-    gecici = yol + ".tmp"
-    with open(gecici, "w", encoding="utf-8") as f:
-        json.dump(k, f, ensure_ascii=False, indent=1)
-    os.replace(gecici, yol)
-    return yol
+    kimlik = k.get("_kimlik") or k.get("ogrenci_kimligi") or depo().coz(k["ogrenci"])
+    return depo().yaz(kimlik, k["ders"], k)
+
+
+def kayit_temiz(k):
+    return {a: v for a, v in k.items() if not a.startswith("_")}
+
+
+def uyari_ekle(out, k):
+    if k.get("_uyarilar"):
+        out.setdefault("uyarilar", [])
+        out["uyarilar"] = k["_uyarilar"] + out["uyarilar"]
+    return out
+
+
+def tohum(k):
+    return k.get("tohum") or (k.get("ogrenci") or "")
 
 
 def tekrar_zamani_gelenler(k):
@@ -616,6 +690,55 @@ def kayit_ozeti(k, eg):
             "oturum_sayisi": len(k.get("oturumlar", [])),
             "testler": [{"tur": t.get("tur"), "tarih": t.get("tarih"), "puan": t.get("puan"), "toplam": t.get("toplam"),
                          "secilen_yanilgilar": t.get("secilen_yanilgilar")} for t in k.get("testler", [])]}
+
+
+OGRENCI_TALIMAT = ("Sonraki bütün araçlarda (kayit_yaz, kayit_oku, karne, rapor_yaz, olcme_..., tekrar_listesi, "
+                   "sozlu_prova) ogrenci alanına bu kimliği yaz: %s")
+
+
+def ogrenci_sec(a):
+    """egitmen_hazirla için öğrenciyi bulur ya da açar. (kimlik, None) ya da (None, sorulacak durum)."""
+    d = depo()
+    d.hazirla()
+    ad = (a.get("ogrenci") or "").strip()
+    ayirt = (a.get("ayirt") or "").strip()
+    deneme = bool(a.get("deneme")) or kd.deneme_adi_mi(ad)
+    defter = d.defter()["ogrenciler"]
+    kim = (a.get("ogrenci_kimligi") or "").strip()
+    if not kim and ad in defter and defter[ad].get("ayirt"):
+        kim = ad  # ogrenci alanına zaten kimlik yazılmış
+    if kim:
+        if not d.var_mi(kim):
+            raise kd.KayitHatasi("Bu kimlikle kayıt yok: %s" % kim)
+        if not (defter.get(kim) or {}).get("ayirt") or deneme:
+            d.eskiyi_bagla(kim, ayirt or None, deneme)
+        return kim, None
+    if not ad:
+        return None, {"durum": "ad_gerekli",
+                      "talimat": "Öğrenciye bir kez adını ve kısa bir ayırt ediciyi (öğrenci numarasının son 3 hanesi "
+                                 "ya da kendi seçtiği bir takma ad) sor; sonra egitmen_hazirla'yı ogrenci ve ayirt ile "
+                                 "yeniden çağır. Öğretmen deniyorsa ogrenci='deneme' ya da deneme=true ver."}
+    if deneme:
+        return d.kimlik_olustur(ad, ayirt or "ogretmen", deneme=True), None
+    adaylar = d.adaylar(ad)
+    if ayirt:
+        for x in adaylar:
+            if x.get("ayirt") and kd.kisalt(x["ayirt"]) == kd.kisalt(ayirt):
+                return x["kimlik"], None
+        if not adaylar or a.get("yeni_ogrenci"):
+            return d.kimlik_olustur(ad, ayirt), None
+    elif not adaylar:
+        return None, {"durum": "ayirt_gerekli",
+                      "talimat": "Bu adla kayıt yok; ilk giriş. Öğrenciye kısa bir ayırt edici sor: öğrenci numarasının "
+                                 "son 3 hanesi ya da kendi seçeceği bir takma ad (aynı adlı başka öğrenciyle karışmasın "
+                                 "diye). Sonra egitmen_hazirla'yı ogrenci ve ayirt ile yeniden çağır."}
+    return None, {"durum": "ayni_ad_var", "soru": "Bu adla kayıt var, sen misin?",
+                  "kayitlar": [{"kimlik": x["kimlik"], "dersler": x["dersler"], "son_calisma": x["son_calisma"],
+                                "eski_kayit": x["eski"]} for x in adaylar],
+                  "talimat": "Öğrenciye 'Bu adla kayıt var, sen misin?' diye sor (kaydın derslerini ve son çalışma "
+                             "tarihini söyleyebilirsin). Evet derse egitmen_hazirla'yı ogrenci_kimligi=<kimlik> ile "
+                             "çağır (eski kayıtsa ayirt'ı da ver, kayıt ona bağlanır). Hayır derse ayirt ve "
+                             "yeni_ogrenci=true ile çağır; yeni ve ayrı bir kayıt açılır."}
 
 
 def ar_egitmen_hazirla(a):
@@ -649,12 +772,24 @@ def ar_egitmen_hazirla(a):
            "bloom_sirasi": BLOOM}
     if not_:
         out["not"] = not_
-    if a.get("ogrenci"):
-        k = kayit_yukle(a["ogrenci"], ders)
-        out["ogrenci"] = {"ad": k["ogrenci"], "kayit": kayit_ozeti(k, eg),
-                          "ilk_oturum": not k.get("oturumlar"), "olcme_sirasi": olcme_sirasi(k, eg)}
+    kimlik, soru = ogrenci_sec(a)
+    if kimlik:
+        k = kayit_yukle(kimlik, ders)
+        out["ogrenci"] = {"ad": k["ogrenci"], "kimlik": kimlik, "kayit": kayit_ozeti(k, eg),
+                          "ilk_oturum": not k.get("oturumlar"), "olcme_sirasi": olcme_sirasi(k, eg),
+                          "kayit_klasoru": depo().klasor(kimlik), "not": OGRENCI_TALIMAT % kimlik}
+        if k.get("deneme"):
+            out["ogrenci"]["deneme"] = True
+            out["ogrenci"]["deneme_notu"] = ("Öğretmen deneme kaydı: karnede ve araştırma dışa aktarımında ayrı "
+                                             "işaretlenir, anonim aktarıma katılmaz.")
+        uyari_ekle(out["ogrenci"], k)
     else:
-        out["ogrenci"] = "Adı bilinmiyor: öğrenciye bir kez adını sor, sonra egitmen_hazirla'yı ogrenci ile yeniden çağır."
+        out["ogrenci"] = soru
+    if depo().tasima_raporu and not getattr(depo(), "_tasima_soylendi", False):
+        r = depo().tasima_raporu
+        depo()._tasima_soylendi = True
+        out["kayit_tasima"] = {"not": "Eski kayıtlar kalıcı kayıt klasörüne kopyalandı; eski dosyalar silinmedi.",
+                               "kaynak": r["kaynak"], "yeni_yer": depo().kok, "kopyalanan": r["kopyalanan"]}
     return metin(out)
 
 
@@ -662,9 +797,12 @@ def ar_kayit_oku(a):
     k = kayit_yukle(a.get("ogrenci"), a.get("ders"))
     eg = egitmen_json(a.get("ders"))
     out = kayit_ozeti(k, eg)
+    out["ogrenci_kimligi"] = k["_kimlik"]
+    if k.get("deneme"):
+        out["deneme"] = True
     if a.get("ayrinti"):
-        out["kayit"] = k
-    return metin(out)
+        out["kayit"] = kayit_temiz(k)
+    return metin(uyari_ekle(out, k))
 
 
 def ar_kayit_yaz(a):
@@ -742,10 +880,10 @@ def ar_kayit_yaz(a):
         else:
             k["oturumlar"].append(o)
     yol = kayit_kaydet(k)
-    out = {"durum": "kaydedildi", "dosya": os.path.relpath(yol, KOK), "ozet": kayit_ozeti(k, eg)}
+    out = {"durum": "kaydedildi", "dosya": yol, "ozet": kayit_ozeti(k, eg)}
     if uyarilar:
         out["uyarilar"] = uyarilar
-    return metin(out)
+    return metin(uyari_ekle(out, k))
 
 
 def ar_rapor_yaz(a):
@@ -756,7 +894,10 @@ def ar_rapor_yaz(a):
     y = ["# Çalışma raporu — %s" % (eg.get("baslik") or ders), "",
          "Öğrenci: %s · Tarih: %s · Eğitmen: %s · Oturum sayısı: %d" % (
              k["ogrenci"], bugun(), EGITMENLER.get(eg.get("egitmen"), "-"), len(k.get("oturumlar", []))),
-         "", "Bu rapor not için değildir. Öğrencinin bilgisayarında üretildi; otomatik gönderilmedi.", "",
+         "", "Bu rapor not için değildir. Öğrencinin bilgisayarında üretildi; otomatik gönderilmedi.", ""]
+    if k.get("deneme"):
+        y += ["> **DENEME KAYDI:** öğretmen denemesidir; araştırma verisine katılmaz.", ""]
+    y += [
          "## Öğretmen özeti", "", (a.get("ogretmen_ozeti") or "(özet yazılmadı)").strip(), ""]
     y += ["## Hedefler", "", "| Hedef | Hedef düzey | Yardımsız ulaşılan | Destekle ulaşılan | Durum | Sonraki tekrar |",
           "| --- | --- | --- | --- | --- | --- |"]
@@ -801,12 +942,10 @@ def ar_rapor_yaz(a):
             y += ["", "## " + baslik, "", a[alan].strip()]
     y += ["", "---", "Eğitmenin kendi değerlendirmesi bağımsız bir ölçüm değildir. Kalıcılık ancak sonraki oturumlardaki "
           "yardımsız geri çağırmayla gösterilir."]
-    klasor = os.path.join(ogrenci_klasoru(k["ogrenci"]), "raporlar")
-    os.makedirs(klasor, exist_ok=True)
-    yol = os.path.join(klasor, "%s_%s.md" % (ders, time.strftime("%Y-%m-%d_%H%M")))
-    open(yol, "w", encoding="utf-8").write("\n".join(y) + "\n")
-    return metin({"durum": "yazıldı", "dosya": os.path.relpath(yol, KOK),
-                  "not": "Öğrenciye dosyanın yerini söyle; isterse öğretmenine kendisi gönderir."})
+    yol = depo().metin_yaz(k["_kimlik"], "raporlar", "%s_%s.md" % (ders, time.strftime("%Y-%m-%d_%H%M")),
+                           "\n".join(y) + "\n")
+    return metin(uyari_ekle({"durum": "yazıldı", "dosya": yol,
+                             "not": "Öğrenciye dosyanın yerini söyle; isterse öğretmenine kendisi gönderir."}, k))
 
 
 # ---------- Bilgi bankası ----------
@@ -908,14 +1047,11 @@ def ar_karne(a):
     if a.get("yaz"):
         d = egitmen_json(ders) or {}
         baslik = d.get("baslik") or ders_json(ders).get("title")
-        klasor = os.path.join(ogrenci_klasoru(k["ogrenci"]), "karneler")
-        os.makedirs(klasor, exist_ok=True)
-        yol = os.path.join(klasor, "%s_%s.md" % (ders, time.strftime("%Y-%m-%d_%H%M")))
-        open(yol, "w", encoding="utf-8").write(karne_.markdown(sonuc, baslik, bugun()))
-        out["dosya"] = os.path.relpath(yol, KOK)
+        out["dosya"] = depo().metin_yaz(k["_kimlik"], "karneler", "%s_%s.md" % (ders, time.strftime("%Y-%m-%d_%H%M")),
+                                        karne_.markdown(sonuc, baslik, bugun()))
     out["not"] = ("Öğrenciye karnenin özetini 3–5 cümleyle, cesaretlendirici ve somut söyle: en güçlü hedef, "
                   "geliştirilecek hedef ve bir sonraki adım. Puanı not gibi sunma. İstersen tahtada table ile göster.")
-    return metin(out)
+    return metin(uyari_ekle(out, k))
 
 
 # ---------- Sözlü sınav provası ----------
@@ -999,7 +1135,9 @@ def ar_tekrar_listesi(a):
         if not os.path.isdir(os.path.join(KOK, "lessons", ders)):
             continue
         try:
-            k = json.load(open(yol, encoding="utf-8"))
+            k, _ = kd.guvenli_oku(yol)
+            if not k:
+                continue
             kr = karne_.hesapla(k, karne_.ders_hedefleri(ders_yolu(ders)), b)
         except (ValueError, KeyError, OSError):
             continue
@@ -1102,7 +1240,8 @@ def ar_olcme_testi(a):
     eg, o, form, ogr = test_formu(a)
     tur, ders = a["tur"], a["ders"]
     k = kayit_yukle(ogr, ders)
-    uyari = []
+    ogr = tohum(k)
+    uyari = list(k.get("_uyarilar") or [])
     if any(t.get("tur") == tur and not t.get("yarim_kaldi") for t in k.get("testler", [])):
         uyari.append("Bu öğrenci %s testini daha önce tamamladı; tekrarı araştırmada ayrı sayılır." % TEST_AD[tur].lower())
     sira_onerisi = olcme_sirasi(k, eg) or {}
@@ -1128,6 +1267,8 @@ def ar_olcme_testi(a):
 def ar_olcme_kaydet(a):
     eg, o, form, ogr = test_formu(a)
     tur, ders = a["tur"], a["ders"]
+    k = kayit_yukle(ogr, ders)
+    ogr = tohum(k)
     sorular = {s["no"]: s for s in o["formlar"][form]}
     toplam = sum(1 if s["tur"] == "secmeli" else 2 for s in sorular.values())
     ayrinti, uyarilar, yanilgilar = [], [], []
@@ -1163,7 +1304,6 @@ def ar_olcme_kaydet(a):
         puan += r["puan"]
         ayrinti.append(r)
     eksik = [n for n in sorular if n not in {r["no"] for r in ayrinti}]
-    k = kayit_yukle(ogr, ders)
     kayit = {"tur": tur, "form": form, "tarih": bugun(), "saat": time.strftime("%H:%M"), "puan": puan,
              "toplam": toplam, "emin_ama_yanlis": emin_yanlis, "secilen_yanilgilar": sorted(set(yanilgilar)),
              "yarim_kaldi": bool(a.get("yarim_kaldi") or eksik), "yanitlar": ayrinti}
@@ -1171,7 +1311,7 @@ def ar_olcme_kaydet(a):
         kayit["cevapsiz"] = eksik
     k.setdefault("testler", []).append(kayit)
     yol = kayit_kaydet(k)
-    out = {"durum": "kaydedildi", "dosya": os.path.relpath(yol, KOK), "test": TEST_AD[tur], "puan": puan,
+    out = {"durum": "kaydedildi", "dosya": yol, "test": TEST_AD[tur], "puan": puan,
            "toplam": toplam, "emin_ama_yanlis": emin_yanlis, "secilen_yanilgilar": kayit["secilen_yanilgilar"],
            "yanlislar": [{"no": r["no"], "cevap": r.get("cevap"), "dogru_cevap": r.get("dogru_cevap"),
                           "olcut": sorular[r["no"]].get("olcut"), "emin_ama_yanlis": r.get("emin_ama_yanlis", False)}
@@ -1182,7 +1322,33 @@ def ar_olcme_kaydet(a):
         out["cevapsiz"] = eksik
     if uyarilar:
         out["uyarilar"] = uyarilar
-    return metin(out)
+    return metin(uyari_ekle(out, k))
+
+
+# ---------- Kayıtları aktarma (yalnız bu bilgisayarda; hiçbir yere gönderilmez) ----------
+def ar_kayit_disa_aktar(a):
+    r = kayit_aktar.disa_aktar(depo(), a.get("ogrenci"), a.get("cikti") or None)
+    r["not"] = ("Öğrenciye dosyanın yerini söyle. Bu dosyayı başka bilgisayara (USB bellek, e-posta) kendisi taşır; "
+                "orada kayit_ice_aktar ile ya da tools/kayit_aktar.py ice ile içe alır. Dosyada adı vardır; "
+                "yalnız güvendiği yere koysun.")
+    return metin(r)
+
+
+def ar_kayit_ice_aktar(a):
+    yol = os.path.abspath(os.path.expanduser((a.get("dosya") or "").strip().strip('"')))
+    if not os.path.isfile(yol):
+        raise ValueError("Dosya bulunamadı: %s" % yol)
+    r = kayit_aktar.ice_aktar(depo(), yol, bool(a.get("uzerine")))
+    r["not"] = "Sonraki araçlarda ogrenci alanına bu kimliği yaz: %s" % r["kimlik"]
+    return metin(r)
+
+
+def ar_kayit_anonim_aktar(a):
+    r = kayit_aktar.anonim(depo(), a.get("ogrenciler") or None, a.get("dosyalar") or None,
+                           bool(a.get("deneme_dahil")), a.get("cikti") or veri_yeri.masaustu())
+    return metin({"dosya": r["dosya"], "ogrenci_sayisi": r["ogrenci_sayisi"],
+                  "haric_tutulan_deneme": r["haric_tutulan_deneme"],
+                  "not": "Dosyada ad, kimlik, ayırt edici ve serbest metin yoktur; kodlar rastgeledir."})
 
 
 # ---------- Tahta ----------
@@ -1358,7 +1524,9 @@ ISLEYICILER = {"egitmen_hazirla": ar_egitmen_hazirla, "kayit_oku": ar_kayit_oku,
                "tahta_durumu": ar_tahta_durumu, "dinle": ar_dinle, "durdur": ar_durdur,
                "anlatima_devam": ar_anlatima_devam, "videolar": ar_videolar,
                "bilgi_ara": ar_bilgi_ara, "vakalar": ar_vakalar, "vaka_oku": ar_vaka_oku, "karne": ar_karne,
-               "sozlu_prova": ar_sozlu_prova, "tekrar_listesi": ar_tekrar_listesi}
+               "sozlu_prova": ar_sozlu_prova, "tekrar_listesi": ar_tekrar_listesi,
+               "kayit_disa_aktar": ar_kayit_disa_aktar, "kayit_ice_aktar": ar_kayit_ice_aktar,
+               "kayit_anonim_aktar": ar_kayit_anonim_aktar}
 
 
 def metin(veri, hata=False):
@@ -1506,6 +1674,16 @@ def kur(kaldir=False):
         print("\nŞimdi Claude masaüstü uygulamasını TAMAMEN kapatın (saat yanındaki simgeye sağ tık → Quit/Çık)")
         print("ve yeniden açın. Sohbet kutusunun altındaki araçlar menüsünde 'klinik-koc' görünmelidir.")
         print("Sonra Claude'a şunu yazın:  Tahtayı aç ve bana Şekil 2'yi anlat.")
+        kayit_yeri_hazirla()
+
+
+def kayit_yeri_hazirla():
+    d = depo()
+    d.hazirla()
+    print("\nÖğrenci kayıtları bu klasörde durur (güncellemede silinmez):\n  " + d.kok)
+    if d.tasima_raporu:
+        print("Eski kayıtlar buraya kopyalandı (%d dosya); eski dosyalar silinmedi: %s" % (
+            d.tasima_raporu["kopyalanan"], d.tasima_raporu["kaynak"]))
 
 
 def kendini_dene():
@@ -1514,6 +1692,7 @@ def kendini_dene():
     print("Klasör:", KOK)
     print("Dersler:", ", ".join(g["id"] for g in katalog()) or "yok")
     print("Araçlar:", ", ".join(a["name"] for a in ARACLAR))
+    print("Kayıt klasörü:", KAYIT_KOK)
     d = sunucu_acik()
     print("Yerel sunucu:", "açık, tahta " + ("bağlı" if d and d.get("bagli") else "bağlı değil") if d else "kapalı (Claude açacak)")
 
@@ -1523,6 +1702,8 @@ if __name__ == "__main__":
         kur()
     elif "--kaldir" in sys.argv:
         kur(kaldir=True)
+    elif "--kayit-yeri" in sys.argv:
+        kayit_yeri_hazirla()
     elif "--dene" in sys.argv:
         kendini_dene()
     else:

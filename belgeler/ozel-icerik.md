@@ -9,7 +9,7 @@ yalnız sizin bilgisayarınızda (ve kendi seçtiğiniz özel yedekte) durur.
 | Gerçek hastadan uyarlanan vaka | `lessons/<ders>/vakalar/ozel-<ad>.json` | Hayır |
 | O vakanın görselleri | `lessons/<ders>/vakalar/ozel-<ad>/...` | Hayır |
 | Ham malzeme (fotoğraflar, Word, PDF) | `ozel/` | Hayır |
-| Öğrenci kayıtları, karneler, raporlar | `kayitlar/` | Hayır |
+| Öğrenci kayıtları, karneler, raporlar | program dışındaki kalıcı kayıt klasörü (eski sürümlerde `kayitlar/`) | Hayır |
 | Arama dizini, indirilen modeller | `.dizin/`, `.modeller/` | Hayır (her bilgisayarda yeniden üretilir) |
 | Genel kod, şablonlar, kurgusal örnek vakalar | her yer | Evet |
 

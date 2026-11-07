@@ -40,12 +40,42 @@ vakaya geri döner. Sorular not için değildir; karne yalnız öğrencinin kend
 - Yalnız oynatıcı: `index.html` dosyasına çift tıklayın.
 - Canlı eğitmen: [Python](https://www.python.org/downloads/) ve Claude masaüstü uygulaması kurulu olmalı.
   `KUR.bat` dosyasına çift tıklayın, Claude uygulamasını tamamen kapatıp açın, sonra yazın:
-  **"Tahtayı aç, peri-implantitis dersine başlayalım. Adım Ayşe."**
+  **"Tahtayı aç, peri-implantitis dersine başlayalım. Adım Ayşe, numaramın son üç hanesi 123."**
 - Mac'te `KUR.bat` yerine `KUR.command` dosyasına çift tıklayın. macOS ilk açılışta "geliştiricisi doğrulanamadı"
   derse dosyaya sağ tıklayıp **Aç → Aç** deyin. Python 3 yoksa kurulum bunu söyler
   ([python.org](https://www.python.org/downloads/macos/)). Claude'u kapatmak için Cmd+Q.
 
 **Öğretmen:** Kendi dersinizi ve vakalarınızı eklemek için [belgeler/ogretmen-kilavuzu.md](belgeler/ogretmen-kilavuzu.md).
+
+## Öğrenci kayıtları nerede, nasıl silinir?
+
+Kayıtlarınız (ilerlemeniz, karneleriniz, raporlarınız) **yalnız bu bilgisayarda** durur. Program
+onları hiçbir yere kendiliğinden göndermez; internete de çıkarmaz. Program klasörünün dışında
+tutulur, bu yüzden programın yeni sürümünü indirip eskisini sildiğinizde kayıtlarınız kaybolmaz.
+
+| Bilgisayar | Kayıt klasörü |
+|---|---|
+| Mac | `~/Library/Application Support/KlinikKoc/kayitlar` (Finder → Git → Klasöre Git… yazıp yapıştırın) |
+| Windows | `%APPDATA%\KlinikKoc\kayitlar` (Dosya Gezgini'nin adres çubuğuna yazın) |
+
+- İlk girişte koç adınızı ve kısa bir ayırt ediciyi (öğrenci numaranızın son 3 hanesi ya da bir
+  takma ad) sorar. Böylece aynı adlı iki öğrencinin kaydı karışmaz. Her öğrencinin kendi klasörü olur.
+- Her kayıt önce geçici bir dosyaya yazılır, sonra yerine konur; önceki 5 sürüm `yedekler/`
+  klasöründe saklanır. Bir dosya bozulursa (ör. elektrik kesilirse) en yeni yedekten açılır.
+- Eski sürümlerde kayıtlar program klasöründeki `kayitlar/` içindeydi. Yeni sürüm ilk açılışta
+  onları bir kez yeni yere kopyalar; eski dosyalara dokunmaz.
+- **Başka bilgisayara taşımak:** Claude'a "kayıtlarımı dışa aktar" deyin; masaüstüne tek bir dosya
+  yazılır. Öbür bilgisayarda "şu dosyadaki kayıtlarımı içe al" deyin (ya da
+  `python tools/kayit_aktar.py ice <dosya>`).
+- **Silmek:** Claude'u kapatın ve yukarıdaki klasörü (ya da içindeki kendi adınızla başlayan
+  klasörü) çöp kutusuna atın. Hepsi budur; başka bir yerde kopyası yoktur.
+- **Öğretmen denemesi:** Öğretmen kendini denerken adını "deneme" verir; bu kayıtlar karnede
+  "DENEME KAYDI" diye görünür ve araştırma aktarımına katılmaz.
+- **Araştırma için (öğretmen):** `python tools/kayit_aktar.py anonim --dosya <öğrencilerin gönderdiği dosyalar>`
+  ad, numara ve serbest metin içermeyen tek bir dosya üretir; öğrenciye rastgele kod verilir, tarih
+  yerine gün farkı yazılır ([belgeler/anonimlestirme.md](belgeler/anonimlestirme.md) ile uyumlu).
+  Öğrenci kendi dosyasını öğretmene yalnız isterse kendisi verir.
+- Kayıt yerini değiştirmek isteyen ileri kullanıcılar `KLINIK_KOC_KAYIT` ortam değişkenini kullanabilir.
 
 ## Kendi içeriğiniz depoya girmez
 

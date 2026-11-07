@@ -36,11 +36,13 @@ Kaldırma: `python tools/tahta-mcp.py --kaldir`.
 | Araç | Ne yapar |
 |---|---|
 | `egitmen_hazirla` | Dersin eğitmenini (İnci ya da Mercan), kurallarını, hedeflerini ve öğrencinin kaydını yükler |
-| `kayit_yaz` / `kayit_oku` | Öğrencinin ilerlemesini, her cevabın Bloom düzeyini ve rubrik puanını bu bilgisayardaki `kayitlar/` klasörüne yazar ve okur |
+| `kayit_yaz` / `kayit_oku` | Öğrencinin ilerlemesini, her cevabın Bloom düzeyini ve rubrik puanını bu bilgisayardaki kalıcı kayıt klasörüne yazar ve okur (bkz. README, "Öğrenci kayıtları") |
 | `bilgi_ara` | Derslerin kaynak sayfalarında, anlatımında, öğretmen notlarında ve vakalarında arar (sözcük + isteğe bağlı anlam araması; bkz. [bilgi-bankasi.md](bilgi-bankasi.md)) |
 | `vakalar` / `vaka_oku` | Dersin vaka kartlarını listeler; bir vakayı eğitmen için açar (bkz. [vaka-karti.md](vaka-karti.md)) |
 | `karne` | Öğrencinin karnesini hesaplar: hedef ve Bloom düzeyine göre başarı, soru güçlüğü, vaka sonuçları |
-| `rapor_yaz` | Öğretmen için Markdown rapor yazar (`kayitlar/<ad>/raporlar/`) |
+| `rapor_yaz` | Öğretmen için Markdown rapor yazar (kayıt klasöründe `<kimlik>/raporlar/`) |
+| `kayit_disa_aktar` / `kayit_ice_aktar` | Öğrencinin bütün kaydını tek dosyaya yazar / başka bilgisayarda içe alır |
+| `kayit_anonim_aktar` | Yalnız öğretmen: seçilen öğrencilerin kimliksiz araştırma dosyası (deneme kayıtları hariç) |
 | `olcme_testi` / `olcme_kaydet` | Öğretmenin onayladığı pilot testi (ön / son / gecikmeli) seçenekleri karıştırarak verir; yanıtları puanlayıp kayda yazar |
 | `tahtayi_ac` | Yerel sunucu kapalıysa açar, tahta sayfasını açar ve bağlanmasını bekler |
 | `dersler` | Bilgisayardaki dersleri, bölümlerini ve görsellerini listeler |
@@ -74,7 +76,7 @@ Başlamak için Claude'a yazın: **"Tahtayı aç, peri-implantitis dersine başl
 Vaka çalışmak için: **"Bu dersin vakasını çözelim."** Karne için: **"Karnemi göster."**
 Claude önce eğitmeni yükler, kaydınızda tekrar zamanı gelen konu varsa kısa bir tekrarla başlar.
 
-Öğrenci kaydı ve raporlar yalnız bu bilgisayardaki `kayitlar/` klasöründe durur; hiçbir yere gönderilmez.
+Öğrenci kaydı ve raporlar yalnız bu bilgisayardaki kalıcı kayıt klasöründe durur (Mac: `~/Library/Application Support/KlinikKoc/kayitlar`, Windows: `%APPDATA%\KlinikKoc\kayitlar`); hiçbir yere gönderilmez. Öğrenci isterse `kayit_disa_aktar` ile tek dosyaya alıp başka bilgisayarda `kayit_ice_aktar` ile açar.
 Rapor, öğrenci isterse öğretmenine kendisi tarafından iletilir.
 
 ## Sesli sohbet (dikte)

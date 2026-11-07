@@ -383,6 +383,190 @@ class Video(unittest.TestCase):
             sunucu.KOK = eski
 
 
+class Kayitlar(unittest.TestCase):
+    """Öğrenci kayıtları: taşıma, atomik yazma, bozuk dosyadan kurtarma, aynı ad, deneme kaydı, aktarma."""
+
+    def setUp(self):
+        import importlib.util
+        import kayit_deposu
+        import kayit_aktar
+        self.kd, self.ka = kayit_deposu, kayit_aktar
+        self.gecici = tempfile.TemporaryDirectory()
+        self.d = os.path.join(self.gecici.name, "Application Support", "Klinik Koc")  # boşluklu yol
+        self.eski = os.path.join(self.gecici.name, "eski program", "kayitlar")
+        spec = importlib.util.spec_from_file_location("tahta_mcp_kayit", os.path.join(KOK, "tools", "tahta-mcp.py"))
+        self.m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.m)
+        self.m.KAYIT_KOK = os.path.join(self.d, "kayitlar")
+        self.m.ESKI_KAYIT_KOK = self.eski
+        self.m._DEPO = None
+        self.eski_ortam = os.environ.pop("KLINIK_KOC_KAYIT", None)
+
+    def tearDown(self):
+        if self.eski_ortam is not None:
+            os.environ["KLINIK_KOC_KAYIT"] = self.eski_ortam
+        self.gecici.cleanup()
+
+    def arac(self, ad, **a):
+        r = self.m.ISLEYICILER[ad](a)
+        t = r["content"][0]["text"]
+        if r.get("isError"):
+            raise AssertionError(t)
+        return json.loads(t)
+
+    def yaz_json(self, yol, veri):
+        os.makedirs(os.path.dirname(yol), exist_ok=True)
+        with open(yol, "w", encoding="utf-8") as f:
+            json.dump(veri, f, ensure_ascii=False)
+
+    def test_kalici_yer_ortam_degiskeni_once(self):
+        import veri_yeri
+        os.environ["KLINIK_KOC_KAYIT"] = os.path.join(self.gecici.name, "özel yer")
+        try:
+            self.assertEqual(veri_yeri.kayit_kok(), os.path.join(self.gecici.name, "özel yer"))
+        finally:
+            del os.environ["KLINIK_KOC_KAYIT"]
+        self.assertTrue(veri_yeri.kayit_kok().endswith(os.path.join("KlinikKoc", "kayitlar")))
+        self.assertNotIn(KOK, veri_yeri.kayit_kok())
+
+    def test_eski_yerden_bir_kez_tasima_silmeden(self):
+        ders = "peri-implantitis-cerrahi"
+        self.yaz_json(os.path.join(self.eski, "ayse-yilmaz", ders + ".json"),
+                      {"ogrenci": "Ayşe Yılmaz", "ders": ders, "hedefler": {"H1.1": {"durum": "bagimsiz_yapti"}},
+                       "yanilgilar": {}, "guven": [], "sorular": [], "testler": [], "oturumlar": [{"tarih": "2026-11-01"}]})
+        os.makedirs(os.path.join(self.eski, "ayse-yilmaz", "raporlar"))
+        open(os.path.join(self.eski, "ayse-yilmaz", "raporlar", "r.md"), "w", encoding="utf-8").write("rapor")
+        k = self.arac("kayit_oku", ogrenci="Ayşe Yılmaz", ders=ders)
+        self.assertEqual(k["oturum_sayisi"], 1)
+        yeni = os.path.join(self.d, "kayitlar", "ayse-yilmaz")
+        self.assertTrue(os.path.exists(os.path.join(yeni, ders + ".json")))
+        self.assertTrue(os.path.exists(os.path.join(yeni, "raporlar", "r.md")))
+        self.assertTrue(os.path.exists(os.path.join(self.eski, "ayse-yilmaz", ders + ".json")), "eski dosya silinmemeli")
+        self.assertTrue(os.path.exists(os.path.join(self.eski, "TASINDI.txt")))
+        # ikinci açılışta yeniden taşımaz: eskide değişen dosya yenisinin üstüne yazılmaz
+        self.yaz_json(os.path.join(self.eski, "ayse-yilmaz", ders + ".json"), {"ogrenci": "x", "ders": ders})
+        depo = self.kd.Depo(os.path.join(self.d, "kayitlar"), self.eski)
+        depo.hazirla()
+        self.assertIsNone(depo.tasima_raporu)
+        self.assertEqual(json.load(open(os.path.join(yeni, ders + ".json"), encoding="utf-8"))["ogrenci"], "Ayşe Yılmaz")
+
+    def test_atomik_yazma_ve_bes_yedek(self):
+        yol = os.path.join(self.d, "kayitlar", "a-1", "d.json")
+        for i in range(8):
+            self.kd.atomik_yaz(yol, {"n": i})
+        self.assertEqual(json.load(open(yol, encoding="utf-8"))["n"], 7)
+        y = self.kd.yedekler(yol)
+        self.assertEqual(len(y), 5)
+        self.assertEqual(json.load(open(y[0], encoding="utf-8"))["n"], 6)  # en yeni yedek bir önceki sürüm
+        self.assertFalse([a for a in os.listdir(os.path.dirname(yol)) if a.endswith(".tmp")])
+
+    def test_bozuk_dosya_yedekten_acilir(self):
+        ders = "peri-implantitis-cerrahi"
+        self.arac("egitmen_hazirla", ders=ders, ogrenci="Can Demir", ayirt="123")
+        self.arac("kayit_yaz", ogrenci="can-demir-123", ders=ders, mola="bölüm 2")
+        self.arac("kayit_yaz", ogrenci="can-demir-123", ders=ders, mola="bölüm 3")
+        yol = os.path.join(self.d, "kayitlar", "can-demir-123", ders + ".json")
+        open(yol, "w", encoding="utf-8").write('{"ogrenci": "Can", "hedef')  # yarım kalmış yazım
+        k = self.arac("kayit_oku", ogrenci="can-demir-123", ders=ders)
+        self.assertEqual(k["mola"], "bölüm 2")
+        self.assertTrue(any("yedekten" in u for u in k["uyarilar"]))
+        self.assertTrue([a for a in os.listdir(os.path.dirname(yol)) if ".bozuk-" in a], "bozuk dosya saklanmalı")
+        self.assertEqual(json.load(open(yol, encoding="utf-8"))["mola"], "bölüm 2")  # geri yazıldı
+
+    def test_kalici_kimlik_ve_ayni_ad(self):
+        ders = "peri-implantitis-cerrahi"
+        r = self.arac("egitmen_hazirla", ders=ders, ogrenci="Elif Kaya")
+        self.assertEqual(r["ogrenci"]["durum"], "ayirt_gerekli")
+        r = self.arac("egitmen_hazirla", ders=ders, ogrenci="Elif Kaya", ayirt="042")
+        kim = r["ogrenci"]["kimlik"]
+        self.assertEqual(kim, "elif-kaya-042")
+        self.arac("kayit_yaz", ogrenci=kim, ders=ders, mola="m1")
+        # aynı ad + aynı ayırt edici → aynı kayıt, soru yok
+        self.assertEqual(self.arac("egitmen_hazirla", ders=ders, ogrenci="elif kaya", ayirt="042")["ogrenci"]["kimlik"], kim)
+        # aynı ad, başka ayırt edici → "Bu adla kayıt var, sen misin?"
+        r = self.arac("egitmen_hazirla", ders=ders, ogrenci="Elif Kaya", ayirt="777")
+        self.assertEqual(r["ogrenci"]["durum"], "ayni_ad_var")
+        self.assertIn("sen misin", r["ogrenci"]["soru"])
+        self.assertEqual([x["kimlik"] for x in r["ogrenci"]["kayitlar"]], [kim])
+        # hayır: ayrı kayıt
+        r = self.arac("egitmen_hazirla", ders=ders, ogrenci="Elif Kaya", ayirt="777", yeni_ogrenci=True)
+        kim2 = r["ogrenci"]["kimlik"]
+        self.assertNotEqual(kim2, kim)
+        self.assertIsNone(r["ogrenci"]["kayit"]["mola"])
+        # artık ad tek başına belirsiz: araçlar kimlik ister
+        with self.assertRaises(self.kd.AyniAdBelirsiz):
+            self.arac("kayit_oku", ogrenci="Elif Kaya", ders=ders)
+        self.assertEqual(self.arac("kayit_oku", ogrenci=kim, ders=ders)["mola"], "m1")
+        # evet: kimlikle devam
+        self.assertEqual(self.arac("egitmen_hazirla", ders=ders, ogrenci_kimligi=kim)["ogrenci"]["kayit"]["mola"], "m1")
+
+    def test_eski_ada_gore_kayit_okunur_ve_baglanir(self):
+        ders = "peri-implantitis-cerrahi"
+        kok = os.path.join(self.d, "kayitlar")
+        self.yaz_json(os.path.join(kok, "mert-oz", ders + ".json"),
+                      {"ogrenci": "Mert Öz", "ders": ders, "olusturma": "2026-10-01", "mod": "once_anlat",
+                       "hedefler": {}, "yanilgilar": {}, "guven": [], "sorular": [], "testler": [],
+                       "oturumlar": [], "mola": "eski mola", "cevaplar": [], "vakalar": []})
+        self.assertEqual(self.arac("kayit_oku", ogrenci="Mert Öz", ders=ders)["mola"], "eski mola")
+        r = self.arac("egitmen_hazirla", ders=ders, ogrenci="Mert Öz", ayirt="55")
+        self.assertEqual(r["ogrenci"]["durum"], "ayni_ad_var")
+        self.assertTrue(r["ogrenci"]["kayitlar"][0]["eski_kayit"])
+        r = self.arac("egitmen_hazirla", ders=ders, ogrenci_kimligi="mert-oz", ayirt="55")
+        self.assertEqual(r["ogrenci"]["kayit"]["mola"], "eski mola")
+        # artık ad + ayırt edici doğrudan eski klasöre gider
+        self.assertEqual(self.arac("egitmen_hazirla", ders=ders, ogrenci="Mert Öz", ayirt="55")["ogrenci"]["kimlik"], "mert-oz")
+
+    def test_deneme_kaydi_ayri(self):
+        ders = "peri-implantitis-cerrahi"
+        r = self.arac("egitmen_hazirla", ders=ders, ogrenci="deneme")
+        self.assertTrue(r["ogrenci"]["deneme"])
+        kd_ = r["ogrenci"]["kimlik"]
+        cev = [{"soru": "S1", "hedef": "H1.1", "bloom": "hatirla", "tur": "secmeli", "puan": 1, "en_yuksek": 1}]
+        self.arac("kayit_yaz", ogrenci=kd_, ders=ders, cevaplar=cev)
+        k = self.arac("karne", ogrenci=kd_, ders=ders, yaz=True)
+        self.assertTrue(k["karne"]["deneme"])
+        self.assertIn("DENEME KAYDI", open(k["dosya"], encoding="utf-8").read())
+        r = self.arac("egitmen_hazirla", ders=ders, ogrenci="Zeynep Ak", ayirt="901")
+        self.arac("kayit_yaz", ogrenci=r["ogrenci"]["kimlik"], ders=ders, cevaplar=cev)
+        self.assertNotIn("deneme", self.arac("karne", ogrenci="zeynep-ak-901", ders=ders)["karne"])
+        a = self.ka.anonim(self.m.depo())
+        self.assertEqual((a["ogrenci_sayisi"], a["haric_tutulan_deneme"]), (1, 1))
+        a = self.ka.anonim(self.m.depo(), deneme_dahil=True)
+        self.assertEqual(sum(1 for x in a["kayitlar"] if x.get("deneme")), 1)
+        # bayrakla açılan deneme de ayrılır
+        r = self.arac("egitmen_hazirla", ders=ders, ogrenci="Hoca", deneme=True)
+        self.assertTrue(r["ogrenci"]["deneme"])
+
+    def test_disa_ice_aktarma_ve_anonim(self):
+        ders = "peri-implantitis-cerrahi"
+        kim = self.arac("egitmen_hazirla", ders=ders, ogrenci="Ali Veli", ayirt="314")["ogrenci"]["kimlik"]
+        self.arac("kayit_yaz", ogrenci=kim, ders=ders, mola="m", hedefler=[
+            {"id": "H1.a", "duzey": "hatirla", "yardim": "yardimsiz", "dogru": True, "kanit": "Ali şunu söyledi"}],
+            sorular=[{"soru": "Kişisel bir soru"}], cevaplar=[{"soru": "S1", "hedef": "H1.1", "puan": 1, "en_yuksek": 1}])
+        self.arac("rapor_yaz", ogrenci=kim, ders=ders, ogretmen_ozeti="Özet.")
+        cikti = os.path.join(self.gecici.name, "masa üstü")
+        os.makedirs(cikti)
+        r = self.arac("kayit_disa_aktar", ogrenci=kim, cikti=cikti)
+        self.assertTrue(os.path.isfile(r["dosya"]))
+        # başka bilgisayar
+        self.m.KAYIT_KOK = os.path.join(self.gecici.name, "ikinci pc", "kayitlar")
+        self.m._DEPO = None
+        i = self.arac("kayit_ice_aktar", dosya=r["dosya"])
+        self.assertEqual((i["kimlik"], i["alinan_dersler"], i["rapor_karne"]), (kim, [ders], 1))
+        self.assertEqual(self.arac("kayit_oku", ogrenci=kim, ders=ders)["mola"], "m")
+        self.assertEqual(self.arac("egitmen_hazirla", ders=ders, ogrenci="Ali Veli", ayirt="314")["ogrenci"]["kimlik"], kim)
+        # buradaki kayıt daha yeniyse dokunmaz
+        self.arac("kayit_yaz", ogrenci=kim, ders=ders, mola="yeni")
+        self.assertTrue(self.arac("kayit_ice_aktar", dosya=r["dosya"])["atlanan"])
+        self.assertEqual(self.arac("kayit_oku", ogrenci=kim, ders=ders)["mola"], "yeni")
+        # öğretmen: dosyadan anonim aktarma — ad, kimlik, ayırt edici, serbest metin ve tam tarih yok
+        a = self.ka.anonim(dosyalar=[r["dosya"]], cikti=cikti)
+        metin_ = open(a["dosya"], encoding="utf-8").read()
+        for yasak in ("Ali", "314", kim, "Kişisel", "şunu söyledi", "2026-"):
+            self.assertNotIn(yasak, metin_)
+        self.assertEqual(a["kayitlar"][0]["dersler"][0]["hedefler"]["H1.a"]["yardimsiz_duzey"], "hatirla")
+
+
 class YayinDenetimi(unittest.TestCase):
     def test_depo_temiz(self):
         r = subprocess.run([sys.executable, os.path.join(KOK, "tools", "yayin_denetimi.py")], capture_output=True, text=True)
