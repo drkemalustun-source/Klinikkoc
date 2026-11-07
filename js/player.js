@@ -229,7 +229,7 @@
         };
       };
       const want = refs(q.sourceRef);
-      const visual = (s) => (s.board || []).some((c) => ['image', 'highlight', 'zoom', 'table', 'flow', 'compare', 'draw', 'tree'].includes(c.type));
+      const visual = (s) => (s.board || []).some((c) => ['image', 'video', 'highlight', 'zoom', 'table', 'flow', 'compare', 'draw', 'tree'].includes(c.type));
       let best = -1, bestScore = 0;
       this.steps.forEach((s, i) => {
         if (s._section !== step._section || s.question) return;

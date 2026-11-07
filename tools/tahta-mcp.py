@@ -62,6 +62,10 @@ Nasıl çalış:
 - Tahtada tek görsel alan vardır (image, table, flow, compare, draw, tree'den biri); yanında title, bullets,
   term, text notları durabilir. Yeni konuya geçerken {"type":"clear"} ile başla.
 - Ders görselleri dışında görsel kullanma; kendi çizimin için draw komutunu kullan.
+Video: Dersin videoları (klasördeki dosyalar ve öğretmenin eklediği YouTube bağlantıları) videolar aracıyla
+  listelenir; tahtada video komutuyla gösterilir. Klasördeki video internetsiz oynar, YouTube internet ister.
+  Videoyu kısa tut (baslangic/bitis ile 1–3 dk); önce ne izleneceğini bir cümleyle söyle, video bitince anlat.
+  Kullanıcı sohbete ya da tahtaya bir YouTube bağlantısı verirse onu da youtube alanıyla oynatabilirsin.
 - Bilgi dersin içeriğine dayansın; dersin dışına çıkarsan bunu açıkça söyle.
 - Anlatım bitince sohbet penceresinde çok kısa özet ver; tahtada anlattığını sohbete tekrar yazma.
 Sesli sohbet (dikte): Kullanıcı tahtadaki mikrofon tuşuna (ya da M tuşuna) basıp konuşabilir; söyledikleri
@@ -112,10 +116,14 @@ KOMUT_SEMASI = {
                    "probe:true periodontal sondayı cebe yerleştirir (parça: sonda, derinliği mm yazar). "
                    "Adım adım kurmak için aynı template+variant ile labels listesini büyüterek yeniden gönder: çizim yerinde kalır, "
                    "yalnız yeni etiketler belirir. Etiket metnini yazmazsan doğru Türkçe terim kullanılır. "
-                   "Renkler: chalk, accent, warn, ok. Metinde **kalın** ve _italik_ kullanılabilir.",
+                   "Renkler: chalk, accent, warn, ok. Metinde **kalın** ve _italik_ kullanılabilir. "
+                   "VIDEO: video{video?:videolar aracındaki kimlik | youtube?:bağlantı ya da kimlik, baslangic?:sn, "
+                   "bitis?:sn, oynat?=true, bekle?=true, sessiz?, caption?} görsel alanını kaplar; bekle=true iken o adımın "
+                   "anlatımı video bitince başlar (videonun üstüne konuşma); kısa klip için baslangic/bitis ver. "
+                   "video_kontrol{eylem:oynat|duraklat|git, saniye?} tahtadaki videoyu yönetir.",
     "properties": {"type": {"type": "string", "enum": [
         "clear", "title", "bullets", "point", "text", "term", "image", "highlight", "unhighlight",
-        "zoom", "unzoom", "table", "flow", "compare", "draw", "tree"]}},
+        "zoom", "unzoom", "table", "flow", "compare", "draw", "tree", "video", "video_kontrol"]}},
     "required": ["type"],
     "additionalProperties": True,
 }
@@ -335,6 +343,13 @@ ARACLAR = [
                        "döngüsü: anlat → dinle → cevapla → dinle.",
         "inputSchema": {"type": "object", "properties": {
             "bekle": {"type": "integer", "description": "en çok kaç saniye beklensin (5–50, varsayılan 40)"}}},
+    },
+    {
+        "name": "videolar",
+        "description": "Dersin videolarını listeler: ders klasöründeki videolar/ dosyaları (internetsiz oynar) ve dersin "
+                       "egitmen.json/ders.json'unda tanımlı YouTube bağlantıları. Tahtada göstermek için tahta aracında "
+                       "{type:'video', video:'<kimlik>'} kullan.",
+        "inputSchema": {"type": "object", "properties": {"ders": {"type": "string"}}, "required": ["ders"]},
     },
     {
         "name": "anlatima_devam",
@@ -1201,6 +1216,7 @@ def ar_tahta(a):
     adimlar = a.get("adimlar") or []
     if not isinstance(adimlar, list) or not adimlar:
         raise ValueError("adimlar boş")
+    videolari_coz(adimlar, a.get("ders"))
     komut = {"tur": "adimlar", "adimlar": adimlar}
     if a.get("ders"):
         komut["ders"] = a["ders"]
@@ -1225,6 +1241,84 @@ def ar_tahta_durumu(a):
         return metin(istek("durum?al=1", zaman=5))
     except Exception:
         return metin({"durum": "sunucu kapalı", "not": "tahtayi_ac ile aç."})
+
+
+VIDEO_UZANTI = (".mp4", ".m4v", ".webm", ".ogv", ".mov")
+
+
+def ders_videolari(ders):
+    """Kimlik → {src | youtube, baslik, ...}. Klasördeki dosyalar (lessons/<ders>/videolar/) ve tanımlı bağlantılar.
+    İsteğe bağlı lessons/<ders>/videolar/videolar.json: {"dosya.mp4": {"baslik", "aciklama", "credit"}}."""
+    out = {}
+    klasor = ders_yolu(ders, "videolar")
+    bilgi = {}
+    yol = os.path.join(klasor, "videolar.json")
+    if os.path.exists(yol):
+        try:
+            with open(yol, encoding="utf-8") as f:
+                bilgi = json.load(f) or {}
+        except ValueError:
+            bilgi = {}
+    if os.path.isdir(klasor):
+        for ad in sorted(os.listdir(klasor)):
+            if not ad.lower().endswith(VIDEO_UZANTI):
+                continue
+            kimlik = os.path.splitext(ad)[0]
+            b = bilgi.get(ad) or bilgi.get(kimlik) or {}
+            out[kimlik] = dict(b, dosya=ad, src="/lessons/%s/videolar/%s" % (ders, urllib.request.quote(ad)),
+                               boyut_mb=round(os.path.getsize(os.path.join(klasor, ad)) / 1e6, 1), internet=False)
+    tanimli = dict((ders_json_ham(ders) or {}).get("videos") or {})
+    tanimli.update((egitmen_json(ders) or {}).get("videolar") or {})
+    for kimlik, v in tanimli.items():
+        v = dict(v)
+        if v.get("src") and not v["src"].startswith(("/", "http")):
+            v["src"] = "/lessons/%s/%s" % (ders, v["src"])
+        v["internet"] = bool(v.get("youtube") or str(v.get("src", "")).startswith("http"))
+        out[kimlik] = v
+    return out
+
+
+def ders_json_ham(ders):
+    yol = ders_yolu(ders, "ders.json")
+    if not os.path.exists(yol):
+        return None
+    with open(yol, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def ar_videolar(a):
+    v = ders_videolari(a.get("ders"))
+    if not v:
+        return metin({"ders": a.get("ders"), "videolar": {},
+                      "not": "Bu dersin videosu yok. Öğretmen videoları lessons/%s/videolar/ klasörüne koyabilir; "
+                             "kullanıcı bir YouTube bağlantısı verirse {type:'video', youtube:'<bağlantı>'} ile oynatılır." % a.get("ders")})
+    return metin({"ders": a.get("ders"), "videolar": v})
+
+
+def videolari_coz(adimlar, ders):
+    """tahta aracındaki video komutlarında 'video' kimliğini dosya yoluna ya da YouTube bağlantısına çevirir."""
+    liste = None
+    for adim in adimlar:
+        for c in (adim or {}).get("komutlar") or []:
+            if not isinstance(c, dict) or c.get("type") != "video" or c.get("src") or c.get("youtube"):
+                continue
+            if not c.get("video"):
+                raise ValueError("video komutunda video, youtube ya da src gerekli")
+            if not ders:
+                raise ValueError("Ders videosu için tahta aracına ders alanını da ver")
+            if liste is None:
+                liste = ders_videolari(ders)
+            v = liste.get(c["video"])
+            if not v:
+                raise ValueError("Video yok: %s. Bu dersin videoları: %s" % (c["video"], ", ".join(liste) or "yok"))
+            for k in ("src", "youtube", "baslangic", "bitis"):
+                if v.get(k) is not None and c.get(k) is None:
+                    c[k] = v[k]
+            if not c.get("caption") and (v.get("baslik") or v.get("caption")):
+                c["caption"] = v.get("baslik") or v.get("caption")
+            if v.get("credit"):
+                c["credit"] = v["credit"]
+            c.pop("video", None)
 
 
 def ar_anlatima_devam(a):
@@ -1262,7 +1356,7 @@ ISLEYICILER = {"egitmen_hazirla": ar_egitmen_hazirla, "kayit_oku": ar_kayit_oku,
                "tahtayi_ac": ar_tahtayi_ac, "dersler": ar_dersler, "ders_oku": ar_ders_oku,
                "gorsel_bak": ar_gorsel_bak, "tahta": ar_tahta, "soru_sor": ar_soru_sor,
                "tahta_durumu": ar_tahta_durumu, "dinle": ar_dinle, "durdur": ar_durdur,
-               "anlatima_devam": ar_anlatima_devam,
+               "anlatima_devam": ar_anlatima_devam, "videolar": ar_videolar,
                "bilgi_ara": ar_bilgi_ara, "vakalar": ar_vakalar, "vaka_oku": ar_vaka_oku, "karne": ar_karne,
                "sozlu_prova": ar_sozlu_prova, "tekrar_listesi": ar_tekrar_listesi}
 

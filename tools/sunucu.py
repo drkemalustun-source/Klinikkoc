@@ -438,7 +438,9 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
         ".js": "text/javascript", ".mjs": "text/javascript", ".json": "application/json",
         ".wasm": "application/wasm", ".webmanifest": "application/manifest+json",
         ".svg": "image/svg+xml", ".css": "text/css", ".html": "text/html",
+        ".mp4": "video/mp4", ".m4v": "video/mp4", ".webm": "video/webm", ".ogv": "video/ogg", ".mov": "video/quicktime",
     })
+    VIDEO = (".mp4", ".m4v", ".webm", ".ogv", ".mov")
 
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=KOK, **kw)
@@ -540,7 +542,55 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
             return self._api()
         if self.path.startswith("/api/canli/"):
             return self._canli()
+        if urllib.parse.urlparse(self.path).path.lower().endswith(self.VIDEO):
+            return self._video()
         return super().do_GET()
+
+    def _video(self):
+        """Video dosyaları parça parça (Range) verilir; tarayıcı videoyu ileri-geri sarabilsin."""
+        yol = self.translate_path(self.path)
+        if not os.path.isfile(yol):
+            return self.send_error(404, "Video bulunamadı")
+        boyut = os.path.getsize(yol)
+        bas, son = 0, boyut - 1
+        aralik = self.headers.get("Range", "")
+        kismi = aralik.startswith("bytes=")
+        if kismi:
+            try:
+                a, b = aralik[6:].split(",")[0].split("-")
+                if a:
+                    bas = int(a)
+                    son = int(b) if b else boyut - 1
+                else:
+                    bas = max(0, boyut - int(b))
+                son = min(son, boyut - 1)
+                if bas > son:
+                    raise ValueError
+            except ValueError:
+                self.send_response(416)
+                self.send_header("Content-Range", "bytes */%d" % boyut)
+                self.end_headers()
+                return None
+        self.send_response(206 if kismi else 200)
+        self.send_header("Content-Type", self.guess_type(yol))
+        self.send_header("Accept-Ranges", "bytes")
+        self.send_header("Content-Length", str(son - bas + 1))
+        if kismi:
+            self.send_header("Content-Range", "bytes %d-%d/%d" % (bas, son, boyut))
+        self.end_headers()
+        try:
+            with open(yol, "rb") as f:
+                f.seek(bas)
+                kalan = son - bas + 1
+                while kalan > 0:
+                    parca = f.read(min(1 << 16, kalan))
+                    if not parca:
+                        break
+                    self.wfile.write(parca)
+                    kalan -= len(parca)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        return None
 
     def do_POST(self):
         n = int(self.headers.get("Content-Length") or 0)

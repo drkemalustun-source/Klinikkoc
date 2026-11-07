@@ -129,6 +129,15 @@ strong { color: var(--accent); font-weight: 700; }
 .board-figure figcaption { font-size: .62em; color: var(--chalk-dim); text-align: center; max-width: 80ch; }
 .board-figure figcaption .credit { display: block; font-size: .85em; opacity: .8; margin-top: .2em; }
 .board-figure.zoomed .figure-frame { cursor: default; }
+/* Video (klasördeki dosya ya da YouTube): görsel alanına 16:9 sığar */
+.board-video { overflow: hidden; }
+.board-video .video-stage { flex: 1; min-height: 0; position: relative; }
+.board-video video, .board-video iframe {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; border: 0; border-radius: 12px;
+  background: #000; box-shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+.board-video .video-stage:has(.video-hata) { display: grid; place-items: center; }
+.board-video .video-hata { color: var(--warn); font-size: .8em; text-align: center; }
 .board-figure.expanded { position: fixed; inset: 0; z-index: 40; background: rgba(5,10,8,.94); padding: 12px; }
 .board-figure.expanded .figure-frame { cursor: zoom-out; }
 

@@ -327,6 +327,62 @@ class CanliKanal(unittest.TestCase):
         self.assertNotIn("experimental", json.loads(p.stdout.splitlines()[0])["result"]["capabilities"])
 
 
+class Video(unittest.TestCase):
+    """Ders klasöründeki videolar listelenir, tahta komutunda kimlik dosya yoluna çevrilir, sunucu parça parça verir."""
+
+    def setUp(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("tahta_mcp", os.path.join(KOK, "tools", "tahta-mcp.py"))
+        self.m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.m)
+        self.gecici = tempfile.mkdtemp()
+        os.makedirs(os.path.join(self.gecici, "lessons", "deneme", "videolar"))
+        with open(os.path.join(self.gecici, "lessons", "deneme", "videolar", "nug klip.mp4"), "wb") as f:
+            f.write(bytes(range(256)) * 40)
+        with open(os.path.join(self.gecici, "lessons", "deneme", "videolar", "videolar.json"), "w", encoding="utf-8") as f:
+            json.dump({"nug klip.mp4": {"baslik": "NUG muayenesi", "credit": "K. Üstün"}}, f)
+        with open(os.path.join(self.gecici, "lessons", "deneme", "egitmen.json"), "w", encoding="utf-8") as f:
+            json.dump({"baslik": "Deneme", "videolar": {"yt": {"youtube": "https://youtu.be/dQw4w9WgXcQ", "baslik": "Açık video"}}}, f)
+        self.m.KOK = self.gecici
+
+    def test_liste_ve_cozum(self):
+        v = self.m.ders_videolari("deneme")
+        self.assertEqual(v["nug klip"]["src"], "/lessons/deneme/videolar/nug%20klip.mp4")
+        self.assertFalse(v["nug klip"]["internet"])
+        self.assertTrue(v["yt"]["internet"])
+        adimlar = [{"komutlar": [{"type": "video", "video": "nug klip", "bitis": 3}, {"type": "video", "video": "yt"}]}]
+        self.m.videolari_coz(adimlar, "deneme")
+        a, b = adimlar[0]["komutlar"]
+        self.assertEqual((a["src"], a["bitis"], a["caption"], a["credit"]), ("/lessons/deneme/videolar/nug%20klip.mp4", 3, "NUG muayenesi", "K. Üstün"))
+        self.assertNotIn("video", a)
+        self.assertEqual(b["youtube"], "https://youtu.be/dQw4w9WgXcQ")
+        with self.assertRaises(ValueError):
+            self.m.videolari_coz([{"komutlar": [{"type": "video", "video": "yok"}]}], "deneme")
+
+    def test_sunucu_parca_verir(self):
+        import http.server
+        import threading
+        import urllib.request
+        sys.path.insert(0, os.path.join(KOK, "tools"))
+        import sunucu
+        eski = sunucu.KOK
+        sunucu.KOK = self.gecici
+        srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), sunucu.Isleyici)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        try:
+            url = "http://127.0.0.1:%d/lessons/deneme/videolar/nug%%20klip.mp4" % srv.server_address[1]
+            r = urllib.request.urlopen(urllib.request.Request(url, headers={"Range": "bytes=256-511"}), timeout=5)
+            self.assertEqual(r.status, 206)
+            self.assertEqual(r.headers["Content-Range"], "bytes 256-511/10240")
+            self.assertEqual(r.headers["Content-Type"], "video/mp4")
+            self.assertEqual(r.read(), bytes(range(256)))
+            r = urllib.request.urlopen(url, timeout=5)
+            self.assertEqual((r.status, len(r.read()), r.headers["Accept-Ranges"]), (200, 10240, "bytes"))
+        finally:
+            srv.shutdown()
+            sunucu.KOK = eski
+
+
 class YayinDenetimi(unittest.TestCase):
     def test_depo_temiz(self):
         r = subprocess.run([sys.executable, os.path.join(KOK, "tools", "yayin_denetimi.py")], capture_output=True, text=True)

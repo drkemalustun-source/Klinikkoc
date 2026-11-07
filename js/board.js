@@ -1,5 +1,5 @@
 /* Tahta: ders dosyasındaki komutları ekrana çizer.
- * Komutlar iki bölgeye düşer: görsel alan (image, draw, table, flow, compare, tree)
+ * Komutlar iki bölgeye düşer: görsel alan (image, video, draw, table, flow, compare, tree)
  * ve not alanı (bullets, point, text, term). title üst başlığı yazar. */
 (function (AT) {
   'use strict';
@@ -31,6 +31,112 @@
     return parent;
   }
 
+  // Ortak video denetimi: oynat, duraklat, git(sn), bitti (söz verilir), durum ('bekliyor'|'oynuyor'|'durdu'|'bitti'|'hata').
+  function denetim() {
+    let coz;
+    const d = { durum: 'bekliyor', hata: null, bitti: null, kapat() {} };
+    d.bitti = new Promise((r) => { coz = r; });
+    d._bitir = (durum, hata) => { if (d.durum === 'bitti' || d.durum === 'hata') return; d.durum = durum || 'bitti'; d.hata = hata || null; coz(d.durum); };
+    return d;
+  }
+
+  function dosyaOynatici(sahne, url, bas, bit, c) {
+    const d = denetim();
+    const v = el('video');
+    v.controls = true;
+    v.playsInline = true;
+    v.preload = 'auto';
+    v.muted = !!c.sessiz;
+    v.src = url;
+    sahne.appendChild(v);
+    let hazir = false;
+    v.addEventListener('loadedmetadata', () => { hazir = true; if (bas) v.currentTime = bas; });
+    v.addEventListener('playing', () => { if (d.durum !== 'bitti') d.durum = 'oynuyor'; });
+    v.addEventListener('pause', () => { if (d.durum === 'oynuyor') d.durum = 'durdu'; });
+    v.addEventListener('ended', () => d._bitir('bitti'));
+    v.addEventListener('timeupdate', () => { if (bit != null && v.currentTime >= bit) { v.pause(); d._bitir('bitti'); } });
+    v.addEventListener('error', () => {
+      sahne.appendChild(el('p', 'video-hata', 'Video açılamadı: ' + decodeURIComponent(url.split('/').pop())));
+      d._bitir('hata', 'açılamadı');
+    });
+    d.oynat = () => {
+      if (d.durum === 'bitti' && bit != null) return;
+      const p = v.play();
+      if (p && p.catch) p.catch(() => { d.durum = 'durdu'; }); // tarayıcı engellediyse kullanıcı ▶'a basar
+    };
+    d.duraklat = () => v.pause();
+    d.git = (sn) => { const t = Math.max(0, sn); if (hazir) v.currentTime = t; else v.addEventListener('loadedmetadata', () => { v.currentTime = t; }, { once: true }); if (d.durum === 'bitti') d.durum = 'durdu'; };
+    d.kapat = () => { v.pause(); v.removeAttribute('src'); v.load(); };
+    d.el = v;
+    return d;
+  }
+
+  // YouTube bağlantısından kimlik: youtu.be/ID, watch?v=ID, embed/ID, shorts/ID ya da yalnız ID. t=90 başlangıçtır.
+  function youtubeKimligi(x) {
+    const s = String(x || '').trim();
+    if (/^[\w-]{11}$/.test(s)) return { id: s };
+    try {
+      const u = new URL(s);
+      let id = u.searchParams.get('v');
+      if (!id) { const m = u.pathname.match(/(?:embed|shorts|live|v)\/([\w-]{11})/) || (u.hostname.endsWith('youtu.be') && u.pathname.match(/^\/([\w-]{11})/)); if (m) id = m[1]; }
+      const t = u.searchParams.get('t') || u.searchParams.get('start');
+      const sn = t ? (/^\d+$/.test(t) ? Number(t) : ((t.match(/(\d+)h/) || [0, 0])[1] * 3600 + (t.match(/(\d+)m/) || [0, 0])[1] * 60 + Number((t.match(/(\d+)s/) || [0, 0])[1]))) : 0;
+      return id && /^[\w-]{11}$/.test(id) ? { id, t: sn } : null;
+    } catch (e) { return null; }
+  }
+  AT.youtubeKimligi = youtubeKimligi;
+
+  function youtubeOynatici(sahne, kaynak, bas, bit, c) {
+    const d = denetim();
+    const k = youtubeKimligi(kaynak);
+    if (!k) { sahne.appendChild(el('p', 'video-hata', 'YouTube bağlantısı anlaşılamadı.')); d._bitir('hata', 'bağlantı'); return Object.assign(d, { oynat() {}, duraklat() {}, git() {} }); }
+    if (!bas && k.t) bas = k.t;
+    if (navigator.onLine === false) {
+      sahne.appendChild(el('p', 'video-hata', 'YouTube videosu internet ister; bu bilgisayar şu an çevrimdışı.'));
+      d._bitir('hata', 'çevrimdışı');
+      return Object.assign(d, { oynat() {}, duraklat() {}, git() {} });
+    }
+    const q = new URLSearchParams({ enablejsapi: '1', rel: '0', playsinline: '1', modestbranding: '1', origin: location.origin });
+    if (bas) q.set('start', String(Math.floor(bas)));
+    if (bit != null) q.set('end', String(Math.ceil(bit)));
+    if (c.oynat !== false) q.set('autoplay', '1');
+    if (c.sessiz) q.set('mute', '1');
+    const f = el('iframe');
+    f.src = 'https://www.youtube-nocookie.com/embed/' + k.id + '?' + q.toString();
+    f.title = c.caption || 'YouTube videosu';
+    f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+    f.allowFullscreen = true;
+    f.referrerPolicy = 'strict-origin-when-cross-origin';
+    sahne.appendChild(f);
+    const gonder = (func, args) => { try { f.contentWindow.postMessage(JSON.stringify({ event: 'command', func, args: args || [] }), '*'); } catch (e) { /* yok */ } };
+    let haber = false;
+    const dinle = (e) => {
+      if (e.source !== f.contentWindow) return;
+      let m;
+      try { m = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch (_) { return; }
+      const st = m && (m.event === 'onStateChange' ? m.info : (m.info && m.info.playerState));
+      if (st == null) return;
+      haber = true;
+      if (st === 1) d.durum = 'oynuyor';
+      else if (st === 2 && d.durum === 'oynuyor') d.durum = 'durdu';
+      else if (st === 0) d._bitir('bitti');
+    };
+    window.addEventListener('message', dinle);
+    f.addEventListener('load', () => {
+      // Oynatıcıdan durum haberi iste (bitti mi, oynuyor mu).
+      try { f.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: k.id, channel: 'widget' }), '*'); } catch (e) { /* yok */ }
+      gonder('addEventListener', ['onStateChange']);
+    });
+    // 20 sn içinde oynatıcıdan hiç haber gelmezse (internet yok, video kapalı) bekleme bırakılır.
+    setTimeout(() => { if (!haber) d._bitir('hata', 'yanıt yok'); }, 20000);
+    d.oynat = () => gonder('playVideo');
+    d.duraklat = () => gonder('pauseVideo');
+    d.git = (sn) => gonder('seekTo', [Math.max(0, sn), true]);
+    d.kapat = () => { gonder('pauseVideo'); window.removeEventListener('message', dinle); };
+    d.el = f;
+    return d;
+  }
+
   class Board {
     constructor(root, lesson) {
       this.root = root;
@@ -42,6 +148,7 @@
     }
 
     clear() {
+      this._videoBirak();
       this.header.replaceChildren();
       this.visual.replaceChildren();
       this.notes.replaceChildren();
@@ -69,8 +176,54 @@
     }
 
     _setVisual(node) {
+      this._videoBirak();
       this.visual.replaceChildren(node);
       this.figure = null;
+    }
+
+    _videoBirak() {
+      if (this.video) { try { this.video.duraklat(); } catch (e) { /* yok */ } this.video.kapat(); }
+      this.video = null;
+    }
+
+    // ---------- Video ----------
+    // { type: "video", video: "<ders videosu kimliği>" | src: "videolar/klip.mp4" | youtube: "<bağlantı ya da kimlik>",
+    //   baslangic?: sn, bitis?: sn, oynat?: true, sessiz?: false, caption? }
+    // Klasördeki video internetsiz oynar; YouTube internet ister. this.video denetim nesnesidir.
+    cmd_video(c) {
+      const a = c.video ? ((this.lesson.videos || {})[c.video] || (this.lesson.assets || {})[c.video]) : null;
+      if (c.video && !a) { console.warn('Video tanımlı değil:', c.video); return null; }
+      const yt = c.youtube || (a && a.youtube);
+      const src = c.src || (a && a.src);
+      const bas = Math.max(0, Number(c.baslangic != null ? c.baslangic : (a && a.baslangic)) || 0);
+      const bitRaw = c.bitis != null ? c.bitis : (a && a.bitis);
+      const bit = bitRaw != null && Number(bitRaw) > bas ? Number(bitRaw) : null;
+      const fig = el('figure', 'board-figure board-video');
+      const sahne = el('div', 'video-stage');
+      fig.appendChild(sahne);
+      const capText = c.caption || (a && (a.caption || a.baslik));
+      const kredi = c.credit || (a && a.credit);
+      if (capText || kredi) {
+        const cap = el('figcaption');
+        if (capText) rich(cap, capText);
+        if (kredi) cap.appendChild(el('span', 'credit', kredi));
+        fig.appendChild(cap);
+      }
+      const v = yt ? youtubeOynatici(sahne, yt, bas, bit, c) : (src ? dosyaOynatici(sahne, AT.lessonUrl(this.lesson, src), bas, bit, c) : null);
+      if (!v) { sahne.appendChild(el('p', 'video-hata', 'Video bulunamadı.')); return fig; }
+      this._setVisual(fig);
+      this.video = v;
+      if (c.oynat !== false) v.oynat();
+      return fig;
+    }
+
+    // { type: "video_kontrol", eylem: "oynat" | "duraklat" | "git", saniye? }
+    cmd_video_kontrol(c) {
+      if (!this.video) return null;
+      if (c.eylem === 'duraklat') this.video.duraklat();
+      else if (c.eylem === 'git') { this.video.git(Number(c.saniye) || 0); if (c.oynat !== false) this.video.oynat(); }
+      else this.video.oynat();
+      return null;
     }
 
     cmd_clear() { this.clear(); }

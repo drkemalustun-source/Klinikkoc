@@ -20,3 +20,12 @@ ozel/
 #   lessons/<ders>/vakalar/ozel-*     (gerçek hastadan uyarlanmış vaka ve görselleri)
 lessons/ozel-*/
 lessons/*/vakalar/ozel-*
+
+# Ders videoları (lessons/<ders>/videolar/): büyük ve çoğu zaman telifli; hiçbir zaman depoya girmez.
+# Herkese açık bir video için ders dosyasında YouTube bağlantısı kullanın.
+lessons/*/videolar/
+*.mp4
+*.m4v
+*.webm
+*.ogv
+*.mov

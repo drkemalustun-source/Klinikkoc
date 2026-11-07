@@ -345,7 +345,9 @@
             "flow",
             "draw",
             "compare",
-            "tree"
+            "tree",
+            "video",
+            "video_kontrol"
           ]
         },
         "cue": {

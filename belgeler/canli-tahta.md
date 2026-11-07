@@ -50,6 +50,7 @@ Kaldırma: `python tools/tahta-mcp.py --kaldir`.
 | `soru_sor` | Tahtada soru kartı açar, dokunduğunuz cevabı Claude'a iletir |
 | `tahta_durumu` | Tahtanın durumu; süren bir anlatımın ya da sorunun bitmesini bekler |
 | `dinle` | Mikrofon tuşuyla söylediğinizi bekler ve yazı olarak alır (sesli sohbet) |
+| `videolar` | Dersin videolarını listeler (klasördeki dosyalar ve YouTube bağlantıları) |
 | `anlatima_devam` | Siz söz alınca duraklayan anlatımı, Claude cevap verdikten sonra kaldığı cümleden sürdürür |
 | `durdur` | Anlatımı hemen keser |
 
@@ -123,6 +124,31 @@ yapar ([belge](https://code.claude.com/docs/en/channels-reference)). Claude Code
 
 Bu yol claude.ai hesabıyla giriş ister; Team/Enterprise hesaplarında yöneticinin "channels"ı açması
 gerekir. Özellik deneme aşamasında olduğu için ileride değişebilir.
+
+## Video
+
+Claude tahtada video gösterebilir. İki yol var:
+
+1. **Bilgisayardaki video (internetsiz):** Videoyu dersin klasöründe `videolar` adlı bir klasöre koyun:
+   `lessons/<ders>/videolar/nug-muayene.mp4`. Claude `videolar` aracıyla listeyi görür ve tahtada oynatır.
+   İsterseniz aynı klasöre `videolar.json` koyup başlık ve kaynak yazabilirsiniz:
+   ```json
+   {"nug-muayene.mp4": {"baslik": "NUG'da ilk muayene", "credit": "K. Üstün, Akdeniz Üniv."}}
+   ```
+   Uygun biçimler: mp4 (Chrome ve Edge'de), webm, mov (Mac'te Safari). En güvenlisi mp4 (H.264).
+2. **YouTube (internet gerekir):** Sohbette Claude'a bağlantıyı verin ("Şu videoyu 1:30'dan 3:00'e kadar
+   göster: https://youtu.be/..."). Ders dosyasında hazır durması için `egitmen.json`'a da yazabilirsiniz:
+   ```json
+   "videolar": {"nug-anlatim": {"youtube": "https://youtu.be/XXXXXXXXXXX", "baslangic": 90, "bitis": 180, "baslik": "NUG"}}
+   ```
+
+Nasıl oynar: Claude önce ne izleneceğini söyler, video oynar, bitince (ya da bitiş saniyesinde) anlatıma
+döner. Duraklat (⏸) ve mikrofon videoyu da durdurur; ▶ ile kaldığı yerden sürer. Videonun kendi
+düğmeleriyle de ileri-geri sarabilirsiniz.
+
+**Telif ve gizlilik:** `videolar` klasörü ve bütün video dosyaları açık depoya hiçbir zaman girmez
+(`.gitignore` ve yayın denetimi bunu engeller). Hasta görüntüsü içeren videolar yalnız fakülte
+bilgisayarında kalır. Herkesle paylaşılacak bir video için YouTube bağlantısı kullanın.
 
 ## Kullanım ipuçları
 

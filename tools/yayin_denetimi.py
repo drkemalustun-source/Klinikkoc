@@ -49,6 +49,9 @@ def denetle():
     for d in dosyalar:
         if d.startswith(YASAK_KLASORLER):
             H.append("Depoya girmemeli: %s" % d)
+        if d.lower().endswith((".mp4", ".m4v", ".webm", ".ogv", ".mov", ".avi", ".mkv")) or "/videolar/" in d:
+            H.append("Video dosyası depoya girmemeli: %s (videolar yalnız ders klasöründe kalır; açık video için "
+                     "YouTube bağlantısı kullanın)" % d)
         try:
             if os.path.getsize(os.path.join(KOK, d)) > EN_BUYUK:
                 H.append("20 MB'tan büyük dosya: %s" % d)

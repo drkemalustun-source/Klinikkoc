@@ -164,7 +164,8 @@
     bekleyenler: [],
     kullanilabilir() {
       if (askidaki() && !araCalisan && !mik.aktif) return true; // ▶: araya girilen anlatıma dön
-      return !mik.aktif && qEl.hidden && (ses.konusuyor || !!(calisan && calisan.tur === 'adimlar'));
+      const video = !!(board.video && board.video.durum === 'oynuyor');
+      return !mik.aktif && qEl.hidden && (ses.konusuyor || video || !!(calisan && calisan.tur === 'adimlar'));
     },
     bekle() {
       return this.aktif ? new Promise((r) => this.bekleyenler.push(r)) : Promise.resolve();
@@ -180,6 +181,7 @@
       this.aktif = true;
       this.soz = neden === 'soz';
       ses.audio.pause();
+      if (board.video && board.video.durum === 'oynuyor') { board.video.duraklat(); this.videoDurdu = board.video; }
       try { if (window.speechSynthesis) speechSynthesis.pause(); } catch (e) { /* yok */ }
       this.goster();
       api('duraklat', { duraklatildi: true, durum: durum() }).catch(() => {});
@@ -189,6 +191,8 @@
       this.aktif = false;
       this.soz = false;
       if (ses.caliyor) ses.audio.play().catch(() => {});
+      if (this.videoDurdu && this.videoDurdu === board.video) this.videoDurdu.oynat();
+      this.videoDurdu = null;
       try { if (window.speechSynthesis) speechSynthesis.resume(); } catch (e) { /* yok */ }
       this.birak();
       api('duraklat', { duraklatildi: false, durum: durum() }).catch(() => {});
@@ -196,6 +200,7 @@
     // Durdur ya da söz alma: duraklama kalkar, bekleyen döngüler bırakılır (onlar iptali görüp çıkar).
     sifirla() {
       this.soz = false;
+      this.videoDurdu = null;
       if (!this.aktif) return;
       this.aktif = false;
       try { if (window.speechSynthesis) speechSynthesis.resume(); } catch (e) { /* yok */ }
@@ -462,6 +467,7 @@
       konusuyor: ses.konusuyor,
       duraklatildi: durak.aktif,
       kaldigi_yer: kaldigiYer(),
+      video: board.video ? board.video.durum : null,
       hiz
     };
   }
@@ -503,6 +509,10 @@
         if (typeof board['cmd_' + c.type] !== 'function') { uyarilar.push('Bilinmeyen komut: ' + c.type); continue; }
         try { board.run(c, false); } catch (e) { uyarilar.push(c.type + ': ' + e.message); }
       }
+      // Video oynuyorsa anlatım video bitince (ya da bitis saniyesinde) başlar. bekle:false ise üstüne anlatılır.
+      const vk = (Array.isArray(a.komutlar) ? a.komutlar : []).find((c) => c && c.type === 'video' && c.oynat !== false && c.bekle !== false);
+      if (vk && board.video) await videoBekle(k, board.video, uyarilar);
+      if (k.iptal) return { durum: 'iptal', tamamlanan: i, uyarilar };
       if (a.anlat) {
         const cumle = (n) => { k.cumle = n; };
         let r = await ses.anlat(a.anlat, { cumle });
@@ -516,6 +526,25 @@
     }
     if (k.iptal) return { durum: 'iptal', tamamlanan: liste.length, uyarilar };
     return uyarilar.length ? { durum: 'bitti', uyarilar } : { durum: 'bitti' };
+  }
+
+  // Video bitene kadar bekler. Duraklatma ve söz alma videoyu da durdurur (durak), askıya alınan anlatımın
+  // videosu da bekler; devam edince video kaldığı yerden sürer.
+  async function videoBekle(k, v, uyarilar) {
+    let askidaDurdu = false;
+    const basla = Date.now();
+    for (;;) {
+      if (k.iptal) { v.duraklat(); return; }
+      if (v.durum === 'bitti') return;
+      if (v.durum === 'hata') { uyarilar.push('Video oynatılamadı (' + (v.hata || 'hata') + ')'); return; }
+      if (k.askida && v.durum === 'oynuyor') { v.duraklat(); askidaDurdu = true; }
+      if (!k.askida && askidaDurdu && !durak.aktif) { askidaDurdu = false; v.oynat(); }
+      if (v.durum === 'bekliyor' && Date.now() - basla > 25000 && !durak.aktif && !k.askida) {
+        uyarilar.push('Video başlamadı: tarayıcı kendiliğinden oynatmayı engellemiş olabilir (kullanıcı ▶ basmadı).');
+        return;
+      }
+      await Promise.race([v.bitti, new Promise((r) => setTimeout(r, 250))]);
+    }
   }
 
   function soru(k) {
@@ -618,10 +647,19 @@
     tahtaKaydi = {
       board, ders, dersId, layout: boardEl.dataset.layout,
       header: parca(board.header), visual: parca(board.visual), notes: parca(board.notes),
-      figure: board.figure, lastList: board.lastList
+      figure: board.figure, lastList: board.lastList, video: board.video
     };
+    if (board.video) board.video.duraklat();
+    board.video = null; // cevap tahtayı temizlese bile saklanan video kapanmasın
     // Cevap, tahtanın bir kopyası üzerine çizilir (görsel işaretlenebilsin diye görsel de kopyalanır).
-    const kopya = (dizi) => dizi.map((n) => n.cloneNode(true));
+    const kopya = (dizi) => dizi.map((n) => {
+      const c = n.cloneNode(true);
+      // Kopyadaki video ve YouTube çerçevesi yeniden oynamasın: yerine işaret konur.
+      if (c.querySelectorAll) {
+        c.querySelectorAll('video, iframe').forEach((x) => x.replaceWith(el('p', 'video-hata', '⏸ Video bekliyor')));
+      }
+      return c;
+    });
     board.header.replaceChildren(...kopya(tahtaKaydi.header));
     board.visual.replaceChildren(...kopya(tahtaKaydi.visual));
     board.notes.replaceChildren(...kopya(tahtaKaydi.notes));
@@ -635,6 +673,7 @@
     const t = tahtaKaydi;
     if (!t) return;
     tahtaKaydi = null;
+    if (board.video && board.video !== t.video) board._videoBirak(); // cevabın videosu kapanır
     board = t.board; ders = t.ders; dersId = t.dersId;
     if (dersId) dersAdiEl.textContent = 'Canlı tahta · ' + (ders.title || dersId);
     board.header.replaceChildren(...t.header);
@@ -642,6 +681,7 @@
     board.notes.replaceChildren(...t.notes);
     board.figure = t.figure;
     board.lastList = t.lastList;
+    board.video = t.video;
     boardEl.dataset.layout = t.layout;
     soruyuKapat();
   }
@@ -701,6 +741,7 @@
 
   function durdur(k) {
     ses.dur();
+    if (board.video) board.video.duraklat();
     for (const x of sira.splice(0).concat(araSira.splice(0))) {
       api('bitti', { no: x.no, sonuc: { durum: 'iptal' } }).catch(() => {});
     }
