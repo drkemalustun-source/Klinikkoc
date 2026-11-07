@@ -20,18 +20,7 @@
         <div class="section-name" id="durum">Bağlanıyor…</div>
       </div>
       <span class="claude-isik" id="claudeIsik" role="status" title="Claude şu an dinlemiyor."><i></i><span>Claude dinlemiyor</span></span>
-      <button class="icon-btn mik" id="mik" aria-label="Konuş" title="Konuş: dokunun, konuşun; susunca gönderilir (M)">
-        <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>
-      </button>
-      <button class="icon-btn duraklat" id="duraklat" aria-label="Duraklat" aria-pressed="false" disabled
-              title="Duraklat: anlatımı bekletir, yeniden basınca kaldığı yerden sürer (P ya da Boşluk)">
-        <svg class="ikon-dur" viewBox="0 0 24 24"><rect x="7" y="5" width="3.5" height="14" rx="1"/><rect x="13.5" y="5" width="3.5" height="14" rx="1"/></svg>
-        <svg class="ikon-devam" viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg>
-      </button>
       <button class="ctrl-btn speed" id="hiz" aria-label="Anlatım hızı" title="Anlatım hızı">1,2×</button>
-      <button class="icon-btn" id="dur" aria-label="Anlatımı durdur" title="Anlatımı durdur (Esc)">
-        <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
-      </button>
       <button class="icon-btn" id="tamEkran" aria-label="Tam ekran" title="Tam ekran (F)">
         <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
       </button>
@@ -46,15 +35,46 @@
       <div class="question" id="question" hidden></div>
     </div>
 
-    <div class="canli-bekleyen" id="bekleyenSoru" role="alert" hidden>
-      <div class="canli-bekleyen-yazi">
-        <strong>Sorunuz bekliyor.</strong> Claude şu an dinlemiyor. Sohbete <b>“tahtaya bak”</b> yazın ya da sorunuzu kopyalayıp yapıştırın.
-        <span class="canli-bekleyen-metin" id="bekleyenMetin"></span>
+    <!-- Alt bölüm: konuşma şeridi (son iki ileti) ve yazma kutusu. Mikrofonla söylenen de bu kutuya yazılır. -->
+    <footer class="canli-alt">
+      <div class="canli-dok" id="dok">
+        <div class="canli-bekleyen" id="bekleyenSoru" role="alert" hidden>
+          <div class="canli-bekleyen-yazi">
+            <strong>Sorunuz bekliyor.</strong> Claude şu an dinlemiyor. Sohbete <b>“tahtaya bak”</b> yazın ya da sorunuzu kopyalayıp yapıştırın.
+            <span class="canli-bekleyen-metin" id="bekleyenMetin"></span>
+          </div>
+          <button class="btn" id="sohbeteKopyala">Sohbete kopyala</button>
+        </div>
+        <div class="canli-serit">
+          <div class="canli-ileti eski" id="onceki" hidden></div>
+          <div class="canli-ileti caption" id="caption" aria-live="polite"></div>
+          <div class="canli-durak" id="durakIsaret" role="status" hidden>⏸ Duraklatıldı · devam için ▶, P ya da Boşluk</div>
+        </div>
+        <div class="canli-satir">
+          <div class="canli-ikili">
+            <button class="canli-yuvarlak duraklat" id="duraklat" aria-label="Duraklat" aria-pressed="false" disabled
+                    title="Duraklat: anlatımı bekletir, yeniden basınca kaldığı yerden sürer (P ya da Boşluk)">
+              <svg class="ikon-dur" viewBox="0 0 24 24"><rect x="7" y="5" width="3.5" height="14" rx="1"/><rect x="13.5" y="5" width="3.5" height="14" rx="1"/></svg>
+              <svg class="ikon-devam" viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg>
+            </button>
+            <button class="canli-yuvarlak mik" id="mik" aria-label="Konuş" title="Konuş: dokunun, konuşun; susunca gönderilir (M)">
+              <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>
+            </button>
+          </div>
+          <div class="canli-kutu">
+            <input id="yazi" type="text" autocomplete="off" enterkeyhint="send" aria-label="Claude'a yazın">
+            <span class="canli-dalga" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+            <button class="canli-gonder" id="gonder" aria-label="Gönder" title="Gönder (Enter)" disabled>
+              <svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+            </button>
+          </div>
+          <button class="canli-yuvarlak kare" id="dur" aria-label="Anlatımı durdur" title="Anlatımı durdur (Esc)">
+            <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+          </button>
+        </div>
+        <div class="canli-ipucu"><span><kbd>M</kbd> konuş</span><span><kbd>Enter</kbd> gönder</span><span><kbd>P</kbd> / <kbd>Boşluk</kbd> duraklat</span><span><kbd>Esc</kbd> durdur</span><span><kbd>F</kbd> tam ekran</span></div>
       </div>
-      <button class="btn primary" id="sohbeteKopyala">Sohbete kopyala</button>
-    </div>
-    <div class="canli-durak" id="durakIsaret" role="status" hidden>⏸ Duraklatıldı · devam için ▶, P ya da Boşluk</div>
-    <div class="caption" id="caption" aria-live="polite"></div>
+    </footer>
   </section>
 
   <div class="canli-baslat" id="baslat">

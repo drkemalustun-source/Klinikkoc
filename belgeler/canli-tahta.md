@@ -78,7 +78,14 @@ Rapor, öğrenci isterse öğretmenine kendisi tarafından iletilir.
 
 ## Sesli sohbet (dikte)
 
-Tahtanın üst çubuğunda **mikrofon** tuşu var (klavyede **M**).
+Tahtanın altında bir konuşma bölümü var: solda **duraklat/oynat** ile **mikrofon** tuşu yan yana (klavyede
+**P** ve **M**), ortada yazma kutusu, sağda durdur tuşu. Kutunun üstünde son iki ileti görünür
+(Claude'un okuduğu cümle ve sizin söyledikleriniz ya da yazdıklarınız).
+
+**Yazarak:** Mikrofon kullanamadığınızda kutuya yazıp Enter'a (ya da ↑ okuna) basın. Yazmaya başlamak da
+söz almaktır: anlatım kaldığı yerde duraklar. Vazgeçip kutuyu boş bırakırsanız anlatım sürer.
+
+**Sesle:**
 
 1. Tuşa dokunun ve konuşun. Söyledikleriniz altyazıda görünür.
 2. 2,5 saniye susunca konuşmanız Claude'a gönderilir (ya da tuşa yeniden dokunun).

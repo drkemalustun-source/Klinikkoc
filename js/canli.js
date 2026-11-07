@@ -91,8 +91,7 @@
           if (secenek.cumle) secenek.cumle(i);
           const url = sonraki ? await sonraki : null;
           sonraki = this.piperVar && i + 1 < cumleler.length ? this.wav(cumleler[i + 1]).catch(() => null) : null;
-          capEl.classList.remove('siz');
-          capEl.textContent = cumleler[i];
+          altyazi(cumleler[i], 'Claude');
           await durak.bekle();
           if (my !== this.token) { if (url) URL.revokeObjectURL(url); return 'kesildi'; }
           if (url) {
@@ -107,7 +106,7 @@
             this.web.setRate(hiz);
             let j = i;
             await this.web.speak(cumleler.slice(i).join(' '), { onSentence: (s) => {
-              capEl.textContent = s;
+              altyazi(s, 'Claude');
               if (secenek.cumle) secenek.cumle(j++);
             } });
             return my !== this.token ? 'kesildi' : undefined;
@@ -243,18 +242,9 @@
     sessizT: null,
 
     baslat() {
-      if (!SR) return toast('Bu tarayıcıda konuşma tanıma yok; Chrome ya da Edge kullanın.');
+      if (!SR) return toast('Bu tarayıcıda konuşma tanıma yok; Chrome ya da Edge kullanın. Yazarak da sorabilirsiniz.');
       if (this.aktif) return this.bitir();
-      // Söz almak: anlatım sürüyorsa kaldığı yerde duraklar (Claude'un bekleyen çağrısı sözü hemen alır);
-      // soru kartı açıksa kart kapanır.
-      const anlatan = araCalisan || (calisan && !calisan.askida ? calisan : null);
-      if (anlatan && anlatan.tur === 'adimlar') {
-        durak.duraklat('soz');
-      } else if (ses.konusuyor || calisan || sira.length) {
-        sozAlindi = true;
-        sozBitti = new Promise((r) => { sozBittiCoz = r; });
-        durdur(null);
-      }
+      sozAl();
       const rec = new SR();
       rec.lang = 'tr-TR';
       rec.continuous = true;
@@ -266,8 +256,9 @@
       this.metin = '';
       mikBtn.classList.add('dinliyor');
       durumEl.textContent = 'Dinleniyor · susunca gönderilir (bitirmek için yeniden dokunun)';
-      capEl.classList.add('siz');
-      capEl.textContent = '🎤 Dinliyorum…';
+      dokEl.classList.add('dinleniyor');
+      const onceki = yaziEl.value.trim(); // kutuda yazılmış bir şey varsa söylenen onun arkasına eklenir
+      yaziEl.placeholder = 'Dinliyorum… susunca gönderilir';
       this.sure(8000); // hiç konuşulmazsa 8 sn sonra kapanır
       rec.onresult = (ev) => {
         let ara = '';
@@ -276,8 +267,9 @@
           if (r.isFinal) finals.push(r[0].transcript.trim());
           else ara += r[0].transcript;
         }
-        this.metin = finals.join(' ');
-        capEl.textContent = '🎤 ' + (this.metin + ' ' + ara).trim();
+        this.metin = [onceki].concat(finals).join(' ').trim();
+        yaziEl.value = (this.metin + ' ' + ara).trim();
+        gonderBtn.disabled = !yaziEl.value.trim();
         this.sure(2500); // 2,5 sn susunca gönder
       };
       rec.onerror = (ev) => {
@@ -298,6 +290,8 @@
         this.aktif = false;
         this.rec = null;
         mikBtn.classList.remove('dinliyor');
+        dokEl.classList.remove('dinleniyor');
+        yaziEl.placeholder = YER_TUTUCU;
         toast('Mikrofon açılamadı: ' + e.message);
       }
     },
@@ -318,38 +312,105 @@
       this.rec = null;
       clearTimeout(this.sessizT);
       mikBtn.classList.remove('dinliyor');
+      dokEl.classList.remove('dinleniyor');
+      yaziEl.placeholder = YER_TUTUCU;
       if (!calisan) durumEl.textContent = hazirYazisi();
       const metin = this.metin.trim();
       this.metin = '';
       if (!metin) {
-        capEl.classList.remove('siz');
-        capEl.textContent = '';
         toast('Ses algılanmadı.');
-        if (durak.soz) durak.devam(); // söz alınıp bir şey söylenmediyse anlatım sürer
-        this.sozBitir();
+        if (durak.soz && !yaziEl.value.trim()) durak.devam(); // söz alınıp bir şey söylenmediyse anlatım sürer
+        sozBitir();
         return;
       }
-      capEl.textContent = 'Siz: ' + metin;
-      try {
-        const r = await api('soyle', { metin });
-        const j = await r.json();
-        if (j.claude_dinliyor) {
-          toast('Claude\'a iletildi.', 4000);
-          if (durak.soz) durumEl.textContent = 'Sorunuz Claude\'a iletildi · anlatım kaldığı yerde bekliyor';
-        } else {
-          bekleyenGoster([metin]);
-        }
-      } catch (e) {
-        toast('Gönderilemedi: ' + e.message + ' (sunucu yeniden başlatılmalı olabilir)', 7000);
-      }
-      this.sozBitir();
-    },
-
-    sozBitir() {
-      if (sozBittiCoz) { const c = sozBittiCoz; sozBittiCoz = null; c(); }
+      await sozGonder(metin);
     }
   };
   mikBtn.addEventListener('click', () => mik.baslat());
+
+  // ---------- Söz alma ve gönderme (mikrofon ve yazı kutusu ortak) ----------
+  // Söz almak: anlatım sürüyorsa kaldığı yerde duraklar (Claude'un bekleyen çağrısı sözü hemen alır);
+  // soru kartı açıksa kart kapanır.
+  function sozAl() {
+    const anlatan = araCalisan || (calisan && !calisan.askida ? calisan : null);
+    if (anlatan && anlatan.tur === 'adimlar') {
+      durak.duraklat('soz');
+    } else if (ses.konusuyor || calisan || sira.length) {
+      sozAlindi = true;
+      sozBitti = new Promise((r) => { sozBittiCoz = r; });
+      durdur(null);
+    }
+  }
+  function sozBitir() {
+    if (sozBittiCoz) { const c = sozBittiCoz; sozBittiCoz = null; c(); }
+  }
+
+  async function sozGonder(metin) {
+    yaziEl.value = '';
+    gonderBtn.disabled = true;
+    altyazi(metin, 'Siz');
+    try {
+      const r = await api('soyle', { metin });
+      const j = await r.json();
+      if (j.claude_dinliyor) {
+        toast('Claude\'a iletildi.', 4000);
+        if (durak.soz) durumEl.textContent = 'Sorunuz Claude\'a iletildi · anlatım kaldığı yerde bekliyor';
+      } else {
+        bekleyenGoster([metin]);
+      }
+    } catch (e) {
+      toast('Gönderilemedi: ' + e.message + ' (sunucu yeniden başlatılmalı olabilir)', 7000);
+      yaziEl.value = metin; // kaybolmasın
+      gonderBtn.disabled = false;
+    }
+    sozBitir();
+  }
+
+  // Yazı kutusu: yazmaya başlamak söz almaktır; Enter ya da ↑ gönderir.
+  const YER_TUTUCU = 'Claude\'a yazın…';
+  const yaziEl = $('#yazi');
+  const gonderBtn = $('#gonder');
+  const dokEl = $('#dok');
+  yaziEl.placeholder = YER_TUTUCU;
+  yaziEl.addEventListener('input', () => {
+    const dolu = !!yaziEl.value.trim();
+    gonderBtn.disabled = !dolu;
+    if (dolu && !mik.aktif && !durak.soz) sozAl();
+  });
+  yaziEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+      e.preventDefault();
+      yaziGonder();
+    } else if (e.key === 'Escape') {
+      yaziEl.blur();
+    }
+  });
+  // Yazmaya başlayıp vazgeçerse (kutu boş, odak gitti) anlatım sürer.
+  yaziEl.addEventListener('blur', () => {
+    setTimeout(() => {
+      if (!yaziEl.value.trim() && !mik.aktif && durak.soz && document.activeElement !== yaziEl) durak.devam();
+    }, 300);
+  });
+  function yaziGonder() {
+    const metin = yaziEl.value.trim();
+    if (!metin) return;
+    if (mik.aktif) { mik.metin = metin; mik.bitir(); return; } // dikteyi bitir, kutudakini gönder
+    sozGonder(metin);
+  }
+  gonderBtn.addEventListener('click', yaziGonder);
+
+  // ---------- Konuşma şeridi (eski altyazı): son iki ileti ----------
+  const oncekiEl = $('#onceki');
+  function altyazi(metin, kim) {
+    if (capEl.textContent && capEl.dataset.kim && capEl.dataset.kim !== kim) {
+      oncekiEl.dataset.kim = capEl.dataset.kim;
+      oncekiEl.textContent = capEl.textContent;
+      oncekiEl.hidden = false;
+    }
+    capEl.dataset.kim = kim;
+    capEl.classList.toggle('siz', kim === 'Siz');
+    capEl.textContent = metin;
+  }
 
   // ---------- Ders (görseller için) ----------
   let ders = { assets: {} };
