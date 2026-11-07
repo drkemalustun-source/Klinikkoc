@@ -126,6 +126,7 @@ class Canli:
         self.kuyruk = []
         self.sayac = 0
         self.sonuclar = {}
+        self.turler = {}  # komut no → tür (adimlar, soru, ...): söz kesilince Claude'a doğru not verilsin
         self.bekleyen_sayfa = 0
         self.son_gorulme = 0.0
         self.sayfa_durumu = {}
@@ -137,17 +138,35 @@ class Canli:
         self.dinleyen = 0
         # Duraklat: kullanıcı tahtadaki ⏸ tuşuyla anlatımı bekletti (iptal değil; devam edince sürer).
         self.duraklatildi = False
+        # Claude'un tahta/soru_sor/tahta_durumu(no) ile sonuç beklediği çağrı sayısı. Bu çağrılar da
+        # kullanıcı konuşunca hemen döner; yani Claude o sırada "dinliyor" sayılır.
+        self.claude_bekliyor = 0
+        # Claude Code kanalı (tahta-mcp.py --kanal): konuşmayı sohbete yeni mesaj olarak iletir.
+        self.kanal_bekleyen = 0
+        self.kanal_son = 0.0
 
     def bagli(self):
         return self.bekleyen_sayfa > 0 or time.time() - self.son_gorulme < 6
 
-    def durum(self):
+    def dinliyor(self):
+        """Claude kullanıcının sözünü şu anda hemen alır mı? (dinle, bekleyen bir tahta çağrısı ya da kanal)"""
+        kanal = self.kanal_bekleyen > 0 or time.time() - self.kanal_son < 5
+        return self.dinleyen > 0 or self.claude_bekliyor > 0 or kanal
+
+    def durum(self, al=False):
+        """al=True (tahta_durumu, no'suz): bekleyen konuşmanın metni de verilir ve Claude'a teslim edilmiş sayılır."""
         with self.kosul:
-            return {"bagli": self.bagli(), "sayac": self.sayac, "sayfa": self.sayfa_durumu,
-                    "bekleyen": [k["no"] for k in self.kuyruk],
-                    "konusma_bekleyen": len(self.konusmalar),
-                    "duraklatildi": self.duraklatildi,
-                    "ses": self.ses_durumu()}
+            d = {"bagli": self.bagli(), "sayac": self.sayac, "sayfa": self.sayfa_durumu,
+                 "bekleyen": [k["no"] for k in self.kuyruk],
+                 "konusma_bekleyen": len(self.konusmalar),
+                 "duraklatildi": self.duraklatildi,
+                 "claude_dinliyor": self.dinliyor(),
+                 "ses": self.ses_durumu()}
+            if al and self.konusmalar:
+                d["bekleyen_konusmalar"] = [dict(x) for x in self.konusmalar]
+                self._konusma_ekle(d)
+                self.kosul.notify_all()  # sayfadaki "Sorunuz bekliyor" uyarısı kalksın
+            return d
 
     def _konusma_ekle(self, sonuc):
         # Anlatım ya da soru sırasında kullanıcı konuştuysa Claude bunu sonuçla birlikte görür.
@@ -156,19 +175,42 @@ class Canli:
             self.konusmalar = []
         return sonuc
 
+    def _soz_kesti(self, no):
+        """Komut sürerken kullanıcı konuştu: Claude anlatımın bitmesini beklemeden sözü alır."""
+        sonuc = {"no": no, "durum": "kullanici_konustu", "duraklatildi": self.duraklatildi}
+        if self.turler.get(no) == "soru":
+            sonuc["not"] = ("Kullanıcı soru kartı açıkken konuştu; kart kapandı, seçenek işaretlenmedi. Önce söylediğine "
+                            "cevap ver; gerekirse soruyu soru_sor ile yeniden sor.")
+        else:
+            sonuc["not"] = ("Kullanıcı söz aldı; anlatım tahtada duraklatıldı ve kaldığı yer korunuyor. Önce kullanıcıya "
+                            "cevap ver (tahta aracıyla sesli ya da sohbette). Sonra anlatima_devam ile kaldığı yerden "
+                            "sürdür; sürdürmeyeceksen anlatima_devam(birak=true) çağır.")
+            k = self.sayfa_durumu.get("kaldigi_yer") if isinstance(self.sayfa_durumu, dict) else None
+            if k:
+                sonuc["kaldigi_yer"] = k
+        return self._konusma_ekle(sonuc)
+
     def _bekle(self, no, sure):
         bitis = time.time() + max(0.0, min(float(sure), 55.0))
-        while no not in self.sonuclar:
-            kalan = bitis - time.time()
-            if kalan <= 0:
-                if self.duraklatildi:
-                    return self._konusma_ekle({
-                        "no": no, "durum": "duraklatildi",
-                        "not": "Kullanıcı anlatımı tahtada duraklattı. Hata değil, iptal de değil: yeni komut "
-                               "gönderme; tahta_durumu(no) ile beklemeyi sürdür. Devam edince anlatım kaldığı yerden sürer."})
-                return self._konusma_ekle({"no": no, "durum": "sürüyor"})
-            self.kosul.wait(kalan)
-        return self._konusma_ekle(dict(self.sonuclar[no], no=no))
+        self.claude_bekliyor += 1
+        self.kosul.notify_all()  # sayfadaki "Claude dinliyor" ışığı yansın
+        try:
+            while no not in self.sonuclar:
+                if self.konusmalar:
+                    return self._soz_kesti(no)
+                kalan = bitis - time.time()
+                if kalan <= 0:
+                    if self.duraklatildi:
+                        return {
+                            "no": no, "durum": "duraklatildi",
+                            "not": "Kullanıcı anlatımı tahtada duraklattı. Hata değil, iptal de değil: yeni komut "
+                                   "gönderme; tahta_durumu(no) ile beklemeyi sürdür. Devam edince anlatım kaldığı yerden sürer."}
+                    return {"no": no, "durum": "sürüyor"}
+                self.kosul.wait(kalan)
+            return self._konusma_ekle(dict(self.sonuclar[no], no=no))
+        finally:
+            self.claude_bekliyor -= 1
+            self.kosul.notify_all()
 
     def soyle(self, metin):
         """Sayfa: kullanıcının mikrofonla söylediği metin."""
@@ -177,9 +219,44 @@ class Canli:
             if metin:
                 self.konusmalar.append({"metin": metin, "saat": time.strftime("%H:%M:%S")})
                 self.konusmalar = self.konusmalar[-20:]
+                self.konusmalar[-1]["t"] = time.time()
             self.son_gorulme = time.time()
+            dinliyor = self.dinliyor()
             self.kosul.notify_all()
-            return {"tamam": True, "claude_dinliyor": self.dinleyen > 0}
+            return {"tamam": True, "claude_dinliyor": dinliyor}
+
+    def birak_konusmalari(self):
+        """Sayfa: kullanıcı bekleyen sözünü "Sohbete kopyala" ile sohbete taşıdı; Claude'a ikinci kez verilmez."""
+        with self.kosul:
+            metin = " ".join(x["metin"] for x in self.konusmalar)
+            self.konusmalar = []
+            self.kosul.notify_all()
+            return {"tamam": True, "metin": metin}
+
+    def kanal(self, sure):
+        """Claude Code kanalı (tahta-mcp.py --kanal) için: Claude başka bir çağrıyla beklemiyorsa
+        kullanıcının sözünü alır; tahta-mcp.py onu sohbete yeni mesaj olarak iletir."""
+        with self.kosul:
+            self.kanal_bekleyen += 1
+            self.kosul.notify_all()
+            try:
+                bitis = time.time() + max(0.0, min(float(sure), 55.0))
+                while True:
+                    simdi = time.time()
+                    # Kısa bir pay: Claude o anda bir araçla bekliyorsa söz oradan gitsin (iki kez gelmesin).
+                    if self.konusmalar and self.dinleyen == 0 and self.claude_bekliyor == 0 \
+                            and simdi - self.konusmalar[-1].get("t", 0) >= 0.8:
+                        parcalar = self.konusmalar
+                        self.konusmalar = []
+                        self.kosul.notify_all()
+                        return {"durum": "konustu", "metin": " ".join(x["metin"] for x in parcalar),
+                                "sayfa": self.sayfa_durumu}
+                    if simdi >= bitis:
+                        return {"durum": "sessiz"}
+                    self.kosul.wait(min(bitis - simdi, 0.3))
+            finally:
+                self.kanal_bekleyen -= 1
+                self.kanal_son = time.time()
 
     def dinle(self, sure):
         """Claude: kullanıcı konuşana kadar (en çok sure sn) bekler."""
@@ -193,7 +270,7 @@ class Canli:
                     if kalan <= 0:
                         return {"durum": "sessiz", "bagli": self.bagli()}
                     self.kosul.wait(kalan)
-                parcalar = self.konusmalar
+                parcalar = [{"metin": x["metin"], "saat": x["saat"]} for x in self.konusmalar]
                 self.konusmalar = []
                 return {"durum": "konustu", "metin": " ".join(x["metin"] for x in parcalar), "parcalar": parcalar}
             finally:
@@ -206,8 +283,14 @@ class Canli:
                 return {"durum": "bağlı değil",
                         "hata": "Tahta sayfası açık değil. tahtayi_ac aracını çağırın ya da "
                                 "tarayıcıda http://localhost:8810/canli.html adresini açın."}
+            if self.konusmalar and komut.get("tur") not in ("dur", "devam"):
+                # Kullanıcının cevaplanmamış sözü var: yeni anlatım onu ezmesin, önce o cevaplansın.
+                return self._konusma_ekle({
+                    "durum": "kullanici_konustu", "gonderilmedi": True,
+                    "not": "Komut tahtaya gönderilmedi; kullanıcı konuşmuş. Önce ona cevap ver, sonra komutu yeniden gönder."})
             self.sayac += 1
             no = self.sayac
+            self.turler[no] = komut.get("tur")
             if komut.get("tur") == "dur":
                 # Durdurma sıradakileri de iptal eder; sayfa hemen uygular.
                 for k in self.kuyruk:
@@ -223,21 +306,24 @@ class Canli:
                 return {"no": no, "durum": "bilinmiyor"}
             return self._bekle(no, sure)
 
-    def al(self, son_no, sure=20.0, sayfa_dinliyor=None):
-        """sayfa_dinliyor: sayfanın bildiği "Claude dinliyor" durumu; değişince hemen döner."""
+    def al(self, son_no, sure=20.0, sayfa_dinliyor=None, sayfa_bekleyen=None):
+        """sayfa_dinliyor / sayfa_bekleyen: sayfanın bildiği "Claude dinliyor" durumu ve bekleyen söz sayısı;
+        biri değişince hemen döner (sayfa ışığı ve "Sorunuz bekliyor" uyarısını günceller)."""
         with self.kosul:
             self.bekleyen_sayfa += 1
             try:
                 bitis = time.time() + sure
                 while True:
-                    dinliyor = self.dinleyen > 0
+                    dinliyor = self.dinliyor()
                     yeni = [k for k in self.kuyruk if k["no"] > son_no]
-                    if yeni or (sayfa_dinliyor is not None and dinliyor != sayfa_dinliyor):
-                        return {"komutlar": yeni, "dinliyor": dinliyor}
+                    degisti = (sayfa_dinliyor is not None and dinliyor != sayfa_dinliyor) or \
+                        (sayfa_bekleyen is not None and len(self.konusmalar) != sayfa_bekleyen)
                     kalan = bitis - time.time()
-                    if kalan <= 0:
-                        return {"komutlar": [], "dinliyor": dinliyor}
-                    self.kosul.wait(kalan)
+                    if yeni or degisti or kalan <= 0:
+                        return {"komutlar": yeni, "dinliyor": dinliyor,
+                                "bekleyen_konusma": [x["metin"] for x in self.konusmalar]}
+                    # Kanal yoklaması kısa aralarla yenilenir; ışık titremesin diye ara ara bakılır.
+                    self.kosul.wait(min(kalan, 2.0))
             finally:
                 self.bekleyen_sayfa -= 1
                 self.son_gorulme = time.time()
@@ -274,6 +360,8 @@ class Canli:
             # Kimsenin almadığı eski sonuçlar birikmesin.
             for eski in [n for n in self.sonuclar if n < no - 200]:
                 del self.sonuclar[eski]
+            for eski in [n for n in self.turler if n < no - 200]:
+                del self.turler[eski]
             self.kosul.notify_all()
 
     # ---- Seslendirme: ses/ses-ayari.json'daki ses (varsayılan Pocket TTS Türkçe, kadın 3);
@@ -362,7 +450,7 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
 
     def log_message(self, fmt, *args):
         p = self.path or ""
-        if "/api/" in p and not p.startswith(("/api/canli/al", "/api/canli/bitti", "/api/canli/ses")):
+        if "/api/" in p and not p.startswith(("/api/canli/al", "/api/canli/bitti", "/api/canli/ses", "/api/canli/kanal")):
             sys.stderr.write("  %s\n" % (fmt % args))
 
     def _json(self, kod, veri):
@@ -408,18 +496,24 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
         try:
             veri = json.loads(govde.decode("utf-8")) if govde else {}
             if yol == "durum":
-                return self._json(200, CANLI.durum())
+                return self._json(200, CANLI.durum(al=q.get("al") == "1"))
             if yol == "gonder":
                 return self._json(200, CANLI.gonder(veri.get("komut") or {}, float(veri.get("bekle", 50))))
             if yol == "sonuc":
                 return self._json(200, CANLI.sonuc(int(q.get("no", 0)), float(q.get("bekle", 50))))
             if yol == "al":
                 d = q.get("dinliyor")
-                return self._json(200, CANLI.al(int(q.get("son", 0)), sayfa_dinliyor=None if d is None else d == "1"))
+                b = q.get("bekleyen")
+                return self._json(200, CANLI.al(int(q.get("son", 0)), sayfa_dinliyor=None if d is None else d == "1",
+                                                sayfa_bekleyen=None if b is None else int(b)))
             if yol == "soyle":
                 return self._json(200, CANLI.soyle(str(veri.get("metin", ""))[:2000]))
             if yol == "dinle":
                 return self._json(200, CANLI.dinle(float(q.get("bekle", 40))))
+            if yol == "kanal":
+                return self._json(200, CANLI.kanal(float(q.get("bekle", 25))))
+            if yol == "birak":
+                return self._json(200, CANLI.birak_konusmalari())
             if yol == "merhaba":
                 return self._json(200, CANLI.merhaba(veri.get("durum")))
             if yol == "duraklat":

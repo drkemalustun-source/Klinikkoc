@@ -50,6 +50,7 @@ Kaldırma: `python tools/tahta-mcp.py --kaldir`.
 | `soru_sor` | Tahtada soru kartı açar, dokunduğunuz cevabı Claude'a iletir |
 | `tahta_durumu` | Tahtanın durumu; süren bir anlatımın ya da sorunun bitmesini bekler |
 | `dinle` | Mikrofon tuşuyla söylediğinizi bekler ve yazı olarak alır (sesli sohbet) |
+| `anlatima_devam` | Siz söz alınca duraklayan anlatımı, Claude cevap verdikten sonra kaldığı cümleden sürdürür |
 | `durdur` | Anlatımı hemen keser |
 
 Tahta komutları: başlık, madde, terim, not, tablo, akış, karşılaştırma, ders görseli,
@@ -83,13 +84,38 @@ Tahtanın üst çubuğunda **mikrofon** tuşu var (klavyede **M**).
 2. 2,5 saniye susunca konuşmanız Claude'a gönderilir (ya da tuşa yeniden dokunun).
 3. Claude tahtada sesli cevap verir, sonra sizi yeniden dinler.
 
-- Tahta konuşurken tuşa dokunmak anlatımı keser: söz almış olursunuz.
+- **Söz alma:** Tahta anlatırken tuşa dokunursanız anlatım kaldığı yerde duraklar ("Söz sizde" yazar).
+  Konuşmanız bitince Claude anlatımın bitmesini beklemeden hemen duyar ve cevap verir. Cevabını tahtada
+  çizerek verirse tahta cevaptan sonra eski hâline döner ve anlatım kesilen cümleden sürer. Bir şey
+  söylemeden susarsanız anlatım kendiliğinden sürer; ▶ ile de siz sürdürebilirsiniz.
+- Soru kartı açıkken konuşursanız kart kapanır; Claude önce sizi cevaplar, gerekirse soruyu yeniden sorar.
 - Konuşma tanıma tarayıcının kendi Türkçe tanıyıcısıdır (Chrome/Edge). İnternet gerekir;
   ses yazıya çevrilmek için Google'a (Edge'de Microsoft'a) gider. Firefox'ta çalışmaz.
 - İlk kullanımda tarayıcı mikrofon izni ister; "İzin ver" deyin.
-- Claude yalnızca bir iş yaparken dinler. Uzun süre konuşmazsanız dinlemeyi bırakır; o zaman
-  sohbete bir mesaj yazmanız (ya da dikteyle söylemeniz) yeterli. Bu arada söyledikleriniz
-  kaybolmaz, Claude ilk fırsatta görür.
+- Üst çubuktaki ışık Claude'un dinleyip dinlemediğini gösterir: **yeşil** "Claude dinliyor", **gri**
+  "Claude dinlemiyor". Claude masaüstü uygulaması, Claude cevabını bitirip beklemeye geçtiğinde
+  kendiliğinden yeni bir iş başlatamaz; o sırada ışık gridir.
+- Işık griyken konuşursanız sorunuz kaybolmaz; tahtada sarı bir uyarı çıkar: "Sorunuz bekliyor".
+  İki yol var: Claude sohbetine **tahtaya bak** yazın (Claude sorunuzu tahtadan alır) ya da
+  **Sohbete kopyala** düğmesine basıp sohbete yapıştırın (Mac'te Cmd+V, Windows'ta Ctrl+V).
+
+### Claude Code ile (isteğe bağlı): sorular sohbete kendiliğinden düşsün
+
+Claude masaüstü uygulamasında bir aracın sohbete kendiliğinden mesaj göndermesinin yolu yoktur.
+Claude Code'da (terminaldeki Claude) ise "channels" adlı, henüz deneme aşamasındaki bir özellik bunu
+yapar ([belge](https://code.claude.com/docs/en/channels-reference)). Claude Code kullanıyorsanız:
+
+1. KlinikKoç klasöründe bir `.mcp.json` dosyası oluşturun:
+   ```json
+   {"mcpServers": {"klinik-koc": {"command": "python3", "args": ["tools/tahta-mcp.py", "--kanal"]}}}
+   ```
+   (Windows'ta `python3` yerine `python`.)
+2. Claude Code'u o klasörde şöyle başlatın:
+   `claude --dangerously-load-development-channels server:klinik-koc`
+3. Artık Claude dinlemezken söyledikleriniz sohbete yeni bir ileti olarak düşer ve ışık hep yeşildir.
+
+Bu yol claude.ai hesabıyla giriş ister; Team/Enterprise hesaplarında yöneticinin "channels"ı açması
+gerekir. Özellik deneme aşamasında olduğu için ileride değişebilir.
 
 ## Kullanım ipuçları
 
@@ -99,7 +125,7 @@ Tahtanın üst çubuğunda **mikrofon** tuşu var (klavyede **M**).
   Hiçbir şey iptal olmaz; ses olduğu yerde durur, sıradaki adımlar bekler ve ekranda "Duraklatıldı"
   yazar. Yeniden basınca (▶) aynı cümlenin kaldığı yerinden sürer. Tuş yalnız anlatım sürerken
   etkindir (soru kartında ve mikrofon dinlerken sönüktür). Claude bu sırada "duraklatildi" görür ve
-  bekler. Duraklatılmışken mikrofona, kare düğmeye ya da Esc'e basmak anlatımı keser (duraklama kalkar).
+  bekler. Duraklatılmışken mikrofona basarsanız söz alırsınız; kare düğme ya da Esc anlatımı keser.
 - Tahtadaki **kare** düğme ya da **Esc** anlatımı keser. **F** tam ekran. Hız düğmesi 1,0 / 1,2 / 1,4.
 - Sesi bu bilgisayardaki Pocket TTS Türkçe kadın 3 sesi üretir (ayar: `ses/ses-ayari.json`). Sunucu
   açılırken ~10–30 sn yüklenir; o sırada ya da hata olursa Piper dfki, o da yoksa tarayıcının Türkçe sesi.

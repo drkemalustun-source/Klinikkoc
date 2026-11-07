@@ -25,6 +25,7 @@ import random
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -64,12 +65,24 @@ Nasıl çalış:
 - Bilgi dersin içeriğine dayansın; dersin dışına çıkarsan bunu açıkça söyle.
 - Anlatım bitince sohbet penceresinde çok kısa özet ver; tahtada anlattığını sohbete tekrar yazma.
 Sesli sohbet (dikte): Kullanıcı tahtadaki mikrofon tuşuna (ya da M tuşuna) basıp konuşabilir; söyledikleri
-yazıya çevrilip sana gelir. Tuşa basmak anlatımı keser (söz alır).
+yazıya çevrilip sana gelir.
+- Söz kesme: Anlatım sürerken kullanıcı konuşursa tahta anlatımı kaldığı yerde duraklatır ve bekleyen tahta /
+  tahta_durumu(no) çağrın beklemeden {"durum": "kullanici_konustu", "kullanici_konustu": "..."} döner.
+  Önce ona cevap ver: tahtada sesli (tahta aracı; cevap araya girer, tahta sonra eski hâline döner) ya da
+  sohbette. Sonra anlatima_devam ile anlatımı kaldığı yerden sürdür; konu değiştiyse anlatima_devam(birak=true).
+- Soru kartı açıkken konuşursa kart kapanır; gerekirse soruyu yeniden sor.
+- tahta ya da soru_sor 'gonderilmedi: true' ile dönerse kullanıcının cevaplanmamış sözü vardır; önce ona cevap ver.
 - Ders ya da sohbet sırasında bir bölümü/cevabı bitirince dinle aracını çağır; gelen metne tahtada sesli
   cevap ver (gerekirse çizerek), sonra yeniden dinle. "sessiz" dönerse bir-iki kez daha dinle; uzun
   sessizlikte döngüyü bırak ve sohbete kısa bir not yaz.
+- Bir oturumda cevabını bitirmeden önce son iş olarak dinle çağır; kullanıcı sesli sohbetteyse dinleme
+  döngüsünü sürdür. Sen dinlemezken söylenenler bekler; tahta sayfası kullanıcıya sohbete "tahtaya bak"
+  yazmasını söyler. Kullanıcı "tahtaya bak" yazarsa tahta_durumu'nu (no'suz) çağır: bekleyen sözü döndürür.
+  Kullanıcı sohbete "Tahtadan sesli soru: ..." yapıştırırsa bu da tahtada söylenmiş bir sözdür.
 - tahta, soru_sor ve tahta_durumu sonuçlarında 'kullanici_konustu' alanı varsa kullanıcı o sırada
   konuşmuştur; önce ona cevap ver.
+- Claude Code'da kanal açıksa (tahta-mcp.py --kanal) sen dinlemezken söylenenler sohbete <channel
+  source="klinik-koc"> iletisi olarak düşer; ona da tahtada cevap ver.
 - "dur", "bekle", "ara verelim" gibi isteklerde dinlemeyi de bırak.
 Duraklat: Kullanıcı tahtadaki ⏸ tuşuyla (ya da P / Boşluk) anlatımı duraklatabilir. Bu iptal değildir.
 - tahta, soru_sor ya da tahta_durumu 'duraklatildi' dönerse hata sayma, yeni komut gönderme, sohbete de
@@ -282,7 +295,8 @@ ARACLAR = [
         "description": "Tahtaya yazar ve sesli anlatır. adimlar sırayla uygulanır: her adımda önce komutlar "
                        "tahtaya çizilir, sonra anlat metni okunur. Anlatım ~40 sn'den uzun sürerse araç "
                        "'sürüyor' döner; bitişini tahta_durumu ile bekleyebilirsin. Kullanıcı tahtada duraklattıysa "
-                       "'duraklatildi' döner: hata değil, tahta_durumu ile beklemeyi sürdür.",
+                       "'duraklatildi' döner: hata değil, tahta_durumu ile beklemeyi sürdür. Kullanıcı konuşursa "
+                       "anlatım duraklar ve araç hemen 'kullanici_konustu' döner: cevap ver, sonra anlatima_devam.",
         "inputSchema": {"type": "object", "properties": {
             "ders": {"type": "string", "description": "image komutu kullanılacaksa görsellerin alınacağı ders"},
             "adimlar": {"type": "array", "minItems": 1, "maxItems": 12, "items": {
@@ -309,7 +323,9 @@ ARACLAR = [
     {
         "name": "tahta_durumu",
         "description": "Tahtanın durumunu verir. no verilirse o komutun (anlatım ya da soru) bitmesini en çok ~40 sn bekler "
-                       "ve sonucunu döndürür. 'duraklatildi': kullanıcı anlatımı duraklattı; aynı no ile beklemeyi sürdür.",
+                       "ve sonucunu döndürür; kullanıcı konuşursa beklemeden 'kullanici_konustu' döner. "
+                       "'duraklatildi': kullanıcı anlatımı duraklattı; aynı no ile beklemeyi sürdür. no verilmezse "
+                       "kullanıcının bekleyen sözünü de 'kullanici_konustu' alanında verir (kullanıcı 'tahtaya bak' derse).",
         "inputSchema": {"type": "object", "properties": {"no": {"type": "integer"}}},
     },
     {
@@ -319,6 +335,13 @@ ARACLAR = [
                        "döngüsü: anlat → dinle → cevapla → dinle.",
         "inputSchema": {"type": "object", "properties": {
             "bekle": {"type": "integer", "description": "en çok kaç saniye beklensin (5–50, varsayılan 40)"}}},
+    },
+    {
+        "name": "anlatima_devam",
+        "description": "Kullanıcı söz alınca duraklayan anlatımı, cevabından sonra kaldığı cümleden sürdürür (tahta cevaptan "
+                       "önceki hâline döner) ve anlatımın bitmesini tahta gibi bekler. birak=true: anlatımı sürdürmez, bırakır.",
+        "inputSchema": {"type": "object", "properties": {
+            "birak": {"type": "boolean", "description": "anlatımı sürdürme, bırak (konu değiştiyse)"}}},
     },
     {
         "name": "durdur",
@@ -1198,7 +1221,25 @@ def ar_tahta_durumu(a):
             return metin(istek("sonuc?no=%d&bekle=40" % int(a["no"]), zaman=70))
         except urllib.error.URLError:
             return metin({"durum": "bağlı değil"})
-    return metin(sunucu_acik() or {"durum": "sunucu kapalı", "not": "tahtayi_ac ile aç."})
+    try:
+        return metin(istek("durum?al=1", zaman=5))
+    except Exception:
+        return metin({"durum": "sunucu kapalı", "not": "tahtayi_ac ile aç."})
+
+
+def ar_anlatima_devam(a):
+    birak = a.get("birak") is True
+    r = gonder({"tur": "devam", "birak": birak}, bekle=True)
+    no = r.get("anlatim_no")
+    if birak or r.get("durum") not in ("devam_ediyor", "zaten_suruyor") or not no:
+        return metin(r)
+    # Anlatım sürüyor: bitişini tahta aracındaki gibi bekle (kullanıcı yine konuşursa hemen döner).
+    try:
+        s = istek("sonuc?no=%d&bekle=40" % int(no), zaman=70)
+    except urllib.error.URLError:
+        return metin(r)
+    s["devam"] = r.get("durum")
+    return metin(s)
 
 
 def ar_dinle(a):
@@ -1221,6 +1262,7 @@ ISLEYICILER = {"egitmen_hazirla": ar_egitmen_hazirla, "kayit_oku": ar_kayit_oku,
                "tahtayi_ac": ar_tahtayi_ac, "dersler": ar_dersler, "ders_oku": ar_ders_oku,
                "gorsel_bak": ar_gorsel_bak, "tahta": ar_tahta, "soru_sor": ar_soru_sor,
                "tahta_durumu": ar_tahta_durumu, "dinle": ar_dinle, "durdur": ar_durdur,
+               "anlatima_devam": ar_anlatima_devam,
                "bilgi_ara": ar_bilgi_ara, "vakalar": ar_vakalar, "vaka_oku": ar_vaka_oku, "karne": ar_karne,
                "sozlu_prova": ar_sozlu_prova, "tekrar_listesi": ar_tekrar_listesi}
 
@@ -1234,18 +1276,59 @@ def metin(veri, hata=False):
 
 
 # ---------- MCP (JSON-RPC, satır satır stdin/stdout) ----------
+YAZ_KILIT = threading.Lock()  # kanal iş parçacığı ile ana döngü aynı anda yazmasın
+
+
 def yaz(mesaj):
-    sys.stdout.buffer.write(json.dumps(mesaj, ensure_ascii=False).encode("utf-8") + b"\n")
-    sys.stdout.buffer.flush()
+    with YAZ_KILIT:
+        sys.stdout.buffer.write(json.dumps(mesaj, ensure_ascii=False).encode("utf-8") + b"\n")
+        sys.stdout.buffer.flush()
+
+
+# ---------- Claude Code kanalı (isteğe bağlı: --kanal) ----------
+# Claude Code'un "channels" özelliği (araştırma önizlemesi) bir MCP sunucusunun oturuma kendiliğinden ileti
+# göndermesine izin verir: notifications/claude/channel. Claude masaüstü sohbeti bunu desteklemez; bu yüzden
+# yalnız --kanal ile açılır (yoksa söz, iletilmediği hâlde sunucudan alınıp kaybolurdu).
+# Claude Code'u şöyle başlatın:  claude --dangerously-load-development-channels server:klinik-koc
+KANAL = "--kanal" in sys.argv or os.environ.get("KLINIK_KOC_KANAL") == "1"
+_kanal_basladi = False
+
+
+def kanal_dongusu():
+    while True:
+        try:
+            r = istek("kanal?bekle=25", zaman=45)
+        except Exception:
+            time.sleep(3)  # sunucu kapalı: tahtayi_ac açınca bağlanılır
+            continue
+        if r.get("durum") == "konustu" and r.get("metin"):
+            sayfa = r.get("sayfa") or {}
+            meta = {"kaynak": "tahta_mikrofonu"}
+            if sayfa.get("ders"):
+                meta["ders"] = str(sayfa["ders"])
+            yaz({"jsonrpc": "2.0", "method": "notifications/claude/channel",
+                 "params": {"content": r["metin"], "meta": meta}})
+
+
+def kanali_baslat():
+    global _kanal_basladi
+    if KANAL and not _kanal_basladi:
+        _kanal_basladi = True
+        threading.Thread(target=kanal_dongusu, daemon=True).start()
 
 
 def isle(m):
     yontem, no, p = m.get("method"), m.get("id"), m.get("params") or {}
     if no is None:
+        if yontem == "notifications/initialized":
+            kanali_baslat()
         return None  # bildirim: yanıt verilmez
     if yontem == "initialize":
+        yetenek = {"tools": {}}
+        if KANAL:
+            yetenek["experimental"] = {"claude/channel": {}}
         return {"protocolVersion": p.get("protocolVersion") or "2025-06-18",
-                "capabilities": {"tools": {}},
+                "capabilities": yetenek,
                 "serverInfo": {"name": AD, "title": "KlinikKoç", "version": SURUM},
                 "instructions": TALIMAT}
     if yontem == "ping":

@@ -170,7 +170,7 @@ class McpSunucusu(unittest.TestCase):
             try:
                 self.assertEqual(cagir("initialize")["serverInfo"]["name"], "klinik-koc")
                 adlar = {t["name"] for t in cagir("tools/list")["tools"]}
-                self.assertTrue({"bilgi_ara", "vakalar", "vaka_oku", "karne", "kayit_yaz"} <= adlar)
+                self.assertTrue({"bilgi_ara", "vakalar", "vaka_oku", "karne", "kayit_yaz", "anlatima_devam"} <= adlar)
                 self.assertTrue(arac("bilgi_ara", sorgu="süpürasyon", k=3)["sonuclar"])
                 self.assertEqual(arac("vakalar", ders="peri-implantitis-cerrahi")["vakalar"][0]["vaka"], "ornek-implant-kanama")
                 self.assertIn("talimat", arac("vaka_oku", ders="peri-implantitis-cerrahi", vaka="ornek-implant-kanama"))
@@ -194,6 +194,137 @@ class McpSunucusu(unittest.TestCase):
             finally:
                 p.stdin.close()
                 p.wait(timeout=10)
+
+
+class CanliSozKesme(unittest.TestCase):
+    """Canlı tahta: kullanıcının sesli sözü Claude'a anlatım bitmeden ulaşır."""
+
+    def setUp(self):
+        import threading
+        import time
+        sys.path.insert(0, os.path.join(KOK, "tools"))
+        import sunucu
+        self.th, self.time = threading, time
+        self.c = sunucu.Canli()
+        self.c.son_gorulme = time.time()  # sayfa bağlı say
+        self.c.bekleyen_sayfa = 1
+
+    def sonra(self, sn, f, *a):
+        t = self.th.Timer(sn, f, a)
+        t.start()
+        return t
+
+    def test_anlatim_surerken_konusunca_hemen_doner(self):
+        self.c.sayfa_durumu = {"kaldigi_yer": {"no": 1, "adim": 2, "toplam": 4}}
+        self.sonra(0.3, self.c.soyle, "periapikal apseden farkı ne")
+        t0 = self.time.time()
+        r = self.c.gonder({"tur": "adimlar", "adimlar": [{"anlat": "uzun anlatım"}]}, 40)
+        self.assertLess(self.time.time() - t0, 3)
+        self.assertEqual(r["durum"], "kullanici_konustu")
+        self.assertEqual(r["kullanici_konustu"], "periapikal apseden farkı ne")
+        self.assertEqual(r["kaldigi_yer"]["adim"], 2)
+        self.assertIn("anlatima_devam", r["not"])
+        self.assertEqual(self.c.konusmalar, [])  # bir kez teslim edilir
+
+    def test_bekleyen_tahta_durumu_da_hemen_doner(self):
+        self.c.gonder({"tur": "adimlar", "adimlar": []}, 0)
+        self.sonra(0.3, self.c.soyle, "bir saniye")
+        r = self.c.sonuc(1, 40)
+        self.assertEqual(r["durum"], "kullanici_konustu")
+
+    def test_soru_kartinda_not_farkli(self):
+        self.sonra(0.3, self.c.soyle, "anlamadım")
+        r = self.c.gonder({"tur": "soru", "soru": "?", "secenekler": ["a", "b"]}, 40)
+        self.assertIn("soru kartı", r["not"])
+
+    def test_cevaplanmamis_soz_varken_yeni_komut_gitmez(self):
+        self.c.soyle("bir sorum var")
+        r = self.c.gonder({"tur": "adimlar", "adimlar": []}, 1)
+        self.assertTrue(r.get("gonderilmedi"))
+        self.assertEqual(r["kullanici_konustu"], "bir sorum var")
+        self.assertEqual(self.c.kuyruk, [])
+        # devam ve dur her zaman gider
+        self.c.soyle("yine")
+        self.c.gonder({"tur": "devam"}, 0)
+        self.assertEqual(self.c.kuyruk[-1]["tur"], "devam")
+
+    def test_durum_bekleyen_metni_verir(self):
+        self.c.soyle("tahtaya bak")
+        d = self.c.durum()
+        self.assertEqual(d["konusma_bekleyen"], 1)
+        self.assertNotIn("kullanici_konustu", d)  # yalnız bakmak sözü tüketmez
+        d = self.c.durum(al=True)
+        self.assertEqual(d["kullanici_konustu"], "tahtaya bak")
+        self.assertEqual(d["bekleyen_konusmalar"][0]["metin"], "tahtaya bak")
+        self.assertEqual(self.c.konusmalar, [])
+
+    def test_dinliyor_isigi(self):
+        self.assertFalse(self.c.soyle("x")["claude_dinliyor"])
+        self.c.birak_konusmalari()
+        self.c.gonder({"tur": "adimlar", "adimlar": []}, 0)
+        self.sonra(0.2, lambda: self.assertTrue(self.c.dinliyor()))
+        self.c.sonuc(1, 0.6)
+        r = self.c.al(1, 0.5, sayfa_dinliyor=True, sayfa_bekleyen=0)
+        self.assertFalse(r["dinliyor"])
+
+    def test_kanal_arac_beklerken_sozu_almaz(self):
+        sonuc = {}
+        self.c.dinleyen = 1  # Claude dinle ile bekliyor
+        self.c.soyle("merhaba")
+        t = self.th.Thread(target=lambda: sonuc.update(self.c.kanal(1.5)))
+        t.start()
+        t.join()
+        self.assertEqual(sonuc["durum"], "sessiz")
+        self.c.dinleyen = 0
+        r = self.c.kanal(3)
+        self.assertEqual((r["durum"], r["metin"]), ("konustu", "merhaba"))
+
+
+class CanliKanal(unittest.TestCase):
+    """--kanal: Claude dinlemiyorken söz, Claude Code oturumuna notifications/claude/channel olarak düşer."""
+
+    def test_soz_bildirim_olarak_gider(self):
+        import http.server
+        import threading
+        import urllib.request
+        sys.path.insert(0, os.path.join(KOK, "tools"))
+        import sunucu
+        sunucu.CANLI = sunucu.Canli()
+        srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), sunucu.Isleyici)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        port = srv.server_address[1]
+        ortam = dict(os.environ, KLINIK_KOC_PORT=str(port))
+        p = subprocess.Popen([sys.executable, os.path.join(KOK, "tools", "tahta-mcp.py"), "--kanal"],
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=ortam)
+        try:
+            p.stdin.write(b'{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}\n')
+            p.stdin.flush()
+            ilk = json.loads(p.stdout.readline())["result"]
+            self.assertEqual(ilk["capabilities"]["experimental"], {"claude/channel": {}})
+            p.stdin.write(b'{"jsonrpc":"2.0","method":"notifications/initialized"}\n')
+            p.stdin.flush()
+            import time
+            for _ in range(50):
+                if sunucu.CANLI.kanal_bekleyen:
+                    break
+                time.sleep(0.1)
+            r = urllib.request.Request("http://127.0.0.1:%d/api/canli/soyle" % port,
+                                       data=json.dumps({"metin": "lezyon neden ağrılı"}).encode(),
+                                       headers={"Content-Type": "application/json"})
+            self.assertTrue(json.loads(urllib.request.urlopen(r, timeout=5).read())["claude_dinliyor"])
+            m = json.loads(p.stdout.readline())
+            self.assertEqual(m["method"], "notifications/claude/channel")
+            self.assertEqual(m["params"]["content"], "lezyon neden ağrılı")
+            self.assertEqual(sunucu.CANLI.konusmalar, [])
+        finally:
+            p.stdin.close()
+            p.kill()
+            srv.shutdown()
+
+    def test_kanalsiz_yetenek_yok(self):
+        p = subprocess.run([sys.executable, os.path.join(KOK, "tools", "tahta-mcp.py")],
+                           input=b'{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}\n', capture_output=True, timeout=20)
+        self.assertNotIn("experimental", json.loads(p.stdout.splitlines()[0])["result"]["capabilities"])
 
 
 class YayinDenetimi(unittest.TestCase):

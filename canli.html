@@ -19,6 +19,7 @@
         <div class="lesson-name" id="dersAdi">Canlı tahta · Claude</div>
         <div class="section-name" id="durum">Bağlanıyor…</div>
       </div>
+      <span class="claude-isik" id="claudeIsik" role="status" title="Claude şu an dinlemiyor."><i></i><span>Claude dinlemiyor</span></span>
       <button class="icon-btn mik" id="mik" aria-label="Konuş" title="Konuş: dokunun, konuşun; susunca gönderilir (M)">
         <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>
       </button>
@@ -45,6 +46,13 @@
       <div class="question" id="question" hidden></div>
     </div>
 
+    <div class="canli-bekleyen" id="bekleyenSoru" role="alert" hidden>
+      <div class="canli-bekleyen-yazi">
+        <strong>Sorunuz bekliyor.</strong> Claude şu an dinlemiyor. Sohbete <b>“tahtaya bak”</b> yazın ya da sorunuzu kopyalayıp yapıştırın.
+        <span class="canli-bekleyen-metin" id="bekleyenMetin"></span>
+      </div>
+      <button class="btn primary" id="sohbeteKopyala">Sohbete kopyala</button>
+    </div>
     <div class="canli-durak" id="durakIsaret" role="status" hidden>⏸ Duraklatıldı · devam için ▶, P ya da Boşluk</div>
     <div class="caption" id="caption" aria-live="polite"></div>
   </section>

@@ -42,3 +42,28 @@
 
 .q-opt.canli-secili { border-color: var(--accent); }
 .q-bekle { margin-top: .7em; font-size: .7em; color: var(--chalk-dim); }
+
+/* Claude dinliyor mu? (yeşil: dinliyor · gri: dinlemiyor) */
+.claude-isik {
+  flex: none; display: inline-flex; align-items: center; gap: .45em; padding: .3em .8em; border-radius: 999px;
+  font-size: .78em; white-space: nowrap; color: var(--chalk-dim); background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+}
+.claude-isik i { width: 10px; height: 10px; border-radius: 50%; background: #7d8783; }
+.claude-isik.acik { color: var(--ok); border-color: rgba(127,209,163,.45); }
+.claude-isik.acik i { background: var(--ok); animation: canli-nabiz 1.6s ease-in-out infinite; }
+@media (max-width: 640px) { .claude-isik span { display: none; } }
+
+/* Claude dinlemiyorken söylenen söz: uyarı ve kopyala düğmesi */
+.canli-bekleyen {
+  position: fixed; left: 50%; top: 84px; transform: translateX(-50%); z-index: 45;
+  width: min(760px, calc(100vw - 32px)); display: flex; gap: 14px; align-items: center;
+  padding: .8em 1em; border-radius: 14px; color: #1b1407; background: #f3c969;
+  box-shadow: 0 10px 30px rgba(0,0,0,.4); font-size: .95em; line-height: 1.35;
+}
+.canli-bekleyen[hidden] { display: none; }
+.canli-bekleyen-yazi { flex: 1; min-width: 0; }
+.canli-bekleyen-metin { display: block; margin-top: .3em; font-style: italic; overflow-wrap: anywhere; }
+.canli-bekleyen .btn { flex: none; background: #1b2420; color: #fff; border-color: #1b2420; }
+.canli-bekleyen strong, .canli-bekleyen b { color: inherit; }
+@media (max-width: 640px) { .canli-bekleyen { flex-direction: column; align-items: stretch; } }

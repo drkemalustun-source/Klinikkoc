@@ -9,8 +9,13 @@
  *   soru    : { soru, secenekler: [..], dogru?, aciklama?, anlat? } → tıklanan cevap döner
  *   temizle : tahtayı siler
  *   dur     : anlatımı hemen keser, sıradaki komutları iptal eder
+ *   devam   : sözü kesilen anlatımı kaldığı yerden sürdürür ({ birak: true } ise bırakır)
  * Dikte: mikrofon tuşu (ya da M) konuşmayı tarayıcının Türkçe tanıyıcısıyla yazıya çevirir ve
- *   /api/canli/soyle ile sunucuya bırakır; Claude onu 'dinle' aracıyla alır. Tuşa basmak anlatımı keser.
+ *   /api/canli/soyle ile sunucuya bırakır. Anlatım sürerken basılırsa anlatım duraklar (söz alma); Claude'un
+ *   bekleyen tahta çağrısı sözü hemen alır. Claude'un cevabı (yeni tahta komutu) araya girer; tahta cevaptan
+ *   sonra eski hâline döner ve 'devam' komutuyla anlatım kaldığı cümleden sürer.
+ * Claude dinlemiyorken söylenenler için üstte uyarı ve "Sohbete kopyala" düğmesi çıkar; üst çubuktaki
+ *   ışık Claude'un dinleyip dinlemediğini gösterir.
  * Duraklat: ⏸ tuşu (ya da P / Boşluk) anlatımı iptal etmeden bekletir; yeniden basınca aynı cümlenin
  *   kaldığı yerinden sürer. Sunucuya /api/canli/duraklat ile bildirilir; Claude 'duraklatildi' görür.
  * Ses: bu bilgisayardaki sunucu sesi (/api/canli/ses; ses/ses-ayari.json, varsayılan Pocket TTS kadın 3,
@@ -67,7 +72,9 @@
       return URL.createObjectURL(await r.blob());
     },
 
-    async anlat(metin) {
+    // Döner: 'kesildi' (durduruldu ya da araya cevap girdi) ya da undefined (bitti).
+    // secenek.bas: kaçıncı cümleden başlansın; secenek.cumle(i): okunan cümle bildirilir (kaldığı yer için).
+    async anlat(metin, secenek = {}) {
       metin = duz(metin);
       if (!metin) return;
       if (mik.aktif) mik.bitir(); // tahta konuşurken mikrofon kendi sesini duymasın
@@ -76,27 +83,34 @@
       dot.classList.add('konusuyor');
       try {
         const cumleler = AT.speech.sentences(metin);
-        let sonraki = this.piperVar ? this.wav(cumleler[0]).catch(() => null) : null;
-        for (let i = 0; i < cumleler.length; i++) {
+        const bas = Math.max(0, Math.min(secenek.bas || 0, cumleler.length - 1));
+        let sonraki = this.piperVar ? this.wav(cumleler[bas]).catch(() => null) : null;
+        for (let i = bas; i < cumleler.length; i++) {
           await durak.bekle();
-          if (my !== this.token) return;
+          if (my !== this.token) return 'kesildi';
+          if (secenek.cumle) secenek.cumle(i);
           const url = sonraki ? await sonraki : null;
           sonraki = this.piperVar && i + 1 < cumleler.length ? this.wav(cumleler[i + 1]).catch(() => null) : null;
           capEl.classList.remove('siz');
           capEl.textContent = cumleler[i];
           await durak.bekle();
-          if (my !== this.token) { if (url) URL.revokeObjectURL(url); return; }
+          if (my !== this.token) { if (url) URL.revokeObjectURL(url); return 'kesildi'; }
           if (url) {
             await this.cal(url, my);
             URL.revokeObjectURL(url);
+            if (my !== this.token) return 'kesildi';
           } else {
             if (this.piperVar) {
               this.piperVar = false;
               toast('Piper sesi bulunamadı; tarayıcının Türkçe sesi kullanılıyor.');
             }
             this.web.setRate(hiz);
-            await this.web.speak(cumleler.slice(i).join(' '), { onSentence: (s) => { capEl.textContent = s; } });
-            return;
+            let j = i;
+            await this.web.speak(cumleler.slice(i).join(' '), { onSentence: (s) => {
+              capEl.textContent = s;
+              if (secenek.cumle) secenek.cumle(j++);
+            } });
+            return my !== this.token ? 'kesildi' : undefined;
           }
         }
       } finally {
@@ -108,7 +122,15 @@
       return new Promise((resolve) => {
         const a = this.audio;
         let bitti = false;
-        const son = () => { if (!bitti) { bitti = true; this.caliyor = false; clearInterval(iv); a.onended = a.onerror = null; resolve(); } };
+        // Ses öğesi tek; araya giren bir cevap onu devralmış olabilir: yalnız kendi işleyicilerimizi temizle.
+        const benim = () => a.onended === son;
+        const son = () => {
+          if (bitti) return;
+          bitti = true;
+          clearInterval(iv);
+          if (benim()) { this.caliyor = false; a.onended = a.onerror = null; }
+          resolve();
+        };
         this.caliyor = true;
         a.onended = son;
         a.onerror = son;
@@ -119,7 +141,7 @@
           $('#baslat').hidden = false;
           son();
         });
-        const iv = setInterval(() => { if (my !== this.token) { a.pause(); son(); } }, 150);
+        const iv = setInterval(() => { if (my !== this.token) { if (benim()) a.pause(); son(); } }, 150);
       });
     },
 
@@ -139,17 +161,25 @@
   const durakIsaret = $('#durakIsaret');
   const durak = {
     aktif: false,
+    soz: false, // kullanıcı mikrofonla söz aldığı için duraklatıldı
     bekleyenler: [],
     kullanilabilir() {
+      if (askidaki() && !araCalisan && !mik.aktif) return true; // ▶: araya girilen anlatıma dön
       return !mik.aktif && qEl.hidden && (ses.konusuyor || !!(calisan && calisan.tur === 'adimlar'));
     },
     bekle() {
       return this.aktif ? new Promise((r) => this.bekleyenler.push(r)) : Promise.resolve();
     },
-    degistir() { if (this.aktif) this.devam(); else this.duraklat(); },
-    duraklat() {
-      if (this.aktif || !this.kullanilabilir()) return;
+    degistir() {
+      if (this.aktif) this.devam();
+      else if (askidaki() && !araCalisan) anlatimaDon(null);
+      else this.duraklat();
+    },
+    duraklat(neden) {
+      if (this.aktif) { if (neden === 'soz') { this.soz = true; this.goster(); } return; }
+      if (!this.kullanilabilir()) return;
       this.aktif = true;
+      this.soz = neden === 'soz';
       ses.audio.pause();
       try { if (window.speechSynthesis) speechSynthesis.pause(); } catch (e) { /* yok */ }
       this.goster();
@@ -158,6 +188,7 @@
     devam() {
       if (!this.aktif) return;
       this.aktif = false;
+      this.soz = false;
       if (ses.caliyor) ses.audio.play().catch(() => {});
       try { if (window.speechSynthesis) speechSynthesis.resume(); } catch (e) { /* yok */ }
       this.birak();
@@ -165,6 +196,7 @@
     },
     // Durdur ya da söz alma: duraklama kalkar, bekleyen döngüler bırakılır (onlar iptali görüp çıkar).
     sifirla() {
+      this.soz = false;
       if (!this.aktif) return;
       this.aktif = false;
       try { if (window.speechSynthesis) speechSynthesis.resume(); } catch (e) { /* yok */ }
@@ -184,7 +216,9 @@
         : 'Duraklat: anlatımı bekletir, yeniden basınca kaldığı yerden sürer (P ya da Boşluk)';
       durakBtn.disabled = !this.aktif && !this.kullanilabilir();
       durakIsaret.hidden = !this.aktif;
-      if (this.aktif) durumEl.textContent = 'Duraklatıldı · devam için ▶';
+      durakIsaret.textContent = this.soz ? '🎤 Söz sizde · anlatım bekliyor (devam için ▶)'
+        : '⏸ Duraklatıldı · devam için ▶, P ya da Boşluk';
+      if (this.aktif) durumEl.textContent = this.soz ? 'Söz sizde · anlatım kaldığı yerde bekliyor' : 'Duraklatıldı · devam için ▶';
       else if (calisan && calisan.tur === 'adimlar') durumEl.textContent = 'Claude anlatıyor';
     }
   };
@@ -200,6 +234,8 @@
     mikBtn.title = 'Bu tarayıcıda konuşma tanıma yok (Chrome ya da Edge gerekir).';
   }
   let sozAlindi = false;
+  let sozBitti = null;     // soru kartında söz alınınca: söz sunucuya ulaşınca çözülür
+  let sozBittiCoz = null;
   const mik = {
     rec: null,
     aktif: false,
@@ -209,8 +245,16 @@
     baslat() {
       if (!SR) return toast('Bu tarayıcıda konuşma tanıma yok; Chrome ya da Edge kullanın.');
       if (this.aktif) return this.bitir();
-      // Söz almak: süren anlatımı ya da soruyu keser.
-      if (ses.konusuyor || calisan || sira.length) { sozAlindi = true; durdur(null); }
+      // Söz almak: anlatım sürüyorsa kaldığı yerde duraklar (Claude'un bekleyen çağrısı sözü hemen alır);
+      // soru kartı açıksa kart kapanır.
+      const anlatan = araCalisan || (calisan && !calisan.askida ? calisan : null);
+      if (anlatan && anlatan.tur === 'adimlar') {
+        durak.duraklat('soz');
+      } else if (ses.konusuyor || calisan || sira.length) {
+        sozAlindi = true;
+        sozBitti = new Promise((r) => { sozBittiCoz = r; });
+        durdur(null);
+      }
       const rec = new SR();
       rec.lang = 'tr-TR';
       rec.continuous = true;
@@ -281,16 +325,28 @@
         capEl.classList.remove('siz');
         capEl.textContent = '';
         toast('Ses algılanmadı.');
+        if (durak.soz) durak.devam(); // söz alınıp bir şey söylenmediyse anlatım sürer
+        this.sozBitir();
         return;
       }
       capEl.textContent = 'Siz: ' + metin;
       try {
         const r = await api('soyle', { metin });
         const j = await r.json();
-        toast(j.claude_dinliyor ? 'Claude\'a iletildi.' : 'Kaydedildi. Claude şu an dinlemiyor; ilk fırsatta görecek.', 5000);
+        if (j.claude_dinliyor) {
+          toast('Claude\'a iletildi.', 4000);
+          if (durak.soz) durumEl.textContent = 'Sorunuz Claude\'a iletildi · anlatım kaldığı yerde bekliyor';
+        } else {
+          bekleyenGoster([metin]);
+        }
       } catch (e) {
         toast('Gönderilemedi: ' + e.message + ' (sunucu yeniden başlatılmalı olabilir)', 7000);
       }
+      this.sozBitir();
+    },
+
+    sozBitir() {
+      if (sozBittiCoz) { const c = sozBittiCoz; sozBittiCoz = null; c(); }
     }
   };
   mikBtn.addEventListener('click', () => mik.baslat());
@@ -344,8 +400,16 @@
       soruAcik: !qEl.hidden,
       konusuyor: ses.konusuyor,
       duraklatildi: durak.aktif,
+      kaldigi_yer: kaldigiYer(),
       hiz
     };
+  }
+
+  function kaldigiYer() {
+    if (!calisan || calisan.tur !== 'adimlar') return null;
+    const toplam = Array.isArray(calisan.adimlar) ? calisan.adimlar.length : 0;
+    return { no: calisan.no, adim: Math.min((calisan.adim || 0) + 1, toplam), toplam,
+             askida: !!calisan.askida, araya_giren: araCalisan ? araCalisan.no : null };
   }
 
   function soruyuKapat() {
@@ -363,7 +427,10 @@
     const liste = Array.isArray(k.adimlar) ? k.adimlar : [];
     for (let i = 0; i < liste.length; i++) {
       await durak.bekle(); // duraklatıldıysa sıradaki adım bekler (iptal edilmez)
+      if (k.askida) await k.uyanis; // araya cevap girdiyse 'devam' beklenir
       if (k.iptal) return { durum: 'iptal', tamamlanan: i, uyarilar };
+      k.adim = i;
+      k.cumle = 0;
       const a = liste[i] || {};
       soruyuKapat();
       for (const c of (Array.isArray(a.komutlar) ? a.komutlar : [])) {
@@ -375,8 +442,16 @@
         if (typeof board['cmd_' + c.type] !== 'function') { uyarilar.push('Bilinmeyen komut: ' + c.type); continue; }
         try { board.run(c, false); } catch (e) { uyarilar.push(c.type + ': ' + e.message); }
       }
-      if (a.anlat) await ses.anlat(a.anlat);
-      else if (a.bekle) await new Promise((r) => setTimeout(r, Math.min(15, a.bekle) * 1000));
+      if (a.anlat) {
+        const cumle = (n) => { k.cumle = n; };
+        let r = await ses.anlat(a.anlat, { cumle });
+        // Araya cevap girdi: 'devam' gelince aynı adımın kesilen cümlesinden sürer (tahta geri yüklenmiştir).
+        while (r === 'kesildi' && k.askida && !k.iptal) {
+          await k.uyanis;
+          if (k.iptal) break;
+          r = await ses.anlat(a.anlat, { bas: k.cumle, cumle });
+        }
+      } else if (a.bekle) await new Promise((r) => setTimeout(r, Math.min(15, a.bekle) * 1000));
     }
     if (k.iptal) return { durum: 'iptal', tamamlanan: liste.length, uyarilar };
     return uyarilar.length ? { durum: 'bitti', uyarilar } : { durum: 'bitti' };
@@ -454,8 +529,11 @@
       let sonuc;
       try { sonuc = await uygula(calisan); } catch (e) { sonuc = { durum: 'hata', hata: e.message }; }
       if (sozAlindi) {
+        // Söz sunucuya ulaşmadan sonucu bildirme: Claude sözü sonuçla birlikte ya da ondan önce alsın.
+        if (sozBitti) await Promise.race([sozBitti, new Promise((r) => setTimeout(r, 20000))]);
         sonuc = Object.assign({}, sonuc, { not: 'Kullanıcı mikrofonla söz aldı; söylediğini dinle aracıyla al.' });
         sozAlindi = false;
+        sozBitti = null;
       }
       const no = calisan.no;
       calisan = null;
@@ -464,25 +542,169 @@
     durumEl.textContent = hazirYazisi();
   }
 
+  // ---------- Araya cevap ----------
+  // Kullanıcı söz alıp anlatım duraklamışken Claude yeni komut gönderirse komut beklemeden, araya girer.
+  // Duraklayan anlatım askıya alınır; tahtanın o anki hâli saklanır, cevap bir kopyası üzerine çizilir.
+  // 'devam' gelince (ya da ▶ ile) tahta geri yüklenir ve anlatım kesilen cümleden sürer.
+  const araSira = [];
+  let araCalisan = null;
+  let tahtaKaydi = null;
+
+  function askidaki() { return calisan && calisan.askida ? calisan : null; }
+
+  function tahtayiSakla() {
+    const parca = (n) => Array.from(n.childNodes);
+    tahtaKaydi = {
+      board, ders, dersId, layout: boardEl.dataset.layout,
+      header: parca(board.header), visual: parca(board.visual), notes: parca(board.notes),
+      figure: board.figure, lastList: board.lastList
+    };
+    // Cevap, tahtanın bir kopyası üzerine çizilir (görsel işaretlenebilsin diye görsel de kopyalanır).
+    const kopya = (dizi) => dizi.map((n) => n.cloneNode(true));
+    board.header.replaceChildren(...kopya(tahtaKaydi.header));
+    board.visual.replaceChildren(...kopya(tahtaKaydi.visual));
+    board.notes.replaceChildren(...kopya(tahtaKaydi.notes));
+    const fig = board.visual.querySelector('.board-figure');
+    board.figure = fig ? { fig, inner: fig.querySelector('.figure-inner'), overlay: fig.querySelector('.figure-overlay') } : null;
+    const ul = board.notes.querySelectorAll('ul');
+    board.lastList = ul.length ? ul[ul.length - 1] : null;
+  }
+
+  function tahtayiGeriYukle() {
+    const t = tahtaKaydi;
+    if (!t) return;
+    tahtaKaydi = null;
+    board = t.board; ders = t.ders; dersId = t.dersId;
+    if (dersId) dersAdiEl.textContent = 'Canlı tahta · ' + (ders.title || dersId);
+    board.header.replaceChildren(...t.header);
+    board.visual.replaceChildren(...t.visual);
+    board.notes.replaceChildren(...t.notes);
+    board.figure = t.figure;
+    board.lastList = t.lastList;
+    boardEl.dataset.layout = t.layout;
+    soruyuKapat();
+  }
+
+  function askiyaAl(k) {
+    if (k.askida) return;
+    k.askida = true;
+    k.uyanis = new Promise((r) => { k.uyandir = () => { k.askida = false; r(); }; });
+    ses.dur();          // çalan cümle kesilir; 'devam'da o cümleden yeniden okunur
+    durak.sifirla();    // duraklama kalkar; askıdaki anlatım uyanışı bekler
+    tahtayiSakla();
+    durak.goster();
+  }
+
+  async function araIsle() {
+    if (araCalisan) return;
+    while (araSira.length) {
+      const k = araSira.shift();
+      if (k.tur === 'devam') { anlatimaDon(k); continue; }
+      const eski = askidaki() || calisan;
+      if (eski && eski.tur === 'adimlar') askiyaAl(eski);
+      araCalisan = k;
+      durumEl.textContent = k.tur === 'soru' ? 'Cevabınız bekleniyor' : 'Claude cevaplıyor';
+      let sonuc;
+      try { sonuc = await uygula(k); } catch (e) { sonuc = { durum: 'hata', hata: e.message }; }
+      araCalisan = null;
+      api('bitti', { no: k.no, sonuc: Object.assign({ araya_girdi: true }, sonuc), durum: durum() }).catch(() => {});
+    }
+    if (askidaki()) durumEl.textContent = 'Claude cevapladı · anlatıma dönmek için ▶';
+    durak.goster();
+  }
+
+  // 'devam' komutu (k) ya da ▶ (k = null): askıdaki ya da söz için duraklayan anlatım kaldığı yerden sürer.
+  function anlatimaDon(k) {
+    const eski = askidaki();
+    let sonuc;
+    if (k && k.birak) {
+      if (eski) { eski.iptal = true; tahtaKaydi = null; eski.uyandir(); }
+      else if (durak.soz && calisan) { calisan.iptal = true; ses.dur(); durak.sifirla(); }
+      sonuc = { durum: eski || calisan ? 'birakildi' : 'devam_edilecek_anlatim_yok' };
+    } else if (eski) {
+      tahtayiGeriYukle();
+      durak.sifirla();
+      eski.uyandir();
+      durumEl.textContent = 'Claude anlatıyor';
+      sonuc = { durum: 'devam_ediyor', anlatim_no: eski.no };
+    } else if (durak.aktif && calisan && calisan.tur === 'adimlar') {
+      durak.devam();
+      sonuc = { durum: 'devam_ediyor', anlatim_no: calisan.no };
+    } else {
+      sonuc = { durum: calisan ? 'zaten_suruyor' : 'devam_edilecek_anlatim_yok' };
+      if (calisan) sonuc.anlatim_no = calisan.no;
+    }
+    durak.goster();
+    if (k) api('bitti', { no: k.no, sonuc, durum: durum() }).catch(() => {});
+  }
+
   function durdur(k) {
     ses.dur();
-    for (const x of sira.splice(0)) api('bitti', { no: x.no, sonuc: { durum: 'iptal' } }).catch(() => {});
-    if (calisan) {
-      calisan.iptal = true;
-      if (calisan._iptal) { soruyuKapat(); calisan._iptal(); }
+    for (const x of sira.splice(0).concat(araSira.splice(0))) {
+      api('bitti', { no: x.no, sonuc: { durum: 'iptal' } }).catch(() => {});
+    }
+    for (const x of [araCalisan, calisan]) {
+      if (!x) continue;
+      x.iptal = true;
+      if (x._iptal) { soruyuKapat(); x._iptal(); }
+      if (x.askida) { x.askida = false; tahtaKaydi = null; x.uyandir(); }
     }
     durak.sifirla();
     if (k) api('bitti', { no: k.no, sonuc: { durum: 'durduruldu' }, durum: durum() }).catch(() => {});
   }
 
-  // Claude 'dinle' aracıyla beklerken mikrofon tuşunun çevresinde yeşil halka yanar.
+  // Claude 'dinle' aracıyla (ya da bekleyen bir tahta çağrısıyla) beklerken mikrofon tuşunun çevresinde
+  // yeşil halka ve üstteki ışık yanar.
   let claudeDinliyor = false;
+  const isikEl = $('#claudeIsik');
   function dinlemeIsareti(var_) {
     claudeDinliyor = !!var_;
+    isikEl.classList.toggle('acik', claudeDinliyor);
+    isikEl.querySelector('span').textContent = claudeDinliyor ? 'Claude dinliyor' : 'Claude dinlemiyor';
+    isikEl.title = claudeDinliyor ? 'Konuşursanız Claude hemen duyar.'
+      : 'Claude şu an dinlemiyor. Konuşursanız sorunuz bekler; sohbete "tahtaya bak" yazın.';
+    bekleyenGoster(bekleyenSoz);
     mikBtn.classList.toggle('claude-dinliyor', claudeDinliyor);
     if (SR) mikBtn.title = claudeDinliyor ? 'Claude dinliyor · dokunup konuşun (M)' : 'Konuş: dokunun, konuşun; susunca gönderilir (M)';
     if (!calisan && !mik.aktif) durumEl.textContent = hazirYazisi();
   }
+  // Claude dinlemiyorken söylenenler: üstte uyarı ve "Sohbete kopyala" düğmesi.
+  let bekleyenSoz = [];
+  const bekleyenEl = $('#bekleyenSoru');
+  function bekleyenGoster(liste) {
+    bekleyenSoz = (liste || []).slice();
+    const goster = bekleyenSoz.length > 0 && !claudeDinliyor;
+    bekleyenEl.hidden = !goster;
+    if (goster) $('#bekleyenMetin').textContent = '“' + bekleyenSoz.join(' ') + '”';
+  }
+  async function panoyaYaz(metin) {
+    try {
+      await navigator.clipboard.writeText(metin);
+      return true;
+    } catch (e) {
+      const t = document.createElement('textarea');
+      t.value = metin;
+      t.style.position = 'fixed';
+      t.style.opacity = '0';
+      document.body.appendChild(t);
+      t.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch (_) { /* yok */ }
+      t.remove();
+      return ok;
+    }
+  }
+  $('#sohbeteKopyala').addEventListener('click', async () => {
+    if (!bekleyenSoz.length) return;
+    const metin = 'Tahtadan sesli soru: ' + bekleyenSoz.join(' ');
+    if (!(await panoyaYaz(metin))) return toast('Kopyalanamadı. Sohbete "tahtaya bak" yazın.', 6000);
+    // Söz sohbete taşındı: Claude onu bir araçtan ikinci kez almasın.
+    api('birak', {}).catch(() => {});
+    bekleyenGoster([]);
+    const mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+    toast('Kopyalandı. Claude sohbetine yapıştırıp gönderin (' + (mac ? 'Cmd+V' : 'Ctrl+V') + ').', 7000);
+  });
+
   function hazirYazisi() {
     return claudeDinliyor ? 'Claude dinliyor · mikrofona dokunup konuşabilirsiniz' : 'Hazır · Claude\'dan komut bekleniyor';
   }
@@ -499,15 +721,23 @@
     baglanti(true);
     for (;;) {
       try {
-        const r = await api('al?son=' + son + '&dinliyor=' + (claudeDinliyor ? 1 : 0));
+        const r = await api('al?son=' + son + '&dinliyor=' + (claudeDinliyor ? 1 : 0) + '&bekleyen=' + bekleyenSoz.length);
         const j = await r.json();
         const komutlar = j.komutlar;
         baglanti(true);
         if (typeof j.dinliyor === 'boolean' && j.dinliyor !== claudeDinliyor) dinlemeIsareti(j.dinliyor);
+        if (Array.isArray(j.bekleyen_konusma)) bekleyenGoster(j.bekleyen_konusma);
         for (const k of komutlar || []) {
           son = Math.max(son, k.no);
           if (k.tur === 'dur') durdur(k);
-          else sira.push(k);
+          else if (k.tur === 'devam') {
+            if (araCalisan || araSira.length) { araSira.push(k); araIsle(); } else anlatimaDon(k);
+          } else if (calisan && calisan.tur === 'adimlar' && (durak.soz || calisan.askida)) {
+            // Söz alınıp duraklayan bir cevap varsa o bırakılır; yeni cevap onun yerine geçer.
+            if (araCalisan && durak.soz) { araCalisan.iptal = true; ses.dur(); durak.sifirla(); }
+            araSira.push(k);
+            araIsle();
+          } else sira.push(k);
         }
         isle();
       } catch (e) {
