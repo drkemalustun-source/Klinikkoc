@@ -38,6 +38,8 @@ Duyu'nun motoru Python'da yazıldığı için birkaç Python paketine ihtiyaç d
 - Mac: `python3 tools/sunucu.py --kur-duyu`
 - Windows: `python tools\sunucu.py --kur-duyu`
 
+Bu komut paketleri ve modeli (~56 MB) program klasörünün dışındaki kalıcı veri klasörüne kurar (Mac:
+`~/Library/Application Support/KlinikKoc/duyu`, Windows: `%APPDATA%\KlinikKoc\duyu`); programı güncelleyince silinmez.
 Sonra sunucuyu yukarıdaki gibi açın. Terminal'de "Duyu-small: hazır" yazmalı.
 
 ## 3. Sayfadaki sıra
@@ -47,13 +49,19 @@ Sayfanın üstündeki sekmeleri soldan sağa izleyin.
 1. **Hazırlık.** Denemek istediğiniz motorları işaretleyip **Seçilenleri hazırla**'ya basın. Modeller iner; her kartta indirme
    süresi ve boyutu görünür. Bir motor bu bilgisayarda çalışmıyorsa nedeni kartında yazar (ör. "Whisper large-v3-turbo"
    güçlü bir ekran kartı ister). Hata alan motoru atlayabilirsiniz.
-2. **Kayıt.** 20 cümlenin her birini bir kez okuyun: **Kaydet**'e basın, cümleyi normal hızınızla okuyun, **Durdur**'a basın.
+2. **Kayıt.** 27 cümlenin her birini bir kez okuyun: **Kaydet**'e basın, cümleyi normal hızınızla okuyun, **Durdur**'a basın.
    **Dinle** ile kontrol edebilirsiniz. "Konuşma algılanmadı" yazarsa yeniden kaydedin. Kayıtlar tarayıcıda saklanır;
    sayfayı kapatsanız da kaybolmaz.
 3. **Konuşma tanıma.** **Değerlendirmeyi başlat**'a basın. Her motor kayıtların hepsini dinler. Tarayıcının tanıyıcısı
    kaydı gerçek zamanlı dinlediği için onun turu birkaç dakika sürer; bu sırada sekmeyi açık tutun.
    - Tablo, her motorun hata oranını ve terimleri ne kadar doğru yazdığını gösterir. Aşağıda cümle cümle karşılaştırma
      vardır: kırmızı işaretli kelimeler yanlış ya da fazladır, üstü çizili olanlar eksiktir.
+   - **Duyu ile tarayıcı karşılaştırması:** canlı tahtanın mikrofonunda hangi tanıyıcının kullanılacağına bu ölçümle
+     karar verilir. **Karşılaştırmayı başlat**'a basın: Duyu ve tarayıcı tanıyıcısı aynı kayıtları yazıya çevirir;
+     kelime hata oranı ve terim doğruluğu, terim sözlüğünden önce (ham) ve sonra ayrı ayrı gösterilir. "Gecikme"
+     sütunu Duyu'nun bir cümleyi kaç saniyede yazıya çevirdiğidir. Sonuç kalıcı veri klasöründeki `olcumler/`
+     içine JSON ve Markdown olarak kaydedilir; yolu sayfada yazar. C21–C27 akut periodontal lezyon cümleleridir;
+     C27 yaklaşık 1 dakikalık uzun konuşmadır.
    - Tarayıcı tanıyıcısı hep boş sonuç veriyorsa "cümleleri canlı okuyacağım" kutusunu işaretleyip yeniden başlatın.
      Bu durumda cümleleri ekranda sırası gelince yüksek sesle okursunuz.
 4. **Seslendirme.** Her cümlede **Dinle**'ye basın, iki puan verin ve yanlış okunan terimleri işaretleyin.

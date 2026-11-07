@@ -101,6 +101,40 @@
 .canli-dalga i:nth-child(1) { height: 8px; } .canli-dalga i:nth-child(2) { height: 18px; animation-delay: .15s; }
 .canli-dalga i:nth-child(3) { height: 12px; animation-delay: .3s; } .canli-dalga i:nth-child(4) { height: 20px; animation-delay: .45s; }
 @keyframes canli-dalga { 50% { transform: scaleY(.4); } }
+/* Dikte motoru etiketi (mikrofonun yanında) ve seçim menüsü */
+.canli-ikili { position: relative; align-items: center; }
+.canli-motor {
+  align-self: center; margin: 0 4px 0 -2px; padding: .2em .55em; border-radius: 999px; cursor: pointer;
+  font: inherit; font-size: .5em; font-weight: 700; letter-spacing: .02em; color: var(--chalk-dim);
+  background: rgba(255,255,255,.06); border: 1px solid var(--board-line);
+}
+.canli-motor:hover, .canli-motor:focus-visible { outline: none; color: var(--chalk); }
+.canli-motor.uyari { color: #1b1407; background: #f3c969; border-color: #f3c969; }
+.canli-dok { position: relative; }
+.canli-menu {
+  position: absolute; left: 0; bottom: calc(100% + 8px); z-index: 30; width: min(420px, calc(100vw - 32px));
+  padding: 12px; border-radius: 16px; background: #15201c; border: 1px solid var(--board-line);
+  box-shadow: 0 12px 32px rgba(0,0,0,.45); font-size: .62em; line-height: 1.35; color: var(--chalk);
+}
+.canli-menu[hidden] { display: none; }
+.canli-menu-baslik { font-weight: 700; color: var(--chalk-dim); margin-bottom: 6px; }
+.canli-secenek { display: flex; gap: 10px; align-items: flex-start; padding: 8px; border-radius: 10px; cursor: pointer; }
+.canli-secenek:hover { background: rgba(255,255,255,.04); }
+.canli-secenek input { margin-top: .25em; accent-color: var(--accent); }
+.canli-secenek small { display: block; color: var(--chalk-dim); margin-top: 2px; }
+.canli-komut { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+.canli-komut code { flex: 1; min-width: 0; white-space: nowrap; overflow-x: auto; padding: .3em .5em; border-radius: 6px; background: #0b1210; color: var(--accent); }
+.canli-menu-not { margin-top: 6px; color: var(--chalk-dim); }
+/* Duyu kaydında ses düzeyi dalgada görünür */
+.dinleniyor.seviyeli .canli-dalga i { animation: none; transform: scaleY(calc(.3 + var(--seviye, .5))); transition: transform .08s; }
+/* Tanınan metin gönderilmeden önce: kutunun altında azalan süre çizgisi */
+.canli-kutu { position: relative; overflow: hidden; }
+.onayda .canli-kutu { border-color: var(--accent); }
+.onayda .canli-kutu::after {
+  content: ""; position: absolute; left: 18px; right: 56px; bottom: 6px; height: 3px; border-radius: 2px;
+  background: var(--accent); transform-origin: left; animation: onay-sure var(--onay-ms, 3s) linear forwards;
+}
+@keyframes onay-sure { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 .canli-ipucu { display: flex; flex-wrap: wrap; gap: 1.1em; margin: 7px 4px 0; font-size: .55em; color: #7f8d86; }
 .canli-ipucu kbd { font: inherit; padding: 0 .35em; border: 1px solid var(--board-line); border-radius: 4px; }
 

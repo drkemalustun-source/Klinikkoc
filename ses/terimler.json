@@ -1,0 +1,26 @@
+{
+ "aciklama": "Konuşma tanıma terim sözlüğü. Mikrofondan yazıya çevrilen metin bu sözlükten geçer: 'duzeltmeler' birebir uygulanır (bozuk biçim → doğru terim; son sözcük ek almış olabilir), 'terimler' yazımca çok benzeyen öbekleri düzeltmek için kullanılır. Kendi terimlerinizi buraya ya da kalıcı veri klasöründeki terimler.json dosyasına ekleyebilirsiniz (Mac: ~/Library/Application Support/KlinikKoc/terimler.json, Windows: %APPDATA%\\KlinikKoc\\terimler.json; o dosya güncellemede silinmez). Derslerin term komutları ve kısa hedef başlıkları da kendiliğinden eklenir.",
+ "duzeltmeler": [
+  {"bozuk": "nekrotizangin gibi test", "dogru": "nekrotizan gingivitis"},
+  {"bozuk": "nekro tizangin gibi testi", "dogru": "nekrotizan gingivitis"},
+  {"bozuk": "nekro tizangin gibi test", "dogru": "nekrotizan gingivitis"},
+  {"bozuk": "birleşim epiteliği", "dogru": "birleşim epiteli"}
+ ],
+ "terimler": [
+  "nekrotizan gingivitis", "nekrotizan periodontitis", "nekrotizan stomatitis", "nekrotizan periodontal hastalıklar",
+  "birleşim epiteli", "sulkus epiteli", "oral epitel", "bağ dokusu ataşmanı", "biyolojik genişlik",
+  "periodontal apse", "gingival apse", "perikoronal apse", "perikoronitis", "endo-perio lezyon",
+  "primer herpetik gingivostomatitis", "gingivostomatitis", "aftöz stomatit",
+  "gingivitis", "periodontitis", "periodonsiyum", "periodontal ligament", "alveol kemiği", "sement",
+  "sondlama derinliği", "sondlamada kanama", "klinik ataşman kaybı", "diş eti çekilmesi", "furkasyon",
+  "mobilite", "süpürasyon", "psödomembran", "interdental papil", "papil nekrozu", "krater",
+  "dental plak", "biyofilm", "diş taşı", "subgingival", "supragingival", "kök yüzeyi düzleştirmesi",
+  "klorheksidin", "metronidazol", "amoksisilin", "hidrojen peroksit", "povidon iyot",
+  "Fusobacterium nucleatum", "Prevotella intermedia", "Treponema denticola", "Porphyromonas gingivalis",
+  "Aggregatibacter actinomycetemcomitans", "Tannerella forsythia", "spiroket",
+  "peri-implantitis", "peri-implant mukozit", "implantoplasti", "osseointegrasyon", "keratinize mukoza",
+  "açık flep debridmanı", "rekonstrüktif tedavi", "rezektif tedavi", "kemik içi defekt", "ksenogreft",
+  "kolajen membran", "dekontaminasyon", "HIV", "nötropeni", "lökositoz", "lenfadenopati", "halitozis",
+  "febril", "malnütrisyon", "immünosüpresyon"
+ ]
+}

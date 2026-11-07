@@ -1,5 +1,5 @@
 {
- "aciklama": "Ses testi cümleleri. Sayılar yazıyla yazılır (kelime hata oranı hesabında '12' ile 'on iki' farkı çıkmasın). 'terimler' tanıma ve okuma doğruluğu ayrıca ölçülen terimlerdir.",
+ "aciklama": "Ses testi cümleleri. Sayılar yazıyla yazılır (kelime hata oranı hesabında '12' ile 'on iki' farkı çıkmasın). 'terimler' tanıma ve okuma doğruluğu ayrıca ölçülen terimlerdir. C21–C27 akut periodontal lezyon terimleriyle eklendi; C27 yaklaşık 1 dakikalık uzun konuşmadır (uzun konuşmanın tek parça yazıya dönmesi denenir).",
  "cumleler": [
   {
    "id": "C01",
@@ -191,6 +191,76 @@
     "cep derinliği"
    ],
    "tur": "gunluk"
+  },
+  {
+   "id": "C21",
+   "metin": "Nekrotizan gingivitis, interdental papillerde nekroz, kanama ve ağrıyla başlayan akut bir hastalıktır.",
+   "terimler": [
+    "nekrotizan gingivitis",
+    "interdental papil",
+    "nekroz"
+   ],
+   "tur": "makale"
+  },
+  {
+   "id": "C22",
+   "metin": "Birleşim epiteli dişe hemidesmozomlarla tutunur ve bakteriyel ürünlere karşı ilk savunma hattını oluşturur.",
+   "terimler": [
+    "birleşim epiteli",
+    "hemidesmozom"
+   ],
+   "tur": "makale"
+  },
+  {
+   "id": "C23",
+   "metin": "Periodontal apse, derin bir cepte biriken irinin dışarı akamadığı durumlarda gelişen lokalize bir enfeksiyondur.",
+   "terimler": [
+    "periodontal apse",
+    "lokalize"
+   ],
+   "tur": "makale"
+  },
+  {
+   "id": "C24",
+   "metin": "Nekrotizan periodontitiste ataşman kaybı hızla ilerler; hastada ateş ve lenfadenopati de görülebilir.",
+   "terimler": [
+    "nekrotizan periodontitis",
+    "ataşman kaybı",
+    "lenfadenopati"
+   ],
+   "tur": "makale"
+  },
+  {
+   "id": "C25",
+   "metin": "Primer herpetik gingivostomatitis çoğunlukla çocuklarda görülür ve dişetinde yaygın veziküllerle başlar.",
+   "terimler": [
+    "primer herpetik gingivostomatitis",
+    "vezikül"
+   ],
+   "tur": "makale"
+  },
+  {
+   "id": "C26",
+   "metin": "Hocam, nekrotizan gingivitisi olan bir hastada metronidazol mü, yoksa amoksisilin mi tercih edilir?",
+   "terimler": [
+    "nekrotizan gingivitis",
+    "metronidazol",
+    "amoksisilin"
+   ],
+   "tur": "gunluk"
+  },
+  {
+   "id": "C27",
+   "metin": "Hocam, şimdi size vakayı baştan anlatayım. Yirmi iki yaşında bir öğrenci üç gündür dişetlerinde şiddetli ağrı ve kanama olduğunu söylüyor. Ağzında kötü bir koku var, son iki haftadır sınavlara hazırlandığı için çok az uyumuş ve günde bir paket sigara içmiş. Muayenede alt ön dişlerin interdental papillerinde krater şeklinde nekroz ve üzerinde gri beyaz bir psödomembran gördüm. Sondlama derinlikleri normal sınırlarda, ataşman kaybı yok. Hafif ateşi ve çene altında ağrılı lenf nodları var. Bu bulgularla nekrotizan gingivitis düşünüyorum. Ayırıcı tanıda primer herpetik gingivostomatitisi ve birleşim epitelini de etkileyen başka bir akut lezyonu düşünmeli miyim?",
+   "terimler": [
+    "interdental papil",
+    "psödomembran",
+    "ataşman kaybı",
+    "nekrotizan gingivitis",
+    "primer herpetik gingivostomatitis",
+    "birleşim epiteli"
+   ],
+   "tur": "uzun"
   }
  ]
 }

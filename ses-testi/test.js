@@ -253,7 +253,7 @@
         const sp = ses.detectSpeech(a);
         ctl.appendChild(el('span', sp ? 'muted small' : 'bad small', (a.length / ses.SAMPLE_RATE).toFixed(1).replace('.', ',') + ' sn' + (sp ? '' : ' · konuşma algılanmadı, yeniden kaydedin')));
       }
-      ctl.appendChild(el('span', 'tag', ({ makale: 'makale dili', gunluk: 'günlük klinik dil', karisik: 'İngilizce karışık', latince: 'Latince' })[c.tur] || c.tur));
+      ctl.appendChild(el('span', 'tag', ({ makale: 'makale dili', gunluk: 'günlük klinik dil', karisik: 'İngilizce karışık', latince: 'Latince', uzun: 'uzun konuşma (~1 dk)' })[c.tur] || c.tur));
       li.appendChild(ctl);
       root.appendChild(li);
     }
@@ -279,8 +279,8 @@
   // ---------- 3. Konuşma tanıma ----------
   let sttStop = false;
 
-  async function runStt() {
-    const engines = [...state.stt].filter(([, s]) => s.selected && s.ready);
+  async function runStt(yalniz) {
+    const engines = [...state.stt].filter(([id, s]) => s.ready && (yalniz ? yalniz.includes(id) : s.selected));
     if (!engines.length) { toast('Önce Hazırlık bölümünde en az bir konuşma tanıma motorunu hazırlayın.', 5000); return; }
     const recs = state.sentences.filter((c) => state.recordings.has(c.id));
     if (!recs.length) { toast('Önce Kayıt bölümünde cümleleri kaydedin.', 5000); return; }
@@ -299,7 +299,7 @@
         const audio = state.recordings.get(c.id);
         try {
           const r = await s.engine.transcribe(audio, { lang: 'tr' });
-          res[c.id] = score(c, r, audio, navigator.onLine);
+          res[c.id] = await score(c, r, audio, navigator.onLine);
         } catch (e) {
           res[c.id] = { error: friendlyError(e), online: navigator.onLine, at: Date.now() };
         }
@@ -309,22 +309,39 @@
     }
     $('#runStt').disabled = false; $('#stopStt').hidden = true;
     $('#sttProgress').textContent = sttStop ? 'Durduruldu.' : 'Bitti.';
+    return !sttStop;
   }
 
-  function score(c, r, audio, online) {
+  // Canlı tahtadaki terim sözlüğü (tools/terim_sozlugu.py) yerel sunucuda çalışır; sunucu yoksa ölçülmez.
+  async function sozlukle(text) {
+    try {
+      const r = await fetch(ses.ROOT + 'api/canli/duzelt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ metin: text }) });
+      if (!r.ok) return null;
+      return await r.json();
+    } catch (e) { return null; }
+  }
+
+  async function score(c, r, audio, online) {
     const w = ses.wer(c.metin, r.text), ch = ses.cer(c.metin, r.text);
     const terms = {};
     for (const t of c.terimler) terms[t] = ses.termHit(t, r.text);
-    return {
+    const out = {
       text: r.text, raw: r.raw, note: r.note, ms: r.ms, totalMs: r.totalMs, roundTripMs: r.roundTripMs, device: r.device, source: r.source,
       audioMs: audio.length / ses.SAMPLE_RATE * 1000,
       wer: w, cer: ch, terms, online, at: Date.now()
     };
+    const d = await sozlukle(r.text);
+    if (d) {
+      const tt = {};
+      for (const t of c.terimler) tt[t] = ses.termHit(t, d.metin);
+      out.duz = { text: d.metin, wer: ses.wer(c.metin, d.metin), terms: tt, duzeltmeler: d.duzeltmeler };
+    }
+    return out;
   }
 
   function summarizeStt(id) {
     const res = state.sttResults[id] || {};
-    let we = 0, ww = 0, ce = 0, cc = 0, th = 0, tt = 0, n = 0, errs = 0, offlineOk = 0;
+    let we = 0, ww = 0, ce = 0, cc = 0, th = 0, tt = 0, n = 0, errs = 0, offlineOk = 0, dwe = 0, dww = 0, dth = 0, dtt = 0;
     const lat = [], rtf = [];
     for (const c of state.sentences) {
       const r = res[c.id];
@@ -332,11 +349,16 @@
       if (r.error) { errs++; continue; }
       n++; we += r.wer.errors; ww += r.wer.words; ce += r.cer.errors; cc += r.cer.chars;
       for (const v of Object.values(r.terms)) { tt++; if (v) th++; }
+      if (r.duz) {
+        dwe += r.duz.wer.errors; dww += r.duz.wer.words;
+        for (const v of Object.values(r.duz.terms)) { dtt++; if (v) dth++; }
+      }
       if (r.ms != null) { lat.push(r.ms); if (r.audioMs) rtf.push(r.ms / r.audioMs); }
       if (r.online === false) offlineOk++;
     }
     const med = (a) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
-    return { n, errs, wer: ww ? we / ww : null, cer: cc ? ce / cc : null, terms: tt ? th / tt : null, termHit: th, termTotal: tt, latency: med(lat), rtf: med(rtf), offlineOk };
+    return { n, errs, wer: ww ? we / ww : null, cer: cc ? ce / cc : null, terms: tt ? th / tt : null, termHit: th, termTotal: tt, latency: med(lat), rtf: med(rtf), offlineOk,
+      werDuz: dww ? dwe / dww : null, termsDuz: dtt ? dth / dtt : null, termHitDuz: dth, termTotalDuz: dtt };
   }
 
   function renderStt() {
@@ -366,6 +388,9 @@
           td.appendChild(meta);
           const miss = Object.entries(r.terms).filter(([, v]) => !v).map(([k]) => k);
           if (miss.length) td.appendChild(el('div', 'bad small', 'Kaçan terim: ' + miss.join(', ')));
+          if (r.duz && r.duz.text !== r.text) {
+            td.appendChild(el('div', 'small', 'Sözlükle: ' + r.duz.text + ' · WER ' + fmtPct(r.duz.wer.rate)));
+          }
         }
         tr.appendChild(td);
       }
@@ -378,7 +403,7 @@
   function sttSummaryTable(ids) {
     const wrap = el('div', 'table-wrap');
     const t = el('table');
-    const head = ['Motor', 'Kelime hata oranı', 'Karakter hata oranı', 'Terim doğruluğu', 'Gecikme (ortanca)', 'Hız (işlem/kayıt)', 'İlk hazırlık', 'Model boyutu', 'İnternetsiz', 'Veri cihazdan çıkar mı', 'Cümle'];
+    const head = ['Motor', 'Kelime hata oranı', 'Karakter hata oranı', 'Terim doğruluğu', 'Kelime hata · sözlükle', 'Terim doğruluğu · sözlükle', 'Gecikme (ortanca)', 'Hız (işlem/kayıt)', 'İlk hazırlık', 'Model boyutu', 'İnternetsiz', 'Veri cihazdan çıkar mı', 'Cümle'];
     const hr = el('tr'); head.forEach((h) => hr.append(el('th', null, h))); t.appendChild(hr);
     for (const id of ids) {
       const s = state.stt.get(id), m = summarizeStt(id), info = s.engine.info || {}, prep = s.prep || state.sttPrep[id] || {};
@@ -388,6 +413,8 @@
       cell(fmtPct(m.wer), 'num ' + grade(m.wer, 0.1, 0.25));
       cell(fmtPct(m.cer), 'num');
       cell(m.terms == null ? '–' : fmtPct(m.terms) + ' (' + m.termHit + '/' + m.termTotal + ')', 'num ' + grade(m.terms == null ? null : 1 - m.terms, 0.1, 0.3));
+      cell(fmtPct(m.werDuz), 'num ' + grade(m.werDuz, 0.1, 0.25));
+      cell(m.termsDuz == null ? '–' : fmtPct(m.termsDuz) + ' (' + m.termHitDuz + '/' + m.termTotalDuz + ')', 'num ' + grade(m.termsDuz == null ? null : 1 - m.termsDuz, 0.1, 0.3));
       cell(fmtMs(m.latency), 'num');
       cell(m.rtf == null ? '–' : fmtNum(m.rtf, 2) + '×', 'num');
       cell(fmtMs(prep.loadMs), 'num');
@@ -399,6 +426,85 @@
     }
     wrap.appendChild(t);
     return wrap;
+  }
+
+  // ---------- Duyu ile tarayıcı karşılaştırması (canlı tahtadaki dikte motoru kararı için) ----------
+  const KARSILASTIR = ['duyu', 'tarayici-sunucu', 'tarayici-cihaz'];
+
+  async function karsilastir() {
+    const btn = $('#karsilastir');
+    const not = $('#karsilastirNot');
+    if (!state.sentences.some((c) => state.recordings.has(c.id))) { toast('Önce Kayıt bölümünde cümleleri kaydedin.', 5000); return; }
+    btn.disabled = true;
+    const ids = KARSILASTIR.filter((id) => state.stt.has(id));
+    for (const id of ids) {
+      const s = state.stt.get(id);
+      // Cihaz içi tarayıcı tanıyıcısının denetimi bazı tarayıcılarda sekmeyi çökertebilir: yalnız Hazırlık'ta hazırlandıysa.
+      if (s.ready || !(s.status && s.status.ok) || id === 'tarayici-cihaz') continue;
+      not.textContent = 'Hazırlanıyor: ' + s.engine.label;
+      await prepareOne('stt', id, s);
+      renderEngines();
+    }
+    const hazir = ids.filter((id) => state.stt.get(id).ready);
+    if (!hazir.includes('duyu')) toast('Duyu hazırlanamadı (kurulu mu? python3 tools/sunucu.py --kur-duyu). Yalnız tarayıcı ölçülecek.', 8000);
+    if (!hazir.length) { btn.disabled = false; not.textContent = 'Hazır motor yok.'; return; }
+    not.textContent = 'Ölçülüyor: ' + hazir.map((id) => state.stt.get(id).engine.label).join(', ');
+    for (const id of hazir) delete state.sttResults[id]; // eski sonuçlar karışmasın
+    const bitti = await runStt(hazir);
+    btn.disabled = false;
+    if (!bitti) { not.textContent = 'Durduruldu; sonuç kaydedilmedi.'; return; }
+    const sonuc = karsilastirmaSonucu(hazir);
+    karsilastirmaGoster(sonuc);
+    const md = karsilastirmaMarkdown(sonuc);
+    try {
+      const r = await fetch(ses.ROOT + 'api/ses-testi/kaydet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sonuc, md }) });
+      const j = await r.json();
+      if (!r.ok || j.hata) throw new Error(j.hata || r.status);
+      not.textContent = 'Sonuç kaydedildi: ' + j.dosya;
+    } catch (e) {
+      download('dikte-karsilastirma-' + sonuc.tarih.slice(0, 10) + '.json', JSON.stringify(sonuc, null, 1), 'application/json');
+      not.textContent = 'Sunucuya kaydedilemedi (' + e.message + '); dosya indirildi.';
+    }
+  }
+
+  function karsilastirmaSonucu(ids) {
+    const motorlar = {};
+    for (const id of ids) {
+      const s = state.stt.get(id);
+      motorlar[id] = { ad: s.engine.label, ozet: summarizeStt(id), bilgi: s.engine.info, hazirlik: s.prep || null, cumleler: state.sttResults[id] };
+    }
+    return { tur: 'dikte-karsilastirmasi', surum: 1, tarih: new Date().toISOString(), cihaz: state.device,
+      cumle_sayisi: state.sentences.filter((c) => state.recordings.has(c.id)).length, cumleler: state.sentences, motorlar };
+  }
+
+  function karsilastirmaGoster(sonuc) {
+    const wrap = el('div', 'table-wrap');
+    const t = el('table');
+    const hr = el('tr');
+    ['Motor', 'Kelime hata oranı (ham)', 'Kelime hata oranı (sözlükle)', 'Terim doğruluğu (ham)', 'Terim doğruluğu (sözlükle)', 'Gecikme (ortanca)', 'Cümle'].forEach((h) => hr.append(el('th', null, h)));
+    t.appendChild(hr);
+    for (const v of Object.values(sonuc.motorlar)) {
+      const m = v.ozet, tr = el('tr');
+      [[v.ad], [fmtPct(m.wer), 'num ' + grade(m.wer, 0.1, 0.25)], [fmtPct(m.werDuz), 'num ' + grade(m.werDuz, 0.1, 0.25)],
+        [m.terms == null ? '–' : fmtPct(m.terms) + ' (' + m.termHit + '/' + m.termTotal + ')', 'num'],
+        [m.termsDuz == null ? '–' : fmtPct(m.termsDuz) + ' (' + m.termHitDuz + '/' + m.termTotalDuz + ')', 'num'],
+        [fmtMs(m.latency), 'num'], [String(m.n), 'num']].forEach(([x, c]) => tr.append(el('td', c || null, x)));
+      t.appendChild(tr);
+    }
+    wrap.appendChild(t);
+    $('#karsilastirSonuc').replaceChildren(wrap);
+  }
+
+  function karsilastirmaMarkdown(sonuc) {
+    const L = ['# Dikte karşılaştırması: Duyu-small ile tarayıcı', '', 'Tarih: ' + sonuc.tarih, 'Cihaz: ' + deviceLine(),
+      'Cümle sayısı: ' + sonuc.cumle_sayisi + ' (ses-testi/cumleler.json)', '',
+      '| Motor | WER ham | WER sözlükle | Terim ham | Terim sözlükle | Gecikme (ortanca) |', '|---|---|---|---|---|---|'];
+    for (const v of Object.values(sonuc.motorlar)) {
+      const m = v.ozet;
+      L.push(`| ${v.ad} | ${fmtPct(m.wer)} | ${fmtPct(m.werDuz)} | ${m.terms == null ? '–' : fmtPct(m.terms)} | ${m.termsDuz == null ? '–' : fmtPct(m.termsDuz)} | ${fmtMs(m.latency)} |`);
+    }
+    L.push('', 'Gecikme: kaydın bitişinden yazının gelmesine kadar geçen süre (Duyu için sunucudaki işlem süresi).');
+    return L.join('\n');
   }
 
   const grade = (x, good, bad) => x == null ? '' : x <= good ? 'ok' : x >= bad ? 'bad' : 'mid';
@@ -697,7 +803,8 @@
     $('#exportRec').addEventListener('click', exportRecordings);
     $('#importRec').addEventListener('change', (e) => { const f = e.target.files[0]; if (f) importRecordings(f).catch((err) => toast(err.message, 6000)); e.target.value = ''; });
     $('#clearRec').addEventListener('click', async () => { if (!confirm('Tüm kayıtlar silinsin mi?')) return; await db.clear(); state.recordings.clear(); renderRecList(); });
-    $('#runStt').addEventListener('click', runStt);
+    $('#runStt').addEventListener('click', () => runStt());
+    $('#karsilastir').addEventListener('click', karsilastir);
     $('#stopStt').addEventListener('click', () => { sttStop = true; });
     $('#ttsRate').addEventListener('input', (e) => { $('#ttsRateVal').textContent = parseFloat(e.target.value).toFixed(2).replace('.', ','); });
     $('#blindMode').addEventListener('change', renderTts);

@@ -18,8 +18,9 @@ Kullanım:
   python3 tools/sunucu.py --sayfa canli.html   # canlı tahtayı açar
 
 Yalnızca Python'un kendi kitaplığı gerekir. Duyu için ayrıca: numpy, onnxruntime,
-sentencepiece, huggingface_hub (--kur-duyu bunları kurar). Model (~56 MB, int8) ilk
-kullanımda Hugging Face'ten indirilir ve bilgisayarda saklanır.
+sentencepiece, huggingface_hub. --kur-duyu bunları ve modeli (~56 MB, int8) kalıcı veri klasörüne
+(Mac: ~/Library/Application Support/KlinikKoc/duyu, Windows: %APPDATA%\\KlinikKoc\\duyu) kurar;
+program güncellenince silinmez. Model indirildikten sonra internet gerekmez.
 """
 import argparse
 import http.server
@@ -38,10 +39,52 @@ import webbrowser
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pocket_ses  # noqa: E402  (tools/pocket_ses.py)
+import terim_sozlugu  # noqa: E402
+import veri_yeri  # noqa: E402
 
 KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DUYU_REPO = "KaanAydinli/Duyu-small"
 DUYU_PAKETLER = ["numpy", "onnxruntime", "sentencepiece", "huggingface_hub"]
+KUR_KOMUTU = ("py tools\\sunucu.py --kur-duyu" if os.name == "nt" else "python3 tools/sunucu.py --kur-duyu")
+# Duyu'nun paketleri ve modeli program klasörünün dışında, kalıcı veri klasöründe durur (güncellemede silinmez).
+DUYU_KLASORU = os.path.join(veri_yeri.veri_kok(), "duyu")
+DUYU_PAKET_KLASORU = os.path.join(DUYU_KLASORU, "paketler")
+DUYU_MODEL_KLASORU = os.path.join(DUYU_KLASORU, "model")
+PARCA_SN = 24.0  # uzun konuşma bu süreyi aşmayan parçalara, sessiz yerlerden bölünerek yazıya çevrilir
+
+
+def duyu_yolunu_ekle():
+    if os.path.isdir(DUYU_PAKET_KLASORU) and DUYU_PAKET_KLASORU not in sys.path:
+        sys.path.insert(0, DUYU_PAKET_KLASORU)
+
+
+duyu_yolunu_ekle()
+
+
+def bolumle(ses, ornekleme=16000, en_uzun=PARCA_SN):
+    """Uzun sesi en çok en_uzun saniyelik parçalara böler; kesim noktası parçanın son yarısındaki en sessiz
+    30 ms'lik penceredir (sözcük ortasından kesmemek için). Kısa ses tek parça döner."""
+    import numpy as np
+    n = len(ses)
+    sinir = int(en_uzun * ornekleme)
+    if n <= sinir:
+        return [ses]
+    pencere = int(0.03 * ornekleme)
+    parcalar, bas = [], 0
+    while n - bas > sinir:
+        ara_bas = bas + sinir // 2
+        ara_son = bas + sinir
+        bolge = ses[ara_bas:ara_son]
+        k = len(bolge) // pencere
+        enerji = (bolge[:k * pencere].reshape(k, pencere) ** 2).mean(axis=1)
+        # tek bir sessiz pencere yerine 5 pencerelik (150 ms) ortalamada en sessiz yer
+        if k >= 5:
+            enerji = np.convolve(enerji, np.ones(5) / 5, mode="same")
+        kes = ara_bas + int(np.argmin(enerji)) * pencere + pencere // 2
+        parcalar.append(ses[bas:kes])
+        bas = kes
+    parcalar.append(ses[bas:])
+    return parcalar
 
 
 class Duyu:
@@ -51,30 +94,63 @@ class Duyu:
         self.model = None
         self.quant = None
         self.boyut = None
+        self.klasor = None
         self.kilit = threading.Lock()
 
-    def durum(self):
+    def eksik_paketler(self):
+        duyu_yolunu_ekle()
         eksik = []
         for p in DUYU_PAKETLER:
             try:
                 __import__(p)
             except Exception:
                 eksik.append(p)
+        return eksik
+
+    def _yerel_model(self):
+        """Model daha önce indirildiyse klasörü (internete çıkmadan); yoksa None."""
+        from huggingface_hub import snapshot_download
+        for cache in (DUYU_MODEL_KLASORU, None):  # önce kalıcı klasör, sonra eski Hugging Face önbelleği
+            try:
+                kw = {"cache_dir": cache} if cache else {}
+                return snapshot_download(DUYU_REPO, local_files_only=True, **kw)
+            except Exception:
+                continue
+        return None
+
+    def durum(self):
+        eksik = self.eksik_paketler()
         if eksik:
-            return {"kurulu": False, "hazir": False,
-                    "neden": "Eksik Python paketleri: " + ", ".join(eksik) + ". Kurmak için: python3 tools/sunucu.py --kur-duyu"}
-        return {"kurulu": True, "hazir": self.model is not None, "quant": self.quant}
+            return {"kurulu": False, "hazir": False, "model_indirildi": False, "komut": KUR_KOMUTU,
+                    "veri_klasoru": DUYU_KLASORU,
+                    "neden": "Duyu kurulu değil (eksik Python paketleri: " + ", ".join(eksik) + "). Kurmak için: "
+                             + KUR_KOMUTU}
+        try:
+            indirildi = self.model is not None or self._yerel_model() is not None
+        except Exception:
+            indirildi = False
+        d = {"kurulu": True, "hazir": self.model is not None, "quant": self.quant, "model_indirildi": indirildi,
+             "veri_klasoru": DUYU_KLASORU, "komut": KUR_KOMUTU}
+        if not indirildi:
+            d["not"] = ("Model henüz indirilmedi; ilk kullanımda bir kez internetten (~56 MB) indirilir. "
+                        "Önceden indirmek için: " + KUR_KOMUTU)
+        return d
+
+    def indir(self, quant="int8"):
+        from huggingface_hub import snapshot_download
+        os.makedirs(DUYU_MODEL_KLASORU, exist_ok=True)
+        return snapshot_download(
+            DUYU_REPO, cache_dir=DUYU_MODEL_KLASORU,
+            allow_patterns=[quant + "/*", "*.json", "*.npz", "spm.model", "duyu_small/*.py", "LICENSE"])
 
     def yukle(self, quant="int8"):
         with self.kilit:
             if self.model is not None and self.quant == quant:
                 return {"yuklemeMs": 0, "boyut": self.boyut, "onbellek": True}
             t0 = time.time()
-            from huggingface_hub import snapshot_download
-            klasor = snapshot_download(
-                DUYU_REPO,
-                allow_patterns=[quant + "/*", "*.json", "*.npz", "spm.model", "duyu_small/*.py", "LICENSE"],
-            )
+            klasor = self._yerel_model()
+            if not klasor or not os.path.isdir(os.path.join(klasor, quant)):
+                klasor = self.indir(quant)
             if klasor not in sys.path:
                 sys.path.insert(0, klasor)
             os.environ["DUYU_SMALL_DIR"] = klasor
@@ -83,13 +159,22 @@ class Duyu:
             kw = {"quant": quant} if "quant" in imza.parameters else {}
             self.model = DuyuSmall(**kw)
             self.quant = quant
+            self.klasor = klasor
             self.boyut = sum(
                 os.path.getsize(os.path.join(d, f))
                 for d, _, fs in os.walk(os.path.join(klasor, quant)) for f in fs
             )
             return {"yuklemeMs": round((time.time() - t0) * 1000), "boyut": self.boyut, "onbellek": False}
 
-    def yaz(self, veri, lang="mix", beam=5, mode="auto"):
+    def _cevir(self, ses, kw):
+        sonuc = self.model.transcribe(ses, **kw)
+        if isinstance(sonuc, tuple):
+            sonuc = sonuc[0]
+        if isinstance(sonuc, dict):
+            sonuc = sonuc.get("text", "")
+        return str(sonuc).strip()
+
+    def yaz(self, veri, lang="mix", beam=5, mode="auto", duzelt=False):
         import numpy as np
         ses = np.frombuffer(veri, dtype="<f4").astype(np.float32)
         if self.model is None:
@@ -99,18 +184,21 @@ class Duyu:
         for ad, deger in (("lang", lang), ("beam", int(beam)), ("mode", mode)):
             if ad in imza.parameters:
                 kw[ad] = deger
+        parcalar = bolumle(ses)
         with self.kilit:
             t0 = time.time()
-            sonuc = self.model.transcribe(ses, **kw)
+            metinler = [self._cevir(p, kw) for p in parcalar if len(p) > 1600]  # 0,1 sn'den kısa artıkları atla
             sure = (time.time() - t0) * 1000
-        if isinstance(sonuc, tuple):
-            sonuc = sonuc[0]
-        if isinstance(sonuc, dict):
-            sonuc = sonuc.get("text", "")
-        return {"metin": str(sonuc), "sureMs": round(sure, 1), "saniye": round(len(ses) / 16000, 2)}
+        metin = " ".join(m for m in metinler if m)
+        out = {"metin": metin, "sureMs": round(sure, 1), "saniye": round(len(ses) / 16000, 2), "parca": len(parcalar)}
+        if duzelt:
+            d = TERIMLER.duzelt(metin)
+            out.update(metin=d["metin"], ham_metin=d["ham_metin"], duzeltmeler=d["duzeltmeler"])
+        return out
 
 
 DUYU = Duyu()
+TERIMLER = terim_sozlugu.Onbellek(KOK, veri_yeri.veri_kok())
 
 
 class Canli:
@@ -168,10 +256,21 @@ class Canli:
                 self.kosul.notify_all()  # sayfadaki "Sorunuz bekliyor" uyarısı kalksın
             return d
 
+    @staticmethod
+    def _ham_ekle(sonuc, parcalar):
+        """Dikteyle gelen sözde tanıyıcının ham çıktısı ve motoru da Claude'a gider."""
+        if any("ham_metin" in x for x in parcalar):
+            sonuc["ham_metin"] = " ".join(x.get("ham_metin") or x["metin"] for x in parcalar)
+        motorlar = list(dict.fromkeys(x["motor"] for x in parcalar if x.get("motor")))
+        if motorlar:
+            sonuc["motor"] = ", ".join(motorlar)
+        return sonuc
+
     def _konusma_ekle(self, sonuc):
         # Anlatım ya da soru sırasında kullanıcı konuştuysa Claude bunu sonuçla birlikte görür.
         if self.konusmalar:
             sonuc["kullanici_konustu"] = " ".join(x["metin"] for x in self.konusmalar)
+            self._ham_ekle(sonuc, self.konusmalar)
             self.konusmalar = []
         return sonuc
 
@@ -212,12 +311,18 @@ class Canli:
             self.claude_bekliyor -= 1
             self.kosul.notify_all()
 
-    def soyle(self, metin):
-        """Sayfa: kullanıcının mikrofonla söylediği metin."""
+    def soyle(self, metin, ham_metin=None, motor=None):
+        """Sayfa: kullanıcının mikrofonla söylediği (ya da yazdığı) metin. ham_metin: tanıyıcının terim
+        sözlüğünden önceki çıktısı; motor: duyu | tarayici | yazi."""
         metin = (metin or "").strip()
         with self.kosul:
             if metin:
-                self.konusmalar.append({"metin": metin, "saat": time.strftime("%H:%M:%S")})
+                x = {"metin": metin, "saat": time.strftime("%H:%M:%S")}
+                if motor:
+                    x["motor"] = str(motor)[:20]
+                if ham_metin and ham_metin.strip():
+                    x["ham_metin"] = ham_metin.strip()[:2000]
+                self.konusmalar.append(x)
                 self.konusmalar = self.konusmalar[-20:]
                 self.konusmalar[-1]["t"] = time.time()
             self.son_gorulme = time.time()
@@ -249,8 +354,8 @@ class Canli:
                         parcalar = self.konusmalar
                         self.konusmalar = []
                         self.kosul.notify_all()
-                        return {"durum": "konustu", "metin": " ".join(x["metin"] for x in parcalar),
-                                "sayfa": self.sayfa_durumu}
+                        return self._ham_ekle({"durum": "konustu", "metin": " ".join(x["metin"] for x in parcalar),
+                                               "sayfa": self.sayfa_durumu}, parcalar)
                     if simdi >= bitis:
                         return {"durum": "sessiz"}
                     self.kosul.wait(min(bitis - simdi, 0.3))
@@ -270,9 +375,11 @@ class Canli:
                     if kalan <= 0:
                         return {"durum": "sessiz", "bagli": self.bagli()}
                     self.kosul.wait(kalan)
-                parcalar = [{"metin": x["metin"], "saat": x["saat"]} for x in self.konusmalar]
+                tum = self.konusmalar
+                parcalar = [{"metin": x["metin"], "saat": x["saat"]} for x in tum]
                 self.konusmalar = []
-                return {"durum": "konustu", "metin": " ".join(x["metin"] for x in parcalar), "parcalar": parcalar}
+                return self._ham_ekle({"durum": "konustu", "metin": " ".join(x["metin"] for x in parcalar),
+                                       "parcalar": parcalar}, tum)
             finally:
                 self.dinleyen -= 1
                 self.kosul.notify_all()  # sayfa "dinliyorum" işaretini söndürsün
@@ -476,7 +583,8 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
             if yol == "yukle":
                 return self._json(200, DUYU.yukle(q.get("quant", "int8")))
             if yol == "yaz":
-                return self._json(200, DUYU.yaz(govde, q.get("lang", "mix"), q.get("beam", 5), q.get("mode", "auto")))
+                return self._json(200, DUYU.yaz(govde, q.get("lang", "mix"), q.get("beam", 5), q.get("mode", "auto"),
+                                                q.get("duzelt") == "1"))
             return self._json(404, {"hata": "Bilinmeyen istek"})
         except Exception as e:  # hata tarayıcıda gösterilir
             return self._json(500, {"hata": "%s: %s" % (type(e).__name__, e)})
@@ -509,7 +617,10 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
                 return self._json(200, CANLI.al(int(q.get("son", 0)), sayfa_dinliyor=None if d is None else d == "1",
                                                 sayfa_bekleyen=None if b is None else int(b)))
             if yol == "soyle":
-                return self._json(200, CANLI.soyle(str(veri.get("metin", ""))[:2000]))
+                return self._json(200, CANLI.soyle(str(veri.get("metin", ""))[:2000], veri.get("ham_metin"),
+                                                   veri.get("motor")))
+            if yol == "duzelt":
+                return self._json(200, TERIMLER.duzelt(str(veri.get("metin", ""))[:4000]))
             if yol == "dinle":
                 return self._json(200, CANLI.dinle(float(q.get("bekle", 40))))
             if yol == "kanal":
@@ -592,19 +703,65 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
             pass
         return None
 
+    def _olcum_kaydet(self, govde):
+        if not self._yerel_mi():
+            return self._json(403, {"hata": "Yalnızca bu bilgisayardan"})
+        if len(govde) > 20 * 1024 * 1024:
+            return self._json(413, {"hata": "Sonuç çok büyük"})
+        try:
+            veri = json.loads(govde.decode("utf-8"))
+            if not isinstance(veri, dict) or not isinstance(veri.get("sonuc"), dict):
+                raise ValueError("sonuc yok")
+            return self._json(200, {"dosya": olcum_kaydet(veri)})
+        except Exception as e:
+            return self._json(400, {"hata": "%s: %s" % (type(e).__name__, e)})
+
     def do_POST(self):
         n = int(self.headers.get("Content-Length") or 0)
         govde = self.rfile.read(n) if n else b""
         if self.path.startswith("/api/canli/"):
             return self._canli(govde)
+        if self.path.startswith("/api/ses-testi/kaydet"):
+            return self._olcum_kaydet(govde)
         if not self.path.startswith("/api/duyu/"):
             return self._json(404, {"hata": "Bilinmeyen istek"})
         return self._api(govde)
 
 
+def olcum_kaydet(veri, klasor=None):
+    """Ses testi sayfasının dikte karşılaştırmasını kalıcı veri klasörüne yazar (JSON + Markdown)."""
+    klasor = klasor or os.path.join(veri_yeri.veri_kok(), "olcumler")
+    os.makedirs(klasor, exist_ok=True)
+    ad = "dikte-karsilastirma-" + time.strftime("%Y-%m-%d_%H%M%S")
+    yol = os.path.join(klasor, ad + ".json")
+    with open(yol, "w", encoding="utf-8") as f:
+        json.dump(veri.get("sonuc"), f, ensure_ascii=False, indent=1)
+    if isinstance(veri.get("md"), str):
+        with open(os.path.join(klasor, ad + ".md"), "w", encoding="utf-8") as f:
+            f.write(veri["md"] + "\n")
+    return yol
+
+
 def kur_duyu():
-    print("Duyu için Python paketleri kuruluyor: " + ", ".join(DUYU_PAKETLER))
-    return subprocess.call([sys.executable, "-m", "pip", "install", "--upgrade"] + DUYU_PAKETLER)
+    """Duyu'nun paketlerini ve modelini kalıcı veri klasörüne kurar (program klasörüne değil)."""
+    os.makedirs(DUYU_PAKET_KLASORU, exist_ok=True)
+    print("Duyu kuruluyor. Yer (güncellemede silinmez): " + DUYU_KLASORU)
+    print("1/2 Python paketleri: " + ", ".join(DUYU_PAKETLER))
+    kod = subprocess.call([sys.executable, "-m", "pip", "install", "--upgrade", "--target", DUYU_PAKET_KLASORU]
+                          + DUYU_PAKETLER)
+    if kod != 0:
+        print("Paketler kurulamadı. İnternet bağlantısını denetleyip yeniden deneyin.")
+        return kod
+    importlib.invalidate_caches()
+    duyu_yolunu_ekle()
+    print("2/2 Model indiriliyor (~56 MB, bir kez)...")
+    try:
+        DUYU.indir()
+    except Exception as e:
+        print("Model indirilemedi (%s). İlk kullanımda yeniden denenecek." % e)
+        return 1
+    print("Duyu hazır. Ses bilgisayardan çıkmaz; bundan sonra internetsiz çalışır.")
+    return 0
 
 
 def main():
@@ -621,7 +778,7 @@ def main():
     print("KlinikKoç sunucusu çalışıyor: " + adres)
     print("Kapatmak için bu pencerede Ctrl+C'ye basın.")
     d = DUYU.durum()
-    print("Duyu-small: " + ("hazır (ilk kullanımda yüklenecek)" if d["kurulu"] else "kurulu değil. " + d["neden"]))
+    print("Duyu-small: " + ("hazır (ilk kullanımda yüklenecek)" if d["kurulu"] else d["neden"]))
     CANLI.pocket_baslat()
     print("Ses: " + CANLI.ses_durumu() + " (ayar: ses/ses-ayari.json)")
     if not a.acma:

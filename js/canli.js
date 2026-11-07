@@ -10,8 +10,8 @@
  *   temizle : tahtayı siler
  *   dur     : anlatımı hemen keser, sıradaki komutları iptal eder
  *   devam   : sözü kesilen anlatımı kaldığı yerden sürdürür ({ birak: true } ise bırakır)
- * Dikte: mikrofon tuşu (ya da M) konuşmayı tarayıcının Türkçe tanıyıcısıyla yazıya çevirir ve
- *   /api/canli/soyle ile sunucuya bırakır. Anlatım sürerken basılırsa anlatım duraklar (söz alma); Claude'un
+ * Dikte: mikrofon tuşu (ya da M) konuşmayı Duyu-small (bu bilgisayarda) ya da tarayıcının Türkçe tanıyıcısıyla
+ *   yazıya çevirir, terim sözlüğünden geçirir, 3 sn kutuda gösterir ve /api/canli/soyle ile sunucuya bırakır. Anlatım sürerken basılırsa anlatım duraklar (söz alma); Claude'un
  *   bekleyen tahta çağrısı sözü hemen alır. Claude'un cevabı (yeni tahta komutu) araya girer; tahta cevaptan
  *   sonra eski hâline döner ve 'devam' komutuyla anlatım kaldığı cümleden sürer.
  * Claude dinlemiyorken söylenenler için üstte uyarı ve "Sohbete kopyala" düğmesi çıkar; üst çubuktaki
@@ -231,25 +231,120 @@
   setInterval(() => { if (!durak.aktif) durakBtn.disabled = !durak.kullanilabilir(); }, 250);
 
   // ---------- Dikte (mikrofon) ----------
+  // İki tanıyıcı: Duyu-small (bu bilgisayarda, tools/sunucu.py; ses dışarı çıkmaz, internetsiz) ve tarayıcının
+  // kendi tanıyıcısı (Chrome'da ses Google'a gider). Duyu kurulu ve hazırsa varsayılan odur; seçim saklanır.
+  // Tanınan metin terim sözlüğünden geçer (/api/canli/duzelt ya da /api/duyu/yaz?duzelt=1), 3 sn kutuda
+  // görünür; öğrenci düzeltebilir ya da hemen gönderebilir. Claude düzeltilmiş metni ve ham_metin'i görür.
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const mikBtn = $('#mik');
-  if (!SR) {
-    mikBtn.disabled = true;
-    mikBtn.title = 'Bu tarayıcıda konuşma tanıma yok (Chrome ya da Edge gerekir).';
-  }
+  const motorBtn = $('#motor');
+  const motorMenu = $('#motorMenu');
+  const MOTOR_ANAHTAR = 'klinikkoc.dikte';
+  const ONAY_MS = 2500;
+  const dikte = {
+    secim: (() => { try { return localStorage.getItem(MOTOR_ANAHTAR); } catch (e) { return null; } })(),
+    duyu: null, // /api/duyu/durum
+    motor() {
+      const duyuVar = !!(this.duyu && this.duyu.kurulu);
+      if (this.secim === 'tarayici' && SR) return 'tarayici';
+      if (duyuVar && (this.secim === 'duyu' || !this.secim || !SR)) return 'duyu';
+      return SR ? 'tarayici' : (duyuVar ? 'duyu' : null);
+    },
+    sec(m) {
+      this.secim = m;
+      try { localStorage.setItem(MOTOR_ANAHTAR, m); } catch (e) { /* özel pencere */ }
+      this.goster();
+      if (m === 'duyu' && !(this.duyu && this.duyu.kurulu)) {
+        toast('Duyu kurulu değil. Kurmak için bir kez: ' + this.komut() + ' — o zamana kadar tarayıcı kullanılıyor.', 9000);
+      }
+    },
+    komut() { return (this.duyu && this.duyu.komut) || 'python3 tools/sunucu.py --kur-duyu'; },
+    async yenile() {
+      try {
+        const r = await fetch('/api/duyu/durum', { cache: 'no-store' });
+        this.duyu = await r.json();
+      } catch (e) {
+        this.duyu = { kurulu: false, neden: 'Sunucuya ulaşılamadı.' };
+      }
+      this.goster();
+      if (this.duyu.kurulu && !this.duyu.hazir && this.motor() === 'duyu') {
+        fetch('/api/duyu/yukle', { method: 'POST' }).then(() => this.yenile()).catch(() => {}); // model ilk konuşmadan önce ısınsın
+      }
+    },
+    goster() {
+      const m = this.motor();
+      const yedek = this.secim === 'duyu' && m !== 'duyu';
+      motorBtn.textContent = m === 'duyu' ? 'Duyu' : m === 'tarayici' ? 'Tarayıcı' : 'Yok';
+      motorBtn.classList.toggle('uyari', yedek || !m);
+      motorBtn.title = (m === 'duyu' ? 'Dikte: Duyu-small, bu bilgisayarda (ses dışarı çıkmaz)'
+        : m === 'tarayici' ? 'Dikte: tarayıcının tanıyıcısı' + (yedek ? ' (Duyu kurulu değil)' : '')
+          : 'Dikte kullanılamıyor') + ' · değiştirmek için dokunun';
+      mikBtn.disabled = !m;
+      mikBtn.title = m ? 'Konuş: dokunun, konuşun; susunca yazıya çevrilir (M)' : 'Konuşma tanıma yok: Duyu kurun ya da Chrome/Edge kullanın.';
+      $('#motorDuyu').checked = m === 'duyu';
+      $('#motorTarayici').checked = m === 'tarayici';
+      $('#motorTarayici').disabled = !SR;
+      const d = this.duyu || {};
+      $('#motorDuyuDurum').textContent = d.kurulu
+        ? (d.hazir ? 'Hazır.' : d.model_indirildi ? 'Kurulu; ilk konuşmada yüklenir.' : 'Kurulu; model ilk kullanımda bir kez indirilir.')
+        : 'Duyu kurulu değil. Kurmak için bir kez şu komutu çalıştırın:';
+      $('#motorKomut').hidden = !!d.kurulu;
+      $('#motorKomutYazi').textContent = this.komut();
+      $('#motorTarayiciDurum').textContent = SR ? 'Kurulum gerekmez; internet ister (Chrome\'da ses Google\'a gider).' : 'Bu tarayıcıda yok (Chrome ya da Edge gerekir).';
+    }
+  };
+  motorBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    motorMenu.hidden = !motorMenu.hidden;
+    if (!motorMenu.hidden) dikte.yenile();
+  });
+  document.addEventListener('click', (e) => { if (!motorMenu.hidden && !motorMenu.contains(e.target)) motorMenu.hidden = true; });
+  $('#motorDuyu').addEventListener('change', () => dikte.sec('duyu'));
+  $('#motorTarayici').addEventListener('change', () => dikte.sec('tarayici'));
+  $('#motorKopyala').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(dikte.komut()); toast('Komut kopyalandı.'); } catch (e) { toast(dikte.komut(), 8000); }
+  });
+
   let sozAlindi = false;
   let sozBitti = null;     // soru kartında söz alınınca: söz sunucuya ulaşınca çözülür
   let sozBittiCoz = null;
   const mik = {
-    rec: null,
+    rec: null,        // tarayıcı tanıyıcısı
+    kayit: null,      // Duyu için mikrofon kaydı
     aktif: false,
+    isleniyor: false,
+    motor: null,
     metin: '',
     sessizT: null,
 
     baslat() {
-      if (!SR) return toast('Bu tarayıcıda konuşma tanıma yok; Chrome ya da Edge kullanın. Yazarak da sorabilirsiniz.');
       if (this.aktif) return this.bitir();
+      if (this.isleniyor) return;
+      const motor = dikte.motor();
+      if (!motor) return toast('Konuşma tanıma yok: Duyu kurun ya da Chrome/Edge kullanın. Yazarak da sorabilirsiniz.', 7000);
+      onay.durdur(true);
       sozAl();
+      this.motor = motor;
+      this.aktif = true;
+      this.metin = '';
+      mikBtn.classList.add('dinliyor');
+      durumEl.textContent = 'Dinleniyor · susunca yazıya çevrilir (bitirmek için yeniden dokunun)';
+      dokEl.classList.add('dinleniyor');
+      this.onceki = yaziEl.value.trim(); // kutuda yazılmış bir şey varsa söylenen onun arkasına eklenir
+      yaziEl.placeholder = 'Dinliyorum… susunca yazıya çevrilir';
+      if (motor === 'duyu') this.duyuBaslat(); else this.tarayiciBaslat();
+    },
+
+    ui() {
+      mikBtn.classList.remove('dinliyor');
+      dokEl.classList.remove('dinleniyor');
+      dokEl.style.removeProperty('--seviye');
+      dokEl.classList.remove('seviyeli');
+      yaziEl.placeholder = YER_TUTUCU;
+    },
+
+    // --- tarayıcı ---
+    tarayiciBaslat() {
       const rec = new SR();
       rec.lang = 'tr-TR';
       rec.continuous = true;
@@ -257,13 +352,6 @@
       rec.maxAlternatives = 1;
       const finals = [];
       this.rec = rec;
-      this.aktif = true;
-      this.metin = '';
-      mikBtn.classList.add('dinliyor');
-      durumEl.textContent = 'Dinleniyor · susunca gönderilir (bitirmek için yeniden dokunun)';
-      dokEl.classList.add('dinleniyor');
-      const onceki = yaziEl.value.trim(); // kutuda yazılmış bir şey varsa söylenen onun arkasına eklenir
-      yaziEl.placeholder = 'Dinliyorum… susunca gönderilir';
       this.sure(8000); // hiç konuşulmazsa 8 sn sonra kapanır
       rec.onresult = (ev) => {
         let ara = '';
@@ -272,33 +360,143 @@
           if (r.isFinal) finals.push(r[0].transcript.trim());
           else ara += r[0].transcript;
         }
-        this.metin = [onceki].concat(finals).join(' ').trim();
-        yaziEl.value = (this.metin + ' ' + ara).trim();
+        this.metin = finals.join(' ').trim();
+        yaziEl.value = [this.onceki, this.metin, ara].join(' ').replace(/\s+/g, ' ').trim();
         gonderBtn.disabled = !yaziEl.value.trim();
-        this.sure(2500); // 2,5 sn susunca gönder
+        this.sure(2500); // 2,5 sn susunca bitir
       };
       rec.onerror = (ev) => {
         if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
           toast('Mikrofon izni verilmedi. Adres çubuğundaki simgeden mikrofona izin verin.', 7000);
         } else if (ev.error === 'network') {
-          toast('Konuşma tanıma için internet bağlantısı gerekiyor.', 6000);
+          toast('Tarayıcının tanıyıcısı internet istiyor. İnternetsiz çalışmak için Duyu\'yu kurun.', 7000);
         } else if (ev.error === 'audio-capture') {
           toast('Mikrofon bulunamadı.', 6000);
         } else if (ev.error !== 'no-speech' && ev.error !== 'aborted') {
           toast('Konuşma tanıma hatası: ' + ev.error);
         }
       };
-      rec.onend = () => this.gonder();
+      rec.onend = () => this.tarayiciBitti();
       try {
         rec.start();
       } catch (e) {
         this.aktif = false;
         this.rec = null;
-        mikBtn.classList.remove('dinliyor');
-        dokEl.classList.remove('dinleniyor');
-        yaziEl.placeholder = YER_TUTUCU;
+        this.ui();
         toast('Mikrofon açılamadı: ' + e.message);
       }
+    },
+
+    async tarayiciBitti() {
+      if (!this.aktif) return;
+      this.aktif = false;
+      this.rec = null;
+      clearTimeout(this.sessizT);
+      this.ui();
+      if (this.yazilan != null) { const y = this.yazilan; this.yazilan = null; return sozGonder(y, { motor: 'yazi' }); }
+      const ham = this.metin.trim();
+      this.metin = '';
+      if (!ham) return this.bos();
+      await this.duzeltVeOnayla(ham, 'tarayici');
+    },
+
+    // --- Duyu: kayıt, sessizlik algılama, sunucuda yazıya çevirme ---
+    async duyuBaslat() {
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+      } catch (e) {
+        this.aktif = false;
+        this.ui();
+        sozBitir();
+        return toast(e.name === 'NotAllowedError' ? 'Mikrofon izni verilmedi. Adres çubuğundaki simgeden izin verin.' : 'Mikrofon açılamadı: ' + e.message, 7000);
+      }
+      if (!this.aktif) { stream.getTracks().forEach((t) => t.stop()); return; } // bu arada bırakıldı
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const src = ctx.createMediaStreamSource(stream);
+      const node = ctx.createScriptProcessor(4096, 1, 1);
+      const k = { stream, ctx, node, parcalar: [], oran: ctx.sampleRate, bas: performance.now(), sonSes: 0, konustu: false, taban: [], esik: 0.015 };
+      node.onaudioprocess = (ev) => {
+        const d = ev.inputBuffer.getChannelData(0);
+        k.parcalar.push(new Float32Array(d));
+        let s = 0;
+        for (let i = 0; i < d.length; i++) s += d[i] * d[i];
+        const rms = Math.sqrt(s / d.length);
+        if (performance.now() - k.bas < 400) { k.taban.push(rms); k.esik = Math.max(0.012, Math.min(0.05, 3 * Math.max(...k.taban))); }
+        else if (rms > k.esik) { k.konustu = true; k.sonSes = performance.now(); }
+        dokEl.style.setProperty('--seviye', Math.min(1, rms * 12).toFixed(2));
+        dokEl.classList.add('seviyeli');
+      };
+      src.connect(node);
+      node.connect(ctx.destination);
+      this.kayit = k;
+      this.kayitT = setInterval(() => {
+        const simdi = performance.now();
+        if (!k.konustu && simdi - k.bas > 8000) this.bitir();              // hiç konuşulmadı
+        else if (k.konustu && simdi - k.sonSes > 2000) this.bitir();       // 2 sn sustu
+        else if (simdi - k.bas > 180000) this.bitir();                     // en çok 3 dk
+      }, 100);
+    },
+
+    async duyuBitti() {
+      const k = this.kayit;
+      this.kayit = null;
+      clearInterval(this.kayitT);
+      this.aktif = false;
+      this.ui();
+      if (!k) return;
+      try { k.node.disconnect(); } catch (e) { /* bitti */ }
+      k.stream.getTracks().forEach((t) => t.stop());
+      try { await k.ctx.close(); } catch (e) { /* kapalı */ }
+      if (this.yazilan != null) { const y = this.yazilan; this.yazilan = null; return sozGonder(y, { motor: 'yazi' }); }
+      if (!k.konustu) return this.bos();
+      const n = k.parcalar.reduce((a, c) => a + c.length, 0);
+      const hepsi = new Float32Array(n);
+      let o = 0;
+      for (const c of k.parcalar) { hepsi.set(c, o); o += c.length; }
+      const ses16 = yenidenOrnekle(hepsi, k.oran, 16000);
+      this.isleniyor = true;
+      yaziEl.placeholder = 'Yazıya çevriliyor…';
+      durumEl.textContent = 'Duyu yazıya çeviriyor (' + Math.round(ses16.length / 16000) + ' sn ses)…';
+      try {
+        const r = await fetch('/api/duyu/yaz?duzelt=1&lang=mix&beam=5&mode=auto', {
+          method: 'POST', headers: { 'Content-Type': 'application/octet-stream' },
+          body: new Uint8Array(ses16.buffer, ses16.byteOffset, ses16.byteLength)
+        });
+        const j = await r.json();
+        if (!r.ok || j.hata) throw new Error(j.hata || ('sunucu ' + r.status));
+        this.isleniyor = false;
+        yaziEl.placeholder = YER_TUTUCU;
+        if (!(j.metin || '').trim()) return this.bos();
+        onay.baslat(this.birlestir(j.metin), this.birlestir(j.ham_metin || j.metin), 'duyu', j.duzeltmeler);
+      } catch (e) {
+        this.isleniyor = false;
+        yaziEl.placeholder = YER_TUTUCU;
+        if (!calisan) durumEl.textContent = hazirYazisi();
+        toast('Duyu yazıya çeviremedi: ' + e.message + '. Tarayıcı tanıyıcısını seçebilir ya da yazabilirsiniz.', 8000);
+        if (durak.soz && !yaziEl.value.trim()) durak.devam();
+        sozBitir();
+      }
+    },
+
+    birlestir(m) { return [this.onceki, (m || '').trim()].join(' ').replace(/\s+/g, ' ').trim(); },
+
+    async duzeltVeOnayla(ham, motor) {
+      let d = { metin: ham, ham_metin: ham, duzeltmeler: [] };
+      try {
+        const r = await api('duzelt', { metin: ham });
+        if (r.ok) d = await r.json();
+      } catch (e) { /* sözlük yoksa ham metin */ }
+      onay.baslat(this.birlestir(d.metin), this.birlestir(d.ham_metin), motor, d.duzeltmeler);
+    },
+
+    bos() {
+      if (!calisan) durumEl.textContent = hazirYazisi();
+      yaziEl.value = this.onceki || '';
+      gonderBtn.disabled = !yaziEl.value.trim();
+      toast('Ses algılanmadı.');
+      if (durak.soz && !yaziEl.value.trim()) durak.devam(); // söz alınıp bir şey söylenmediyse anlatım sürer
+      sozBitir();
     },
 
     sure(ms) {
@@ -306,32 +504,68 @@
       this.sessizT = setTimeout(() => this.bitir(), ms);
     },
 
+    // Kaydı bitirir; o ana kadar söyleneni yazıya çevirir (tahta konuşmaya başlarsa da çağrılır:
+    // mikrofon tahtanın kendi sesini almasın).
     bitir() {
       clearTimeout(this.sessizT);
+      if (this.motor === 'duyu') { if (this.kayit) this.duyuBitti(); return; }
       if (this.rec) { try { this.rec.stop(); } catch (e) { /* zaten durdu */ } }
-    },
-
-    async gonder() {
-      if (!this.aktif) return;
-      this.aktif = false;
-      this.rec = null;
-      clearTimeout(this.sessizT);
-      mikBtn.classList.remove('dinliyor');
-      dokEl.classList.remove('dinleniyor');
-      yaziEl.placeholder = YER_TUTUCU;
-      if (!calisan) durumEl.textContent = hazirYazisi();
-      const metin = this.metin.trim();
-      this.metin = '';
-      if (!metin) {
-        toast('Ses algılanmadı.');
-        if (durak.soz && !yaziEl.value.trim()) durak.devam(); // söz alınıp bir şey söylenmediyse anlatım sürer
-        sozBitir();
-        return;
-      }
-      await sozGonder(metin);
     }
   };
   mikBtn.addEventListener('click', () => mik.baslat());
+
+  // Tarayıcının sesini 16 kHz'e indirir (ortalama alarak; basit alçak geçiren süzgeç).
+  function yenidenOrnekle(veri, kaynak, hedef) {
+    if (kaynak === hedef) return veri;
+    const oran = kaynak / hedef;
+    const n = Math.floor(veri.length / oran);
+    const out = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const a = Math.floor(i * oran), b = Math.min(veri.length, Math.floor((i + 1) * oran));
+      let s = 0;
+      for (let j = a; j < b; j++) s += veri[j];
+      out[i] = b > a ? s / (b - a) : veri[a] || 0;
+    }
+    return out;
+  }
+
+  // ---------- Onay: tanınan metin 3 sn kutuda görünür ----------
+  const onay = {
+    t: null,
+    bilgi: null,
+    baslat(metin, ham, motor, duzeltmeler) {
+      this.bilgi = { ham_metin: ham, motor };
+      yaziEl.value = metin;
+      gonderBtn.disabled = !metin;
+      dokEl.classList.remove('onayda');
+      void dokEl.offsetWidth; // süre çizgisi baştan başlasın
+      dokEl.style.setProperty('--onay-ms', ONAY_MS + 'ms');
+      dokEl.classList.add('onayda');
+      const d = (duzeltmeler || []).map((x) => '“' + x.ham + '” → ' + x.terim).join(', ');
+      durumEl.textContent = (d ? 'Terim düzeltildi: ' + d + ' · ' : '') + 'Birazdan gönderilecek · düzeltmek için kutuya dokunun, hemen göndermek için ↑';
+      clearTimeout(this.t);
+      this.t = setTimeout(() => this.gonder(), ONAY_MS);
+    },
+    // Öğrenci kutuya dokundu ya da yazmaya başladı: süre durur, gönderme ona kalır.
+    durdur(sessiz) {
+      if (!this.t) return;
+      clearTimeout(this.t);
+      this.t = null;
+      dokEl.classList.remove('onayda');
+      if (!sessiz) durumEl.textContent = 'Düzeltin, sonra Enter ya da ↑ ile gönderin';
+    },
+    gonder() {
+      clearTimeout(this.t);
+      this.t = null;
+      dokEl.classList.remove('onayda');
+      const metin = yaziEl.value.trim();
+      const b = this.bilgi;
+      this.bilgi = null;
+      if (!calisan) durumEl.textContent = hazirYazisi();
+      if (metin) sozGonder(metin, b);
+      else { sozBitir(); if (durak.soz) durak.devam(); }
+    }
+  };
 
   // ---------- Söz alma ve gönderme (mikrofon ve yazı kutusu ortak) ----------
   // Söz almak: anlatım sürüyorsa kaldığı yerde duraklar (Claude'un bekleyen çağrısı sözü hemen alır);
@@ -350,12 +584,14 @@
     if (sozBittiCoz) { const c = sozBittiCoz; sozBittiCoz = null; c(); }
   }
 
-  async function sozGonder(metin) {
+  async function sozGonder(metin, ek) {
     yaziEl.value = '';
     gonderBtn.disabled = true;
     altyazi(metin, 'Siz');
+    const govde = { metin, motor: (ek && ek.motor) || 'yazi' };
+    if (ek && ek.ham_metin) govde.ham_metin = ek.ham_metin;
     try {
-      const r = await api('soyle', { metin });
+      const r = await api('soyle', govde);
       const j = await r.json();
       if (j.claude_dinliyor) {
         toast('Claude\'a iletildi.', 4000);
@@ -378,11 +614,14 @@
   const dokEl = $('#dok');
   yaziEl.placeholder = YER_TUTUCU;
   yaziEl.addEventListener('input', () => {
+    onay.durdur();
     const dolu = !!yaziEl.value.trim();
     gonderBtn.disabled = !dolu;
     if (dolu && !mik.aktif && !durak.soz) sozAl();
   });
+  yaziEl.addEventListener('pointerdown', () => onay.durdur());
   yaziEl.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') onay.durdur();
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
       e.preventDefault();
       yaziGonder();
@@ -399,7 +638,8 @@
   function yaziGonder() {
     const metin = yaziEl.value.trim();
     if (!metin) return;
-    if (mik.aktif) { mik.metin = metin; mik.bitir(); return; } // dikteyi bitir, kutudakini gönder
+    if (mik.aktif) { mik.yazilan = metin; mik.bitir(); return; } // dikteyi bitir, kutudakini gönder
+    if (onay.bilgi) return onay.gonder();
     sozGonder(metin);
   }
   gonderBtn.addEventListener('click', yaziGonder);
@@ -468,6 +708,7 @@
       duraklatildi: durak.aktif,
       kaldigi_yer: kaldigiYer(),
       video: board.video ? board.video.durum : null,
+      dikte: dikte.motor(),
       hiz
     };
   }
@@ -895,6 +1136,9 @@
     ses.audio.play().catch(() => {});
     if (tam) tamEkran();
   }
+  dikte.goster();
+  dikte.yenile();
+  setInterval(() => { if (!mik.aktif && !mik.isleniyor) dikte.yenile(); }, 60000); // Duyu sonradan kurulursa görünsün
   $('#baslatPencere').addEventListener('click', () => baslat(false));
   $('#baslatTam').addEventListener('click', () => baslat(true));
 

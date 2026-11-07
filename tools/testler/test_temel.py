@@ -567,6 +567,96 @@ class Kayitlar(unittest.TestCase):
         self.assertEqual(a["kayitlar"][0]["dersler"][0]["hedefler"]["H1.a"]["yardimsiz_duzey"], "hatirla")
 
 
+class DikteTerimSozlugu(unittest.TestCase):
+    """Konuşma tanımanın bozduğu terimler sözlükle düzelir; doğru metne dokunulmaz (gerçek oturum örnekleri)."""
+
+    def setUp(self):
+        import terim_sozlugu
+        self.t = terim_sozlugu
+        self.s = terim_sozlugu.yukle(KOK)
+
+    def test_gercek_ornekler(self):
+        for ham, beklenen in (("nekrotizangin gibi test", "nekrotizan gingivitis"),
+                              ("nekro tizangin gibi testi", "nekrotizan gingivitis"),
+                              ("birleşim epiteliği", "birleşim epiteli")):
+            r = self.s.duzelt("Hocam " + ham + " nedir?")
+            self.assertIn(beklenen, r["metin"], ham)
+            self.assertEqual(r["ham_metin"], "Hocam " + ham + " nedir?")
+            self.assertTrue(r["duzeltmeler"])
+        self.assertEqual(self.s.duzelt("Birleşim epiteliği hasar görür.")["metin"], "Birleşim epiteli hasar görür.")
+
+    def test_benzerlikle_eslemesiz_de_duzelir(self):
+        s = self.t.Sozluk(terimler=["nekrotizan gingivitis", "birleşim epiteli"])
+        self.assertEqual(s.duzelt("Hastada nekrotizangin gibi test var")["metin"], "Hastada nekrotizan gingivitis var")
+        self.assertIn("nekrotizan gingivitis", s.duzelt("nekro tizangin gibi testi")["metin"])
+        self.assertEqual(s.duzelt("nekrotizan gin givitis")["metin"], "nekrotizan gingivitis")
+
+    def test_dogru_metne_dokunmaz(self):
+        for m in ("Birleşim epitelinin yapısı", "nekrotizan gingivitisin tedavisi", "periodontal cep derinliği",
+                  "Nekrotizan periodontal hastalıklar", "sondlama derinliklerini ölçtüm", "hastada lökosit sayısı",
+                  "primer herpetik gingivostomatitisi düşünürüm", "interdental papillerinde krater var",
+                  "nekrotizan stomatit (NS) nadirdir"):
+            self.assertEqual(self.s.duzelt(m)["metin"], m, m)
+        cumleler = json.load(open(os.path.join(KOK, "ses-testi", "cumleler.json"), encoding="utf-8"))["cumleler"]
+        for c in cumleler:
+            self.assertEqual(self.s.duzelt(c["metin"])["duzeltmeler"], [], c["id"])
+
+    def test_ogretmen_kendi_terimini_ekler(self):
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "terimler.json"), "w", encoding="utf-8") as f:
+                json.dump({"duzeltmeler": [{"bozuk": "perio kronik", "dogru": "perikoronitis"}]}, f)
+            s = self.t.yukle(KOK, d)
+            self.assertEqual(s.duzelt("bu bir perio kronik tablo")["metin"], "bu bir perikoronitis tablo")
+
+    def test_ham_metin_ve_motor_claudea_gider(self):
+        import sunucu
+        c = sunucu.Canli()
+        c.soyle("nekrotizan gingivitis nedir", "nekrotizangin gibi test nedir", "duyu")
+        r = c.dinle(1)
+        self.assertEqual((r["metin"], r["ham_metin"], r["motor"]),
+                         ("nekrotizan gingivitis nedir", "nekrotizangin gibi test nedir", "duyu"))
+        c.soyle("yazarak sordum", None, "yazi")
+        r = c.dinle(1)
+        self.assertNotIn("ham_metin", r)
+        self.assertEqual(r["motor"], "yazi")
+        c.soyle("eski sayfa")  # eski sayfa ham_metin/motor göndermez: alanlar eklenmez
+        self.assertEqual(set(c.dinle(1)), {"durum", "metin", "parcalar"})
+
+    def test_uzun_konusma_tek_parca_yaziya_doner(self):
+        try:
+            import numpy as np
+        except ImportError:
+            self.skipTest("numpy yok")
+        import sunucu
+        sr = 16000
+        t = np.arange(int(70 * sr)) / sr
+        ses = (0.2 * np.sin(2 * np.pi * 220 * t)).astype(np.float32)
+        for bas in (9.0, 19.5, 31.0, 44.0, 57.5):  # cümle araları
+            ses[int(bas * sr):int((bas + 0.4) * sr)] = 0
+        parcalar = sunucu.bolumle(ses, sr)
+        self.assertGreaterEqual(len(parcalar), 3)
+        self.assertTrue(all(len(p) <= sunucu.PARCA_SN * sr for p in parcalar))
+        self.assertEqual(sum(len(p) for p in parcalar), len(ses))
+
+        class SahteModel:
+            def transcribe(self, s, lang="mix"):
+                return "parça %d" % round(len(s) / sr)
+        d = sunucu.Duyu()
+        d.model = SahteModel()
+        r = d.yaz(ses.tobytes(), duzelt=True)
+        self.assertEqual(r["parca"], len(parcalar))
+        self.assertEqual(r["saniye"], 70.0)
+        self.assertEqual(len(r["metin"].split("parça")) - 1, len(parcalar))
+        self.assertIn("ham_metin", r)
+
+    def test_olcum_dosyaya_yazilir(self):
+        import sunucu
+        with tempfile.TemporaryDirectory() as d:
+            yol = sunucu.olcum_kaydet({"sonuc": {"tur": "dikte-karsilastirmasi"}, "md": "# x"}, d)
+            self.assertTrue(os.path.exists(yol))
+            self.assertTrue(os.path.exists(yol[:-5] + ".md"))
+
+
 class YayinDenetimi(unittest.TestCase):
     def test_depo_temiz(self):
         r = subprocess.run([sys.executable, os.path.join(KOK, "tools", "yayin_denetimi.py")], capture_output=True, text=True)

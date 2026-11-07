@@ -90,17 +90,43 @@ söz almaktır: anlatım kaldığı yerde duraklar. Vazgeçip kutuyu boş bırak
 
 **Sesle:**
 
-1. Tuşa dokunun ve konuşun. Söyledikleriniz altyazıda görünür.
-2. 2,5 saniye susunca konuşmanız Claude'a gönderilir (ya da tuşa yeniden dokunun).
+1. Tuşa dokunun ve konuşun. En az 1 dakikalık uzun bir konuşma da tek parça yazıya döner.
+2. Susunca (ya da tuşa yeniden dokununca) konuşmanız yazıya çevrilir ve **2–3 saniye kutuda görünür**.
+   Bir terim yanlış yazılmışsa kutuya dokunup düzeltin, sonra Enter'a basın; hemen göndermek için ↑.
+   Dokunmazsanız kendiliğinden gönderilir.
 3. Claude tahtada sesli cevap verir, sonra sizi yeniden dinler.
+
+**Konuşmayı yazıya çeviren (dikte motoru):** Mikrofonun yanındaki küçük etiket hangisinin kullanıldığını
+gösterir; dokunup değiştirebilirsiniz, seçim saklanır.
+
+| | Duyu-small (yerel) | Tarayıcı |
+|---|---|---|
+| Nerede çalışır | Bu bilgisayarda (yerel sunucu) | Chrome/Edge'in kendi tanıyıcısı |
+| Ses dışarı çıkar mı | Hayır | Evet (Google'a ya da Microsoft'a gider) |
+| İnternet | Gerekmez (model bir kez indirildikten sonra) | Gerekir |
+| Tıbbi terimler | Daha doğru | Sık bozar ("nekrotizan gingivitis" → "nekrotizangin gibi test") |
+| Kurulum | Bir kez: `python3 tools/sunucu.py --kur-duyu` (Windows: `py tools\sunucu.py --kur-duyu`) | Yok |
+
+Duyu kuruluysa varsayılan odur; kurulu değilse tahta tarayıcıya düşer, etiket sarı yanar ve menüde kurulum
+komutu görünür. Duyu'nun paketleri ve modeli program klasörünün dışında, kalıcı veri klasöründe durur
+(Mac: `~/Library/Application Support/KlinikKoc/duyu`, Windows: `%APPDATA%\KlinikKoc\duyu`); programı
+güncellediğinizde silinmez. Mikrofon, tahta konuşmaya başlayınca kendiliğinden kapanır; tahtanın kendi
+sesini almaz.
+
+**Terim sözlüğü:** Yazıya çevrilen metin alan terimleri sözlüğünden geçer: bozuk biçim doğru terime
+çevrilir (ör. "birleşim epiteliği" → "birleşim epiteli"). Sözlük `ses/terimler.json`, `ses/telaffuz.json`'un
+ters yönü ve derslerin terimlerinden (term komutları, kısa hedef başlıkları) beslenir. Kendi terimlerinizi
+kalıcı veri klasöründeki `terimler.json` dosyasına ekleyin (biçim `ses/terimler.json`'daki gibi; güncellemede
+silinmez). Claude düzeltilmiş metni ve tanıyıcının ham çıktısını (`ham_metin`) birlikte görür; belirsizse sorar.
+Hangi tanıyıcının daha iyi olduğunu ses testi sayfasındaki **Duyu ile tarayıcı karşılaştırması** ölçer
+(bkz. `ses-testi/KILAVUZ.md`).
 
 - **Söz alma:** Tahta anlatırken tuşa dokunursanız anlatım kaldığı yerde duraklar ("Söz sizde" yazar).
   Konuşmanız bitince Claude anlatımın bitmesini beklemeden hemen duyar ve cevap verir. Cevabını tahtada
   çizerek verirse tahta cevaptan sonra eski hâline döner ve anlatım kesilen cümleden sürer. Bir şey
   söylemeden susarsanız anlatım kendiliğinden sürer; ▶ ile de siz sürdürebilirsiniz.
 - Soru kartı açıkken konuşursanız kart kapanır; Claude önce sizi cevaplar, gerekirse soruyu yeniden sorar.
-- Konuşma tanıma tarayıcının kendi Türkçe tanıyıcısıdır (Chrome/Edge). İnternet gerekir;
-  ses yazıya çevrilmek için Google'a (Edge'de Microsoft'a) gider. Firefox'ta çalışmaz.
+- Tarayıcı tanıyıcısı Firefox'ta yoktur; orada Duyu ya da yazı kutusu kullanılır.
 - İlk kullanımda tarayıcı mikrofon izni ister; "İzin ver" deyin.
 - Üst çubuktaki ışık Claude'un dinleyip dinlemediğini gösterir: **yeşil** "Claude dinliyor", **gri**
   "Claude dinlemiyor". Claude masaüstü uygulaması, Claude cevabını bitirip beklemeye geçtiğinde

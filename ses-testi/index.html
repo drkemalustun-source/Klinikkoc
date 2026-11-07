@@ -75,6 +75,18 @@
         <button class="ghost" id="stopStt" hidden>Durdur</button>
         <span class="muted" id="sttProgress"></span>
       </div>
+      <div class="karsilastir">
+        <h3>Duyu ile tarayıcı karşılaştırması</h3>
+        <p class="help">Canlı tahtanın mikrofonunda hangi tanıyıcının kullanılacağına bu ölçümle karar verilir. Kayıt bölümündeki aynı
+          periodontoloji cümleleri önce Duyu-small (bu bilgisayarda), sonra tarayıcının tanıyıcısıyla yazıya çevrilir. Kelime hata oranı ve
+          terim doğruluğu ayrı ayrı, terim sözlüğünden önce (ham) ve sonra gösterilir. Sonuç bu bilgisayarda bir dosyaya kaydedilir
+          (Mac: ~/Library/Application Support/KlinikKoc/olcumler, Windows: %APPDATA%\KlinikKoc\olcumler).</p>
+        <div class="actions">
+          <button class="primary" id="karsilastir">Karşılaştırmayı başlat</button>
+          <span class="muted" id="karsilastirNot"></span>
+        </div>
+        <div id="karsilastirSonuc"></div>
+      </div>
       <div id="sttSummary"></div>
       <div id="sttDetail"></div>
     </section>

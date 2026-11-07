@@ -57,9 +57,20 @@
               <svg class="ikon-dur" viewBox="0 0 24 24"><rect x="7" y="5" width="3.5" height="14" rx="1"/><rect x="13.5" y="5" width="3.5" height="14" rx="1"/></svg>
               <svg class="ikon-devam" viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg>
             </button>
-            <button class="canli-yuvarlak mik" id="mik" aria-label="Konuş" title="Konuş: dokunun, konuşun; susunca gönderilir (M)">
+            <button class="canli-yuvarlak mik" id="mik" aria-label="Konuş" title="Konuş: dokunun, konuşun; susunca yazıya çevrilir (M)">
               <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>
             </button>
+            <button class="canli-motor" id="motor" type="button" aria-haspopup="true" aria-controls="motorMenu">…</button>
+          </div>
+          <div class="canli-menu" id="motorMenu" role="dialog" aria-label="Dikte motoru" hidden>
+            <div class="canli-menu-baslik">Konuşmayı yazıya çeviren</div>
+            <label class="canli-secenek"><input type="radio" name="motor" id="motorDuyu">
+              <span><b>Duyu-small (yerel)</b><small>Bu bilgisayarda çalışır; ses dışarı çıkmaz, internet gerekmez. Tıbbi terimlerde daha doğru.</small>
+              <small id="motorDuyuDurum"></small>
+              <span class="canli-komut" id="motorKomut" hidden><code id="motorKomutYazi"></code><button type="button" class="btn" id="motorKopyala">Kopyala</button></span></span></label>
+            <label class="canli-secenek"><input type="radio" name="motor" id="motorTarayici">
+              <span><b>Tarayıcı</b><small id="motorTarayiciDurum"></small></span></label>
+            <div class="canli-menu-not">Söylediğiniz terim sözlüğünden geçer ve göndermeden önce 2–3 sn kutuda görünür; düzeltmek için kutuya dokunun.</div>
           </div>
           <div class="canli-kutu">
             <input id="yazi" type="text" autocomplete="off" enterkeyhint="send" aria-label="Claude'a yazın">

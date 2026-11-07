@@ -77,7 +77,9 @@ Video: Dersin videoları (klasördeki dosyalar ve öğretmenin eklediği YouTube
 - Bilgi dersin içeriğine dayansın; dersin dışına çıkarsan bunu açıkça söyle.
 - Anlatım bitince sohbet penceresinde çok kısa özet ver; tahtada anlattığını sohbete tekrar yazma.
 Sesli sohbet (dikte): Kullanıcı tahtadaki mikrofon tuşuna (ya da M tuşuna) basıp konuşabilir; söyledikleri
-yazıya çevrilip sana gelir.
+yazıya çevrilip sana gelir. Tanıyıcı (Duyu-small, bu bilgisayarda; yoksa tarayıcınınki) alan terimlerini
+bozabilir; metin terim sözlüğünden geçer. 'ham_metin' alanı tanıyıcının ilk çıktısıdır: düzeltme yanlış
+görünüyorsa ya da cümle anlamsızsa öğrenciye ne demek istediğini kısaca sor.
 - Söz kesme: Anlatım sürerken kullanıcı konuşursa tahta anlatımı kaldığı yerde duraklatır ve bekleyen tahta /
   tahta_durumu(no) çağrın beklemeden {"durum": "kullanici_konustu", "kullanici_konustu": "..."} döner.
   Önce ona cevap ver: tahtada sesli (tahta aracı; cevap araya girer, tahta sonra eski hâline döner) ya da
@@ -383,7 +385,8 @@ ARACLAR = [
         "name": "dinle",
         "description": "Kullanıcının tahtadaki mikrofon tuşuyla söylediğini bekler ve yazı olarak döndürür "
                        "(en çok ~40 sn). Kimse konuşmazsa 'sessiz' döner; yeniden çağırabilirsin. Sesli sohbet "
-                       "döngüsü: anlat → dinle → cevapla → dinle.",
+                       "döngüsü: anlat → dinle → cevapla → dinle. Dikteyle gelen sözde 'metin' terim sözlüğüyle "
+                       "düzeltilmiştir, 'ham_metin' tanıyıcının ilk çıktısı, 'motor' duyu|tarayici|yazi.",
         "inputSchema": {"type": "object", "properties": {
             "bekle": {"type": "integer", "description": "en çok kaç saniye beklensin (5–50, varsayılan 40)"}}},
     },
@@ -1373,9 +1376,35 @@ def ar_tahtayi_ac(_):
                 break
     if not d.get("bagli"):
         return metin({"durum": "bekleniyor", "not": "Tarayıcıda canli.html açılıyor; birkaç saniye sonra tekrar dene."})
-    return metin({"durum": "hazır", "tahta": d.get("sayfa"), "ses": d.get("ses"),
+    return metin({"durum": "hazır", "tahta": d.get("sayfa"), "ses": d.get("ses"), "dikte": dikte_durumu(d),
                   "not": "Tahta açık. Kullanıcı ilk açılışta sayfada 'başlat' düğmesine bir kez dokunmalı; "
                          "dokunmadıysa ses çalmaz ama yazılar görünür."})
+
+
+def dikte_durumu(d):
+    """Mikrofonun hangi tanıyıcıyla çalıştığı ve Duyu'nun kurulum durumu."""
+    out = {}
+    sayfa = d.get("sayfa") if isinstance(d.get("sayfa"), dict) else {}
+    if sayfa.get("dikte"):
+        out["motor"] = sayfa["dikte"]
+    try:
+        r = urllib.request.Request(ADRES + "/api/duyu/durum")
+        with urllib.request.urlopen(r, timeout=10) as y:
+            du = json.loads(y.read().decode("utf-8"))
+    except Exception:
+        du = None
+    if du is None:
+        out["duyu"] = "bilinmiyor (sunucu eski sürüm olabilir)"
+    elif not du.get("kurulu"):
+        out["duyu"] = "kurulu değil"
+        out["not"] = ("Mikrofon tarayıcının tanıyıcısıyla çalışıyor; alan terimlerini bozabilir. Daha doğru tanıma için "
+                      "kullanıcıya bir kez şu komutu çalıştırmasını önerebilirsin: " + du.get("komut", ""))
+    else:
+        out["duyu"] = "hazır" if du.get("hazir") else ("kurulu" if du.get("model_indirildi")
+                                                       else "kurulu, model ilk kullanımda indirilecek")
+    out["terim_duzeltme"] = ("Dikteyle gelen sözlerde 'metin' terim sözlüğüyle düzeltilmiştir; 'ham_metin' tanıyıcının "
+                             "ilk çıktısıdır. İkisi farklıysa ve anlam belirsizse öğrenciye kısaca sor.")
+    return out
 
 
 def ar_tahta(a):
