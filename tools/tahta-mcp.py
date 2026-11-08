@@ -182,6 +182,8 @@ ARACLAR = [
         "name": "kayit_yaz",
         "description": "Öğrencinin ilerlemesini bu bilgisayardaki kayda işler. Her anlamlı adımdan sonra çağır. "
                        "hedefler: [{id, duzey (hatirla|anla|uygula|cozumle|degerlendir|olustur), yardim (yardimsiz|destekle), "
+                       "iskele (S0 yardımsız | S1 genel yönlendirme | S2 odaklı ipucu | S3 kısmi çözüm ya da seçenek daraltma | "
+                       "S4 cevabı gösterip açıklama; cevaba ulaşılan basamak, isteğe bağlı), "
                        "dogru, solo (yapi_oncesi|tek|cok|iliskisel|genisletilmis), durum (ele_alinmadi|destekle_yapti|"
                        "bagimsiz_yapti|tekrar_gerekli), tur (yanit|geri_cagirma|uygulama), kanit (tek cümle)}]. "
                        "yanilgilar: [{id, durum (acik|cozuldu), not}]. guven: [{hedef, soru, guven (tahmin|biraz|emin), dogru}]. "
@@ -621,6 +623,24 @@ BLOOM_AD = dict(zip(BLOOM, ["hatırla", "anla", "uygula", "çözümle", "değerl
 DURUM_AD = {"ele_alinmadi": "ele alınmadı", "destekle_yapti": "destekle yaptı", "bagimsiz_yapti": "bağımsız yaptı",
             "tekrar_gerekli": "tekrar gerekli", "devam_ediyor": "devam ediyor"}
 TEKRAR_GUN = {1: 1, 2: 3, 3: 7, 4: 21}  # Leitner kutusu → sonraki geri çağırmaya kadar gün
+# İpucu merdiveni: öğrencinin cevaba hangi basamakta ulaştığı. S0 yardımsız; S1 genel yönlendirme ("neye bakmalısın?");
+# S2 odaklı ipucu; S3 kısmi çözüm ya da seçenek daraltma; S4 cevabı gösterip açıklama.
+ISKELE = ("S0", "S1", "S2", "S3", "S4")
+
+
+def yeni_kutu(kutu, dogru, yardimsiz, iskele=None):
+    """Leitner kutusu. iskele verilmezse eski kural: yardımsız doğru bir üst kutu, gerisi 1. kutu.
+    iskele verilirse: S0 doğru bir üst kutu; S1 doğru kutuyu korur (sıfırlamaz); S2–S4 ya da yanlış 1. kutu."""
+    kutu = kutu or 0
+    if not dogru:
+        return 1
+    if iskele in ISKELE:
+        if iskele == "S0":
+            return min(4, kutu + 1)
+        if iskele == "S1":
+            return max(1, kutu)
+        return 1
+    return min(4, kutu + 1) if yardimsiz else 1
 KAYIT_KOK = veri_yeri.kayit_kok()          # kalıcı yer; KLINIK_KOC_KAYIT önce gelir
 ESKI_KAYIT_KOK = os.path.join(KOK, "kayitlar")  # eski sürümlerin yeri: ilk açılışta bir kez kopyalanır
 _DEPO = None
@@ -850,6 +870,15 @@ def ar_kayit_yaz(a):
         if duzey and duzey not in BLOOM:
             uyarilar.append("Geçersiz Bloom düzeyi: %s" % duzey)
             duzey = None
+        iskele = g.get("iskele")
+        if iskele is not None and iskele not in ISKELE:
+            uyarilar.append("Geçersiz iskele basamağı: %s (S0–S4 olmalı)" % iskele)
+            iskele = None
+        if iskele and not g.get("yardim"):
+            g["yardim"] = "yardimsiz" if iskele == "S0" else "destekle"
+        elif iskele and (iskele == "S0") != (g.get("yardim") == "yardimsiz"):
+            uyarilar.append("%s: yardim (%s) ile iskele (%s) uyuşmuyor; iskele esas alındı" % (hid, g.get("yardim"), iskele))
+            g["yardim"] = "yardimsiz" if iskele == "S0" else "destekle"
         yardimsiz = g.get("yardim") == "yardimsiz"
         if duzey:
             alan = "yardimsiz_duzey" if yardimsiz else "destekle_duzey"
@@ -864,14 +893,15 @@ def ar_kayit_yaz(a):
             elif v.get("durum") != "bagimsiz_yapti":
                 v["durum"] = "destekle_yapti" if not yardimsiz else "devam_ediyor"
         if duzey or g.get("tur") == "geri_cagirma":
-            # Aralıklı tekrar: yardımsız başarı bir üst kutu, başarısızlık ya da yardım 1. kutu.
-            v["kutu"] = min(4, v.get("kutu", 0) + 1) if (yardimsiz and g.get("dogru", True)) else 1
+            # Aralıklı tekrar: yardımsız başarı bir üst kutu; yalnız genel yönlendirmeyle (S1) başarı kutuyu korur;
+            # başarısızlık ya da daha fazla yardım 1. kutu.
+            v["kutu"] = yeni_kutu(v.get("kutu", 0), g.get("dogru", True), yardimsiz, iskele)
             v["sonraki_tekrar"] = gun_ekle(b, TEKRAR_GUN[v["kutu"]])
         v["son"] = b
         if g.get("kanit"):
             v["kanitlar"] = (v.get("kanitlar") or [])[-9:] + [
                 {"tarih": b, "tur": g.get("tur", "yanit"), "duzey": duzey, "yardim": g.get("yardim"),
-                 "solo": g.get("solo"), "dogru": g.get("dogru"), "ozet": g["kanit"]}]
+                 **({"iskele": iskele} if iskele else {}), "solo": g.get("solo"), "dogru": g.get("dogru"), "ozet": g["kanit"]}]
     for y in a.get("yanilgilar") or []:
         v = k["yanilgilar"].setdefault(y.get("id"), {"durum": "acik", "ilk": b})
         v["durum"] = y.get("durum", v["durum"])

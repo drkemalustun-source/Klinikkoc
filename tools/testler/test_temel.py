@@ -603,6 +603,29 @@ class Kayitlar(unittest.TestCase):
         # artık ad + ayırt edici doğrudan eski klasöre gider
         self.assertEqual(self.arac("egitmen_hazirla", ders=ders, ogrenci="Mert Öz", ayirt="55")["ogrenci"]["kimlik"], "mert-oz")
 
+    def test_ipucu_merdiveni_ve_aralikli_tekrar(self):
+        yk = self.m.yeni_kutu
+        # iskele yoksa eski kural aynen
+        self.assertEqual((yk(2, True, True), yk(2, True, False), yk(3, False, True)), (3, 1, 1))
+        # S0 doğru bir üst kutu; S1 doğru kutuyu korur; S2–S4 ya da yanlış 1. kutu
+        self.assertEqual([yk(2, True, False, s) for s in self.m.ISKELE], [3, 2, 1, 1, 1])
+        self.assertEqual((yk(0, True, False, "S1"), yk(4, True, True, "S0"), yk(3, False, True, "S0")), (1, 4, 1))
+        ders = "peri-implantitis-cerrahi"
+        kim = self.arac("egitmen_hazirla", ders=ders, ogrenci="Ece Su", ayirt="12")["ogrenci"]["kimlik"]
+        h = lambda iskele, **x: dict({"id": "H1.a", "duzey": "hatirla", "dogru": True, "iskele": iskele,
+                                      "kanit": "deneme"}, **x)
+        self.arac("kayit_yaz", ogrenci=kim, ders=ders, hedefler=[h("S0")])
+        self.arac("kayit_yaz", ogrenci=kim, ders=ders, hedefler=[h("S0")])
+        v = self.m.kayit_yukle(kim, ders)["hedefler"]["H1.a"]
+        self.assertEqual((v["kutu"], v["kanitlar"][-1]["iskele"], v["kanitlar"][-1]["yardim"]), (2, "S0", "yardimsiz"))
+        self.arac("kayit_yaz", ogrenci=kim, ders=ders, hedefler=[h("S1")])
+        v = self.m.kayit_yukle(kim, ders)["hedefler"]["H1.a"]
+        self.assertEqual((v["kutu"], v["kanitlar"][-1]["yardim"]), (2, "destekle"))
+        # çelişen yardım uyarı verir, iskele esas alınır; geçersiz basamak uyarı verir
+        r = self.arac("kayit_yaz", ogrenci=kim, ders=ders, hedefler=[h("S3", yardim="yardimsiz"), h("S9")])
+        self.assertEqual(len(r["uyarilar"]), 2)
+        self.assertEqual(self.m.kayit_yukle(kim, ders)["hedefler"]["H1.a"]["kutu"], 1)
+
     def test_deneme_kaydi_ayri(self):
         ders = "peri-implantitis-cerrahi"
         r = self.arac("egitmen_hazirla", ders=ders, ogrenci="deneme")
