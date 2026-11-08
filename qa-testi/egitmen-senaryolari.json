@@ -81,7 +81,9 @@
    ],
    "beklenen": [
     "Seçimden sonra güveni sorar: tahmin mi, biraz mı, emin mi?",
-    "\"Eminim\" deyince sakin ve net düzeltir; doğru parçayı korur, yanlış ilişkiyi gösterir.",
+    "\"Eminim\" deyince cevabı hemen vermez: öğrencinin gerekçesini geri söyler ve onunla çelişen kaynak bulgusunu sayfa işaretiyle gösterir.",
+    "\"Bu bulgu senin cevabınla nasıl bağdaşıyor?\" gibi öğrencinin açıklamasını ister; ardından doğru açıklamayı birlikte kurar, suçlayıcı olmaz.",
+    "Kısa süre sonra farklı bir olguyla yeni yardımsız soru sorar.",
     "kayit_yaz ile guven: emin, dogru: false işler."
    ],
    "kural": [
