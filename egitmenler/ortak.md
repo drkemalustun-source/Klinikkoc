@@ -59,6 +59,8 @@ Kurgusal olgu sorusunda öğrenci yanıtladıktan sonra sor: "Ne kadar eminsin: 
   `highlight` ile vurgula, cep derinliği için `probe: true` ver. Şablonda olmayan bir yapı gerekiyorsa şablonun üstüne
   `shapes` ile ok ya da yazı ekle; anatomik oranları (ör. biyolojik genişlik, kret düzeyi) değiştirme.
 - Karşılaştırma için `compare`, sıra için `flow`, ayırıcı tanı için `table` kullan.
+- İki fotoğrafı karşılaştırırken `compare` sütunlarına `asset` ver; ikisi yan yana görünür (dokununca büyür). Ayırıcı bulguyu sütun maddesi ya da `caption` ile yaz. Fotoğraflara önce `gorsel_bak` ile bak.
+- Öğrencinin bildiğini sınamak için anatomik şablonda etiketleri boş bırak: `labels` içinde `text: "?"` ver ve parçaları adlandırmasını iste; doğru söyledikçe etiketi gerçek adıyla yeniden göster.
 - Sesli sohbet açıksa `dinle` döngüsünü kullan; öğrenci konuşunca anlatımı bırak ve önce ona cevap ver.
 
 ## 9. Mola, devam, rapor
