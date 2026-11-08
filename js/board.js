@@ -410,14 +410,38 @@
       const wrap = el('div', 'board-compare');
       if (c.title) wrap.appendChild(rich(el('h3'), c.title));
       const cols = el('div', 'compare-cols');
+      let gorsel = false;
       for (const col of c.columns) {
         const box = el('div', 'compare-col ' + (col.color || ''));
         box.appendChild(rich(el('h4'), col.title));
-        const ul = el('ul');
-        for (const it of col.items || []) ul.appendChild(rich(el('li'), it));
-        box.appendChild(ul);
+        // Görsel karşılaştırma: sütunda asset varsa fotoğraf sütunun başında gösterilir (ör. NG ve PHG yan yana).
+        const a = col.asset ? (this.lesson.assets || {})[col.asset] : null;
+        if (col.asset && !a) console.warn('Görsel tanımlı değil:', col.asset);
+        if (a) {
+          gorsel = true;
+          const fig = el('figure', 'compare-figure');
+          const img = el('img');
+          img.alt = a.alt || '';
+          img.draggable = false;
+          img.src = AT.lessonUrl(this.lesson, a.src);
+          fig.appendChild(img);
+          if (col.caption || a.credit) {
+            const cap = el('figcaption');
+            if (col.caption) rich(cap, col.caption);
+            if (a.credit) cap.appendChild(el('span', 'credit', a.credit));
+            fig.appendChild(cap);
+          }
+          fig.addEventListener('click', () => fig.classList.toggle('expanded'));
+          box.appendChild(fig);
+        }
+        if ((col.items || []).length) {
+          const ul = el('ul');
+          for (const it of col.items) ul.appendChild(rich(el('li'), it));
+          box.appendChild(ul);
+        }
         cols.appendChild(box);
       }
+      if (gorsel) wrap.classList.add('gorselli');
       wrap.appendChild(cols);
       this._setVisual(wrap);
       return wrap;

@@ -747,6 +747,11 @@
           uyarilar.push('Görsel yok: ' + c.asset + (dersId ? '' : ' (önce ders seçilmeli)'));
           continue;
         }
+        if (c.type === 'compare' && Array.isArray(c.columns)) {
+          for (const col of c.columns) {
+            if (col && col.asset && !(ders.assets || {})[col.asset]) uyarilar.push('Görsel yok: ' + col.asset);
+          }
+        }
         if (typeof board['cmd_' + c.type] !== 'function') { uyarilar.push('Bilinmeyen komut: ' + c.type); continue; }
         try { board.run(c, false); } catch (e) { uyarilar.push(c.type + ': ' + e.message); }
       }
