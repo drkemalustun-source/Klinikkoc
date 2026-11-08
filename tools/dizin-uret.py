@@ -41,6 +41,23 @@ import re
 import subprocess
 import sys
 
+
+def _metin_yaz(yol, metin, **ek):
+    with open(yol, "w", encoding="utf-8", **ek) as f:
+        f.write(metin)
+
+
+def _metin_oku(yol):
+    """Dosyayı okuyup hemen kapatır (açık kalan dosya Windows'ta kilitlenmeye yol açar)."""
+    with open(yol, encoding="utf-8") as f:
+        return f.read()
+
+
+def _json_oku(yol):
+    with open(yol, encoding="utf-8") as f:
+        return json.load(f)
+
+
 KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PARCA = 900       # hedef parça uzunluğu (karakter)
 ORTUSME = 150     # parçalar arası örtüşme
@@ -99,7 +116,7 @@ def oku(yol, spec, sil=(), bitis=None):
             if m:
                 return
     else:
-        yield 0, temizle(open(yol, encoding="utf-8").read(), sil)
+        yield 0, temizle(_metin_oku(yol), sil)
 
 
 def main():
@@ -114,7 +131,7 @@ def main():
 
     ders_dir = os.path.join(KOK, "lessons", a.ders)
     kdir = os.path.join(ders_dir, "kaynaklar")
-    cfg = json.load(open(os.path.join(kdir, "kaynaklar.json"), encoding="utf-8"))
+    cfg = _json_oku(os.path.join(kdir, "kaynaklar.json"))
     kaynaklar, parcalar = [], []
     for i, k in enumerate(cfg["kaynaklar"]):
         if not k.get("lisans"):
@@ -129,8 +146,8 @@ def main():
 
     out = {"surum": 1, "kaynaklar": kaynaklar, "sozluk": cfg.get("sozluk", {}), "parcalar": parcalar}
     body = json.dumps(out, ensure_ascii=False, separators=(",", ":"))
-    open(os.path.join(ders_dir, "kaynak-dizini.json"), "w", encoding="utf-8").write(body + "\n")
-    open(os.path.join(ders_dir, "kaynak-dizini.js"), "w", encoding="utf-8").write(
+    _metin_yaz(os.path.join(ders_dir, "kaynak-dizini.json"), body + "\n")
+    _metin_yaz(os.path.join(ders_dir, "kaynak-dizini.js"), 
         "/* tools/dizin-uret.py üretti; elle düzenlemeyin. */\nAT.registerLessonData(%s, %s);\n"
         % (json.dumps(a.ders + ":dizin"), body))
     print("Dizin hazır: %d kaynak, %d parça, %.0f KB." % (len(kaynaklar), len(parcalar), len(body.encode()) / 1024))

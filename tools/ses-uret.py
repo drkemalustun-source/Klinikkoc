@@ -41,6 +41,17 @@ import sys
 import time
 import urllib.request
 
+
+def _metin_yaz(yol, metin, **ek):
+    with open(yol, "w", encoding="utf-8", **ek) as f:
+        f.write(metin)
+
+
+def _json_oku(yol):
+    with open(yol, encoding="utf-8") as f:
+        return json.load(f)
+
+
 KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SES_KLASORU = os.path.join(KOK, "tools", ".sesler")
 PAKETLER = ["piper-tts", "soundfile", "numpy"]
@@ -109,7 +120,7 @@ def load_dictionary():
     path = os.path.join(KOK, "ses", "telaffuz.json")
     if not os.path.exists(path):
         return []
-    data = json.load(open(path, encoding="utf-8"))
+    data = _json_oku(path)
     entries = data.get("entries", []) if isinstance(data, dict) else data
     entries = [e for e in entries if e.get("yazim") and e.get("okunus") is not None]
     return sorted(entries, key=lambda e: -len(e["yazim"]))
@@ -190,7 +201,7 @@ def main():
         sys.exit("soundfile MP3 yazamıyor; python tools/ses-uret.py --kur ile güncelleyin.")
 
     lesson_dir = os.path.join(KOK, "lessons", a.ders)
-    lesson = json.load(open(os.path.join(lesson_dir, "ders.json"), encoding="utf-8"))
+    lesson = _json_oku(os.path.join(lesson_dir, "ders.json"))
     out_dir = os.path.abspath(a.cikti) if a.cikti else os.path.join(lesson_dir, "audio")
     os.makedirs(out_dir, exist_ok=True)
     dictionary = load_dictionary()
@@ -230,7 +241,7 @@ def main():
     old_path = os.path.join(out_dir, "manifest.json")
     if os.path.exists(old_path):
         try:
-            for entries in json.load(open(old_path, encoding="utf-8")).get("steps", {}).values():
+            for entries in _json_oku(old_path).get("steps", {}).values():
                 for e in entries:
                     if isinstance(e, dict):
                         old[e["src"]] = e
@@ -283,8 +294,8 @@ def main():
         if f.endswith(".mp3") and f not in keep:
             os.remove(os.path.join(out_dir, f))
     body = json.dumps(manifest, ensure_ascii=False, indent=1)
-    open(os.path.join(out_dir, "manifest.json"), "w", encoding="utf-8").write(body + "\n")
-    open(os.path.join(out_dir, "manifest.js"), "w", encoding="utf-8").write(
+    _metin_yaz(os.path.join(out_dir, "manifest.json"), body + "\n")
+    _metin_yaz(os.path.join(out_dir, "manifest.js"), 
         "/* tools/ses-uret.py üretti; elle düzenlemeyin. */\nAT.registerAudioManifest(%s, %s);\n"
         % (json.dumps(a.ders), body))
 

@@ -38,6 +38,22 @@ import karne as karne_  # noqa: E402
 import kayit_aktar  # noqa: E402
 import kayit_deposu as kd  # noqa: E402
 import veri_yeri  # noqa: E402
+
+
+def _metin_oku(yol):
+    """Dosyayı okuyup hemen kapatır (açık kalan dosya Windows'ta kilitlenmeye yol açar)."""
+    with open(yol, encoding="utf-8") as f:
+        return f.read()
+
+
+def _json_oku(yol):
+    with open(yol, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _ikili_oku(yol):
+    with open(yol, "rb") as f:
+        return f.read()
 PORT = int(os.environ.get("KLINIK_KOC_PORT", "8810"))
 ADRES = "http://127.0.0.1:%d" % PORT
 SURUM = "0.4.0"
@@ -288,7 +304,10 @@ ARACLAR = [
             "ogrenciler": {"type": "array", "items": {"type": "string"}, "description": "kimlikler; boşsa hepsi"},
             "dosyalar": {"type": "array", "items": {"type": "string"},
                          "description": "öğrencilerin dışa aktardığı kayıt dosyaları (içe almadan anonimleştirilir)"},
-            "deneme_dahil": {"type": "boolean"}, "cikti": {"type": "string"}}},
+            "deneme_dahil": {"type": "boolean"}, "cikti": {"type": "string"},
+            "ham_yanitlar": {"type": "boolean", "description": "true: ölçme testlerindeki kısa yazılı cevapların ham "
+                             "metnini de ekle (puanlayıcı uyumu çalışması için). Serbest metindir; dosyayı paylaşmadan "
+                             "önce öğretmen okumalı."}}},
     },
     {
         "name": "olcme_testi",
@@ -304,13 +323,16 @@ ARACLAR = [
         "name": "olcme_kaydet",
         "description": "Biten ölçme testinin yanıtlarını kaydeder ve puanlar. Çoktan seçmelilerde tahtanın döndürdüğü "
                        "secim (0'dan başlayan sıra) verilir, puanı araç hesaplar. Kısa yazılı sorularda ölçüte göre "
-                       "puan (0, 1, 2) ve yanit_ozet verilir. Her soruda guven: tahmin|biraz|emin.",
+                       "puan (0, 1, 2), öğrencinin cevabı kelimesi kelimesine ham_yanit ve kısa yanit_ozet verilir. "
+                       "Her soruda guven: tahmin|biraz|emin.",
         "inputSchema": {"type": "object", "properties": {
             "ders": {"type": "string"}, "ogrenci": {"type": "string"},
             "tur": {"type": "string", "enum": ["on", "son", "gecikmeli"]},
             "yanitlar": {"type": "array", "items": {"type": "object", "properties": {
                 "no": {"type": "string"}, "secim": {"type": "integer"}, "puan": {"type": "integer"},
                 "yanit_ozet": {"type": "string"},
+                "ham_yanit": {"type": "string", "description": "kısa yazılı soruda öğrencinin cevabı, kelimesi kelimesine, "
+                              "düzeltmeden ve özetlemeden (sonradan insan puanlamasıyla karşılaştırmak için)"},
                 "yanilgi_secildi": {"type": "boolean", "description": "kısa yanıtta ölçütteki yanılgı dile getirildiyse true"},
                 "guven": {"type": "string", "enum": ["tahmin", "biraz", "emin"]}},
                 "required": ["no"]}},
@@ -455,7 +477,7 @@ def katalog():
     yol = os.path.join(KOK, "lessons", "katalog.json")
     girisler = []
     if os.path.exists(yol):
-        girisler = json.load(open(yol, encoding="utf-8")).get("lessons", [])
+        girisler = _json_oku(yol).get("lessons", [])
     bilinen = {g["id"] for g in girisler}
     for d in sorted(glob.glob(os.path.join(KOK, "lessons", "*", "ders.json")) +
                     glob.glob(os.path.join(KOK, "lessons", "*", "egitmen.json"))):
@@ -474,14 +496,14 @@ def ders_yolu(ders, *parca):
 
 def egitmen_json(ders):
     yol = ders_yolu(ders, "egitmen.json")
-    return json.load(open(yol, encoding="utf-8")) if os.path.exists(yol) else None
+    return _json_oku(yol) if os.path.exists(yol) else None
 
 
 def ders_json(ders):
     """ders.json'u döndürür. Yalnız egitmen.json olan (canlı) derste ondan özet bir ders kurar."""
     yol = ders_yolu(ders, "ders.json")
     if os.path.exists(yol):
-        return json.load(open(yol, encoding="utf-8"))
+        return _json_oku(yol)
     eg = egitmen_json(ders)
     if not eg:
         raise ValueError("Ders bulunamadı: %s. dersler aracıyla listeye bak." % ders)
@@ -529,7 +551,7 @@ def ar_ders_oku(a):
         if not os.path.exists(yol):
             return metin({"sayfa": n, "durum": "okunamadı", "not": "Bu sayfanın metni pakette yok. "
                           "'Notta yok' deme; 'bu sayfayı okuyamadım' de."})
-        out = {"sayfa": n, "kaynak": kay.get("baslik"), "metin": open(yol, encoding="utf-8").read(),
+        out = {"sayfa": n, "kaynak": kay.get("baslik"), "metin": _metin_oku(yol),
                "okuma_notu": kay.get("okumaNotu")}
         if kay.get("sayfaGorseli"):
             out["sayfa_gorseli"] = "sayfa-%02d (gorsel_bak ile bakabilirsin)" % n
@@ -587,7 +609,7 @@ def ar_gorsel_bak(a):
             bilgi += "\n%s: %s" % ("Öğretmen notu" if k == "ogretmenNotu" else "Kaynak notu", eg_g[k])
     if not tur:
         return {"content": [{"type": "text", "text": bilgi + "\n(Bu görsel türü gösterilemiyor: %s)" % uz}]}
-    veri = base64.b64encode(open(yol, "rb").read()).decode("ascii")
+    veri = base64.b64encode(_ikili_oku(yol)).decode("ascii")
     return {"content": [{"type": "image", "data": veri, "mimeType": tur}, {"type": "text", "text": bilgi}]}
 
 
@@ -762,8 +784,8 @@ def ar_egitmen_hazirla(a):
         secilen = eg.get("egitmen")
     if secilen not in EGITMENLER:
         raise ValueError("Bilinmeyen eğitmen: %s" % secilen)
-    kurallar = open(os.path.join(KOK, "egitmenler", "ortak.md"), encoding="utf-8").read() + "\n\n" + \
-        open(os.path.join(KOK, "egitmenler", secilen + ".md"), encoding="utf-8").read()
+    kurallar = _metin_oku(os.path.join(KOK, "egitmenler", "ortak.md")) + "\n\n" + \
+        _metin_oku(os.path.join(KOK, "egitmenler", secilen + ".md"))
     out = {"egitmen": EGITMENLER[secilen], "izinli_egitmenler": [EGITMENLER.get(x, x) for x in izinli],
            "kurallar": kurallar,
            "ders": {"kimlik": ders, "baslik": eg.get("baslik") or d.get("title"), "duzey": eg.get("duzey"),
@@ -1034,7 +1056,7 @@ def ar_vakalar(a):
     out = []
     for yol in sorted(glob.glob(ders_yolu(ders, "vakalar", "*.json"))):
         try:
-            v = json.load(open(yol, encoding="utf-8"))
+            v = _json_oku(yol)
         except ValueError:
             out.append({"vaka": os.path.basename(yol), "hata": "okunamadı"})
             continue
@@ -1111,7 +1133,7 @@ def ar_sozlu_prova(a):
                                  "bloom": q.get("bloom"), "rubrik": q.get("rubric"), "ornek_cevap": q.get("modelAnswer")})
     for yol in sorted(glob.glob(ders_yolu(ders, "vakalar", "*.json"))):
         try:
-            v = json.load(open(yol, encoding="utf-8"))
+            v = _json_oku(yol)
         except ValueError:
             continue
         for nd in v.get("dugumler", []):
@@ -1186,7 +1208,8 @@ OLCME_TALIMAT = """Bu bir ölçme testi, ders değil. Eğitmen kurallarını tes
 - Soruları sırayla, tek tek sor. Çoktan seçmeli soruda soru_sor'u 'dogru' ve 'aciklama' OLMADAN, verilen secenekler
   sırasıyla ve etiket ile çağır (ör. "Ön test · 3/12"). Dönen 'secim' değerini not al.
 - Kısa yazılı soruda soruyu tahtaya yaz (tahta: title + text) ve öğrencinin cevabını sohbetten ya da dinle ile al.
-  Puanı 'olcut'e göre sessizce ver (0, 1, 2); öğrenciye söyleme.
+  Puanı 'olcut'e göre sessizce ver (0, 1, 2); öğrenciye söyleme. olcme_kaydet'te öğrencinin cevabını kelimesi
+  kelimesine ham_yanit olarak ver (düzeltme, özetleme yok; konuştuysa dinle'nin ham_metin'i).
 - Her sorudan sonra güveni sor: soru_sor ile secenekler ["Tahmin", "Biraz", "Emin"], etiket "Ne kadar eminsin?".
 - Bütün sorular bitince olcme_kaydet'i çağır. Sonra puanı ve her yanlış sorunun doğru cevabını kısa, sakin bir dille
   göster; 'emin ama yanlış' olanları özellikle düzelt. Öğrenci testi yarıda bırakırsa yarim_kaldi=true ile kaydet.
@@ -1238,7 +1261,25 @@ def karisik_sira(ogrenci, ders, tur, no, n):
     return sira
 
 
-def test_formu(a):
+def olcme_grubu(k, o):
+    """Çapraz form tasarımında öğrencinin grubu: 1 → plan olduğu gibi (ör. A→B→A), 2 → formlar yer değiştirir
+    (B→A→B). Grup bir kez belirlenir ve kayda yazılır. Öğrenci numarasının son hanesi varsa tek/çift (sınıfta
+    yaklaşık yarı yarıya ve öğretmen tarafından denetlenebilir), yoksa kimlikten türetilen sabit bir sayı."""
+    if not (o.get("plan") or {}).get("capraz") or len(o.get("formlar") or {}) != 2:
+        return None
+    if k.get("olcme_grubu") in (1, 2):
+        return k["olcme_grubu"]
+    bilgi = depo().defter()["ogrenciler"].get(k.get("_kimlik") or k.get("ogrenci_kimligi")) or {}
+    ayirt = "".join(c for c in str(bilgi.get("ayirt") or "") if c.isdigit())
+    if ayirt:
+        g = 1 if int(ayirt[-1]) % 2 == 0 else 2
+    else:
+        g = 1 + int(hashlib.sha256(tohum(k).strip().lower().encode("utf-8")).hexdigest()[:8], 16) % 2
+    k["olcme_grubu"] = g
+    return g
+
+
+def test_formu(a, k=None):
     ders, ogr, tur = a.get("ders"), (a.get("ogrenci") or "").strip(), a.get("tur")
     if not ogr:
         raise ValueError("ogrenci gerekli")
@@ -1251,13 +1292,20 @@ def test_formu(a):
     form = (o.get("plan") or {}).get(tur)
     if form not in o["formlar"]:
         raise ValueError("Bu test türü için form tanımlı değil: %s" % tur)
+    if k is not None and olcme_grubu(k, o) == 2:
+        a_, b_ = sorted(o["formlar"])
+        form = b_ if form == a_ else a_
     return eg, o, form, ogr
 
 
 def ar_olcme_testi(a):
-    eg, o, form, ogr = test_formu(a)
+    test_formu(a)  # önce girdileri denetle
     tur, ders = a["tur"], a["ders"]
-    k = kayit_yukle(ogr, ders)
+    k = kayit_yukle(a["ogrenci"].strip(), ders)
+    yeni_grup = "olcme_grubu" not in k
+    eg, o, form, ogr = test_formu(a, k)
+    if yeni_grup and k.get("olcme_grubu"):
+        kayit_kaydet(k)
     ogr = tohum(k)
     uyari = list(k.get("_uyarilar") or [])
     if any(t.get("tur") == tur and not t.get("yarim_kaldi") for t in k.get("testler", [])):
@@ -1283,9 +1331,10 @@ def ar_olcme_testi(a):
 
 
 def ar_olcme_kaydet(a):
-    eg, o, form, ogr = test_formu(a)
+    test_formu(a)
     tur, ders = a["tur"], a["ders"]
-    k = kayit_yukle(ogr, ders)
+    k = kayit_yukle(a["ogrenci"].strip(), ders)
+    eg, o, form, ogr = test_formu(a, k)
     ogr = tohum(k)
     sorular = {s["no"]: s for s in o["formlar"][form]}
     toplam = sum(1 if s["tur"] == "secmeli" else 2 for s in sorular.values())
@@ -1313,6 +1362,11 @@ def ar_olcme_kaydet(a):
         else:
             p = y.get("puan")
             r.update(puan=p if p in (0, 1, 2) else 0, cevap=y.get("yanit_ozet"))
+            # Ham cevap: Claude'un puanını sonradan körlemeli insan puanıyla karşılaştırabilmek için (araştırma).
+            if (y.get("ham_yanit") or "").strip():
+                r["ham_yanit"] = y["ham_yanit"].strip()
+            else:
+                uyarilar.append("%s: ham_yanit eksik; öğrencinin cevabını kelimesi kelimesine ver" % s["no"])
             tam = r["puan"] == 2
             if r["puan"] == 0 and s.get("yanilgi") and y.get("yanilgi_secildi"):
                 yanilgilar.append(s["yanilgi"])
@@ -1322,7 +1376,7 @@ def ar_olcme_kaydet(a):
         puan += r["puan"]
         ayrinti.append(r)
     eksik = [n for n in sorular if n not in {r["no"] for r in ayrinti}]
-    kayit = {"tur": tur, "form": form, "tarih": bugun(), "saat": time.strftime("%H:%M"), "puan": puan,
+    kayit = {"tur": tur, "form": form, "grup": k.get("olcme_grubu"), "tarih": bugun(), "saat": time.strftime("%H:%M"), "puan": puan,
              "toplam": toplam, "emin_ama_yanlis": emin_yanlis, "secilen_yanilgilar": sorted(set(yanilgilar)),
              "yarim_kaldi": bool(a.get("yarim_kaldi") or eksik), "yanitlar": ayrinti}
     if eksik:
@@ -1363,10 +1417,14 @@ def ar_kayit_ice_aktar(a):
 
 def ar_kayit_anonim_aktar(a):
     r = kayit_aktar.anonim(depo(), a.get("ogrenciler") or None, a.get("dosyalar") or None,
-                           bool(a.get("deneme_dahil")), a.get("cikti") or veri_yeri.masaustu())
+                           bool(a.get("deneme_dahil")), a.get("cikti") or veri_yeri.masaustu(),
+                           ham_yanitlar=bool(a.get("ham_yanitlar")))
     return metin({"dosya": r["dosya"], "ogrenci_sayisi": r["ogrenci_sayisi"],
                   "haric_tutulan_deneme": r["haric_tutulan_deneme"],
-                  "not": "Dosyada ad, kimlik, ayırt edici ve serbest metin yoktur; kodlar rastgeledir."})
+                  "not": ("Dosyada ad, kimlik ve ayırt edici yoktur; kodlar rastgeledir. Ölçme testlerinin kısa yazılı "
+                          "cevapları ham metin olarak VAR: paylaşmadan önce içinde ad ya da kimlik geçmediğini kontrol et.")
+                  if a.get("ham_yanitlar") else
+                  "Dosyada ad, kimlik, ayırt edici ve serbest metin yoktur; kodlar rastgeledir."})
 
 
 # ---------- Tahta ----------
@@ -1701,7 +1759,7 @@ def kur(kaldir=False):
         ayar = {}
         if os.path.exists(yol):
             try:
-                ayar = json.load(open(yol, encoding="utf-8")) or {}
+                ayar = _json_oku(yol) or {}
             except Exception:
                 sys.exit("Ayar dosyası okunamadı (bozuk JSON?): %s\nDosyayı düzeltip yeniden deneyin." % yol)
             shutil.copy2(yol, yol + ".yedek")

@@ -33,6 +33,12 @@ import sys
 import time
 import urllib.request
 
+
+def _metin_yaz(yol, metin, **ek):
+    with open(yol, "w", encoding="utf-8", **ek) as f:
+        f.write(metin)
+
+
 KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIZIN = os.environ.get("KLINIK_KOC_DIZIN") or os.path.join(KOK, ".dizin", "bilgi.sqlite")
 MODEL_KLASORU = os.environ.get("KLINIK_KOC_MODEL") or os.path.join(KOK, ".modeller", "multilingual-e5-small")
@@ -522,7 +528,7 @@ def kur_anlam():
                     print("\r   %s: %%%d" % (yerel, alinan * 100 // toplam), end="", flush=True)
         os.replace(gecici, hedef)
         print()
-    open(os.path.join(MODEL_KLASORU, "LISANS.txt"), "w", encoding="utf-8").write(
+    _metin_yaz(os.path.join(MODEL_KLASORU, "LISANS.txt"), 
         "intfloat/multilingual-e5-small (ONNX: Xenova/multilingual-e5-small), MIT lisansı.\n")
     print("Hazır. Şimdi dizini yenileyin:  python tools/bilgi_bankasi.py --dizinle")
 

@@ -13,6 +13,7 @@ Engellenenler:
   - 20 MB'tan büyük dosyalar
 Git yoksa klasördeki bütün dosyalara, git varsa yalnız depoya girecek dosyalara bakılır.
 """
+import fnmatch
 import glob
 import json
 import re
@@ -24,8 +25,57 @@ KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(KOK, "tools"))
 import vaka_denetle  # noqa: E402
 
+
+def _metin_yaz(yol, metin, **ek):
+    with open(yol, "w", encoding="utf-8", **ek) as f:
+        f.write(metin)
+
+
+def _metin_oku(yol):
+    """Dosyayı okuyup hemen kapatır (açık kalan dosya Windows'ta kilitlenmeye yol açar)."""
+    with open(yol, encoding="utf-8") as f:
+        return f.read()
+
+
+def _json_oku(yol):
+    with open(yol, encoding="utf-8") as f:
+        return json.load(f)
+
+
 YASAK_KLASORLER = ("kayitlar/", "ozel/", ".dizin/", ".modeller/", ".ses-ortami/", "tools/.sesler/")
 EN_BUYUK = 20 * 1024 * 1024
+
+
+def _gitignore_kurallari():
+    """.gitignore satırlarını basit kurallara çevirir (git yokken, ör. zip ile dağıtılan kopyada kullanılır)."""
+    kurallar = []
+    try:
+        with open(os.path.join(KOK, ".gitignore"), encoding="utf-8") as f:
+            satirlar = f.read().splitlines()
+    except OSError:
+        return kurallar
+    for x in satirlar:
+        x = x.strip()
+        if not x or x.startswith("#") or x.startswith("!"):
+            continue
+        klasor = x.endswith("/")
+        x = x.rstrip("/")
+        kurallar.append((x.lstrip("/"), klasor, "/" in x))
+    return kurallar
+
+
+def yok_sayilir_mi(yol, kurallar):
+    """yol: depo köküne göre, '/' ayraçlı dosya yolu. Git'in yok sayma kurallarının sade bir karşılığı:
+    '/' içermeyen kural her düzeydeki ada, içeren kural kökten yola uyar; '/' ile biten kural klasöre uyar."""
+    parcalar = yol.split("/")
+    for kural, klasor, kokten in kurallar:
+        for i in range(1, len(parcalar) + 1):
+            if klasor and i == len(parcalar):
+                break  # klasör kuralı dosyanın kendisine değil, üst klasörlerine uyar
+            aday = "/".join(parcalar[:i]) if kokten else parcalar[i - 1]
+            if fnmatch.fnmatchcase(aday, kural):
+                return True
+    return False
 
 
 def depo_dosyalari():
@@ -35,10 +85,16 @@ def depo_dosyalari():
                            capture_output=True, text=True, check=True)
         return [x for x in r.stdout.splitlines() if x and os.path.exists(os.path.join(KOK, x))]
     except (OSError, subprocess.CalledProcessError):
+        # Git yok (ör. zip ile kurulan fakülte kopyası): .gitignore kurallarını kendimiz uygularız; yoksa
+        # lessons/ozel-* gibi hiçbir zaman depoya girmeyecek klasörler yanlışlıkla hata verir.
+        kurallar = _gitignore_kurallari()
         out = []
         for kok, klasorler, dosyalar in os.walk(KOK):
             klasorler[:] = [k for k in klasorler if k not in (".git", "__pycache__", "node_modules")]
-            out += [os.path.relpath(os.path.join(kok, d), KOK).replace(os.sep, "/") for d in dosyalar]
+            for d in dosyalar:
+                rel = os.path.relpath(os.path.join(kok, d), KOK).replace(os.sep, "/")
+                if not yok_sayilir_mi(rel, kurallar):
+                    out.append(rel)
         return out
 
 
@@ -65,8 +121,8 @@ def denetle():
             continue  # derse ait hiçbir dosya depoya girmiyor (ör. .gitignore ile dışarıda)
         dj = os.path.join(klasor, "ders.json")
         ej = os.path.join(klasor, "egitmen.json")
-        d = json.load(open(dj, encoding="utf-8")) if os.path.exists(dj) else {}
-        e = json.load(open(ej, encoding="utf-8")) if os.path.exists(ej) else {}
+        d = _json_oku(dj) if os.path.exists(dj) else {}
+        e = _json_oku(ej) if os.path.exists(ej) else {}
         if d.get("distribution") == "faculty" or e.get("dagitim") == "fakulte":
             H.append("Fakülteye özel ders depoya giriyor: %s (klasörün adını ozel-... ile başlatın; o zaman depoya hiç girmez)" % on)
             continue
@@ -93,14 +149,14 @@ def denetle():
             yol = os.path.join(klasor, paket)
             if rel not in kume or not os.path.exists(yol):
                 continue
-            metin = open(yol, encoding="utf-8").read()
+            metin = _metin_oku(yol)
             if re.search(r'"dagitim"\s*:\s*"fakulte"', metin) or re.search(r'"id"\s*:\s*"ozel-', metin):
                 H.append("%s fakülteye özel vaka içeriyor: 'node tools/paketle.mjs' (--fakulte olmadan) çalıştırın" % rel)
         # Vaka görselleri yalnız denetimden geçmiş bir karta bağlıysa yayımlanabilir
         bagli = set()
         for v in glob.glob(os.path.join(klasor, "vakalar", "*.json")):
             try:
-                kart = json.load(open(v, encoding="utf-8"))
+                kart = _json_oku(v)
             except ValueError:
                 continue
             bagli |= {b.get("gorsel") for b in kart.get("bulgular") or [] if b.get("gorsel")}
@@ -114,7 +170,7 @@ def denetle():
         yol = os.path.join(KOK, liste)
         if liste not in kume or not os.path.exists(yol):
             continue
-        metin = open(yol, encoding="utf-8").read()
+        metin = _metin_oku(yol)
         for klasor in glob.glob(os.path.join(KOK, "lessons", "*", "")):
             ders = os.path.basename(os.path.dirname(klasor))
             if not any(x.startswith("lessons/%s/" % ders) for x in kume) and ('"%s"' % ders in metin or "lessons/%s/" % ders in metin):
@@ -136,7 +192,7 @@ def kanca_kur():
         sys.exit("Bu klasör bir git deposu değil.")
     yol = os.path.join(git, "hooks", "pre-commit")
     os.makedirs(os.path.dirname(yol), exist_ok=True)
-    open(yol, "w", newline="\n").write(KANCA)
+    _metin_yaz(yol, KANCA, newline="\n")
     os.chmod(yol, 0o755)
     print("Kuruldu: %s\nArtık her commit'ten önce yayın denetimi çalışır." % os.path.relpath(yol, KOK))
 

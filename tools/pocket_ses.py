@@ -14,6 +14,12 @@ import sys
 import threading
 import time
 
+
+def _json_oku(yol):
+    with open(yol, encoding="utf-8") as f:
+        return json.load(f)
+
+
 KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 AYAR_DOSYASI = os.path.join(KOK, "ses", "ses-ayari.json")
 ORTAM = os.path.join(KOK, ".ses-ortami")
@@ -24,7 +30,7 @@ VARSAYILAN = {"motor": "piper", "ses": "female_3", "tohum": 1,
 def ayar():
     a = dict(VARSAYILAN)
     try:
-        a.update(json.load(open(AYAR_DOSYASI, encoding="utf-8")))
+        a.update(_json_oku(AYAR_DOSYASI))
     except Exception:
         pass
     return a
