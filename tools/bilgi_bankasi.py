@@ -98,15 +98,63 @@ def sozcukler(s):
     return re.findall(r"[0-9a-zçğıöşüâîû]+", kucuk(s))
 
 
+# Hafif kök bulucu: yaygın çekim eklerini sondan atar ("apsede" → "apse", "dişlerin" → "diş"). Tam bir Türkçe
+# biçimbilim çözümleyicisi değildir; amaç önek aramasının ekli sözcüklerde kökü kaçırmamasıdır.
+# js/qa/bilgi.js içinde aynı kurallar vardır; birini değiştirirseniz ötekini de değiştirin.
+EKLER = sorted("""
+lar ler ları leri ların lerin larda lerde lardan lerden lara lere
+nın nin nun nün ın in un ün
+da de ta te dan den tan ten nda nde ndan nden
+ya ye yı yi yu yü sı si su sü
+yla yle la le
+dır dir dur dür tır tir tur tür
+ı i u ü a e
+""".split(), key=len, reverse=True)
+# Ünlü düşmesi olan sık sözcükler: ekli biçim → yalın biçim (ikisi de aranır).
+UNLU_DUSMESI = {"ağz": "ağız", "burn": "burun", "kayb": "kayıp", "boyn": "boyun", "karn": "karın", "aln": "alın",
+                "oğl": "oğul", "ağzı": "ağız", "kaybı": "kayıp"}
+YUMUSAMA = {"b": "p", "c": "ç", "d": "t", "ğ": "k"}
+
+
+def kok(w):
+    """Sözcüğün sonundaki en uzun yaygın çekim ekini (bir kez) atar; kök en az 3 harf kalır."""
+    if len(w) < 5 or w.isdigit():
+        return w
+    for ek in EKLER:
+        if w.endswith(ek) and len(w) - len(ek) >= 3:
+            return w[:-len(ek)]
+    return w
+
+
+def onekler(w):
+    """Bir sorgu sözcüğü için aranacak önekler. Uzun sözcükte ilk 5 harf ve kök (hangisi kısaysa) kullanılır;
+    ünsüz yumuşaması ve ünlü düşmesi için ikinci biçim de eklenir ("kaybı" → "kayb" ve "kayıp")."""
+    k = kok(w)
+    on = min((w[:5] if len(w) > 5 else w), k, key=len)
+    out = [on]
+    if k in UNLU_DUSMESI:
+        out.append(UNLU_DUSMESI[k])
+    tersi = {v: a for a, v in UNLU_DUSMESI.items() if len(a) <= 4}
+    if k in tersi:
+        out.append(tersi[k])
+    if len(k) >= 4 and k[-1] in YUMUSAMA and k != w:  # ünsüz yumuşaması: "ağacı" → "ağaç"
+        out.append(k[:-1] + YUMUSAMA[k[-1]])
+    sonuc = []
+    for x in out:  # öncekilerden birinin devamı olan biçim gereksizdir ("iltih" varken "iltihap")
+        if len(x) >= 2 and not any(x.startswith(y) for y in sonuc):
+            sonuc.append(x)
+    return sonuc
+
+
 def fts_sorgusu(sorgu):
-    """Kullanıcının sorgusunu FTS5 ifadesine çevirir. Uzun sözcükler köküne yakın bir önekle aranır."""
+    """Kullanıcının sorgusunu FTS5 ifadesine çevirir. Sözcükler köküne yakın bir önekle aranır."""
     parca = []
     for w in sozcukler(sorgu):
         if len(w) < 2:
             continue
         w = w.replace('"', "")
-        parca.append('"%s"*' % w[:5] if len(w) > 5 else '"%s"*' % w)
-    return " OR ".join(parca)
+        parca += ['"%s"*' % x for x in onekler(w)]
+    return " OR ".join(dict.fromkeys(parca))
 
 
 def parcala(metin, n=PARCA_SOZCUK, ortusme=ORTUSME):
@@ -361,7 +409,7 @@ def anlamli_sozcukler(sorgu):
 
 
 def _onek(w):
-    return w[:5] if len(w) > 5 else w
+    return onekler(w)[0]
 
 
 def _agirliklar(db, sozler):
@@ -371,7 +419,7 @@ def _agirliklar(db, sozler):
     for w in sozler:
         try:
             df = db.execute("SELECT COUNT(*) FROM parca_fts WHERE parca_fts MATCH ?",
-                            ['"%s"*' % _onek(w).replace('"', "")]).fetchone()[0]
+                            [" OR ".join('"%s"*' % o.replace('"', "") for o in onekler(w))]).fetchone()[0]
         except sqlite3.OperationalError:
             df = 0
         out[w] = math.log((n + 1) / (df + 1)) + 1
@@ -384,7 +432,7 @@ def sozcuk_kapsami(metin, agirlik):
         return None
     var = set(sozcukler(metin))
     toplam = sum(agirlik.values())
-    bulunan = sum(a for w, a in agirlik.items() if any(x.startswith(_onek(w)) for x in var))
+    bulunan = sum(a for w, a in agirlik.items() if any(x.startswith(o) for o in onekler(w) for x in var))
     return round(bulunan / toplam, 3) if toplam else None
 
 

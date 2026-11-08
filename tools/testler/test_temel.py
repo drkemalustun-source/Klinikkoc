@@ -72,6 +72,18 @@ class BilgiBankasi(unittest.TestCase):
         self.assertEqual(bilgi_bankasi.fts_sorgusu("İltihabı"), '"iltih"*')
         self.assertEqual(bilgi_bankasi.fts_sorgusu("a"), "")
 
+    def test_hafif_kok_bulucu(self):
+        ok = bilgi_bankasi.onekler
+        self.assertEqual(ok("apsede"), ["apse"])      # 5 harflik önek "apsed" yalın "apse"yi kaçırırdı
+        self.assertEqual(ok("apseler"), ["apse"])
+        self.assertEqual(ok("dişlerin"), ["diş"])
+        self.assertEqual(ok("hastaya"), ["hasta"])
+        self.assertEqual(ok("kaybı")[:2], ["kayb", "kayıp"])  # ünlü düşmesi
+        self.assertIn("kayb", ok("kayıp"))
+        self.assertEqual(ok("periodontitis"), ["perio"])  # uzun sözcükte önceki davranış korunur
+        self.assertEqual(ok("kanal"), ["kanal"])
+        self.assertEqual(bilgi_bankasi.fts_sorgusu("apsede drenaj"), '"apse"* OR "drena"*')
+
     def test_parcalama_ortusur(self):
         p = bilgi_bankasi.parcala(" ".join(str(i) for i in range(250)), n=100, ortusme=20)
         self.assertEqual(len(p), 3)
