@@ -55,6 +55,8 @@ dersin eğitmenini, öğretim kurallarını, hedeflerini, öğretmen notlarını
 oturum boyunca o kurallara uy. Öğrencinin ilerlemesini kayit_yaz ile işle, bitişte rapor_yaz ile rapor yaz.
 Bilgi bankası: Cevabından emin değilsen ya da öğrenci ders dışı görünen bir şey sorarsa önce bilgi_ara ile
 dersin kaynaklarında, anlatımında, öğretmen notlarında ve vakalarında ara; bulduğun parçanın kaynağını (sayfa) söyle.
+bilgi_ara sonucundaki dayanak alanına uy: "yok" ise kaynakta olmadığını söyle, "zayif" ise yalnız parçanın
+açıkça söylediğini aktar.
 Vakalar: Dersin vaka kartları varsa (vakalar aracı) vaka_oku ile bir vakayı aç ve dönen vaka kurallarına uy.
 Her cevaplanan soruyu ve vaka adımını kayit_yaz'ın cevaplar alanına işle (Bloom düzeyi ve rubrik puanıyla);
 öğrenci "karnem" derse karne aracını çağır.
@@ -190,7 +192,8 @@ ARACLAR = [
         "name": "bilgi_ara",
         "description": "Bu bilgisayardaki derslerin kaynak metinlerinde (ders notu/makale sayfaları), hazır anlatımlarında, "
                        "sorularında, öğretmen notlarında ve vaka kartlarında arar. Sözcük araması her zaman açıktır; "
-                       "anlam araması kuruluysa anlamca yakın parçaları da bulur. Her sonuçta kaynak (sayfa) bilgisi vardır.",
+                       "anlam araması kuruluysa anlamca yakın parçaları da bulur. Her sonuçta kaynak (sayfa) bilgisi vardır. "
+                       "Sonuçta 'dayanak' (guclu | zayif | yok) kaynakta bu soruya gerçekten dayanak olup olmadığını söyler.",
         "inputSchema": {"type": "object", "properties": {
             "sorgu": {"type": "string", "description": "aranacak soru ya da anahtar sözcükler (Türkçe)"},
             "ders": {"type": "string", "description": "yalnız bu derste ara (isteğe bağlı)"},
@@ -975,12 +978,24 @@ def ar_bilgi_ara(a):
     # Değişen dersler her aramadan önce yeniden dizinlenir (değişmeyenler saniyenin altında atlanır).
     bilgi_bankasi.dizinle(model=model, sessiz=True)
     k = max(1, min(int(a.get("k") or 6), 15))
-    sonuclar = bilgi_bankasi.ara(sorgu, a.get("ders"), a.get("tur"), k, model=model)
+    sonuclar, oz = bilgi_bankasi.ara_ve_dayanak(sorgu, a.get("ders"), a.get("tur"), k, model=model)
     out = {"sorgu": sorgu, "anlam_aramasi": "açık" if model.hazir else "kapalı (yalnız sözcük araması)",
-           "sonuclar": sonuclar}
+           "dayanak": oz["dayanak"]}
+    if DAYANAK_TALIMAT.get(oz["dayanak"]):
+        out["talimat"] = DAYANAK_TALIMAT[oz["dayanak"]]
+    out["dayanak_olcumu"] = {x: oz[x] for x in ("en_iyi_benzerlik", "en_iyi_kapsam", "sozcuk_eslesen_sayi")}
+    out["sonuclar"] = sonuclar
     if not sonuclar:
         out["not"] = "Sonuç yok. Başka sözcüklerle ya da daha kısa bir sorguyla dene; yine yoksa 'kaynaklarda bulamadım' de."
     return metin(out)
+
+
+DAYANAK_TALIMAT = {
+    "yok": "Kaynakta bu soruya dayanak bulunamadı. Ders dışı bilgi verme; ortak kurallar §1'i uygula "
+           "(\"Bu sorunun cevabı ders kaynağında yer almıyor.\"). Sorgu çok kısa ya da farklı sözcüklerle yazıldıysa "
+           "bir kez başka sözcüklerle yeniden arayabilirsin.",
+    "zayif": "Dayanak zayıf. Yalnız parçanın açıkça söylediğini aktar; kalanını 'kaynakta yok' diye ayır.",
+}
 
 
 # ---------- Vakalar ----------

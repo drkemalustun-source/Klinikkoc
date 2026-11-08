@@ -80,6 +80,53 @@ class BilgiBankasi(unittest.TestCase):
         self.assertTrue(any("anlam" in x["yontem"] for x in r))
         self.assertTrue(any(set(x["yontem"].split("+")) == {"sözcük", "anlam"} for x in r))
 
+    # ---- Dayanak etiketi ----
+    DERS_DISI = "Diş beyazlatmada hangi jel daha etkilidir?"
+
+    def ders_cumlesi(self):
+        """Dersin kendi anlatımından uzunca bir cümle."""
+        with open(os.path.join(KOK, "lessons", "peri-implantitis-cerrahi", "ders.json"), encoding="utf-8") as f:
+            d = json.load(f)
+        for s in d["sections"]:
+            for st in s.get("steps", []):
+                c = bilgi_bankasi.duz(st.get("say"))
+                if len(c.split()) >= 12:
+                    return c
+        self.fail("derste cümle yok")
+
+    def test_dayanak_model_kapaliyken(self):
+        bilgi_bankasi.dizinle(yol=self.db, sessiz=True)
+        r, oz = bilgi_bankasi.ara_ve_dayanak(self.DERS_DISI, yol=self.db)
+        self.assertTrue(r)  # RRF yine sonuç döndürür; dayanak etiketi bunu ayırt etmeli
+        self.assertNotEqual(oz["dayanak"], "guclu")
+        self.assertFalse(oz["anlam_aramasi"])
+        self.assertIsNone(oz["en_iyi_benzerlik"])
+        self.assertTrue(all("sozcuk_eslesti" in x and "sozcuk_kapsami" in x for x in r))
+        self.assertEqual(bilgi_bankasi.ara_ve_dayanak("Karnıyarık nasıl yapılır?", yol=self.db)[1]["dayanak"], "yok")
+        self.assertEqual(bilgi_bankasi.ara_ve_dayanak(self.ders_cumlesi(), yol=self.db)[1]["dayanak"], "guclu")
+
+    def test_dayanak_anlam_ile(self):
+        m = SahteModel()
+        bilgi_bankasi.dizinle(model=m, yol=self.db, sessiz=True)
+        r, oz = bilgi_bankasi.ara_ve_dayanak(self.DERS_DISI, model=m, yol=self.db)
+        self.assertNotEqual(oz["dayanak"], "guclu")
+        self.assertTrue(oz["anlam_aramasi"])
+        self.assertIsNotNone(oz["en_iyi_benzerlik"])
+        self.assertTrue(all("anlam_benzerligi" in x for x in r if "anlam" in x["yontem"]))
+        self.assertEqual(bilgi_bankasi.ara_ve_dayanak(self.ders_cumlesi(), model=m, yol=self.db)[1]["dayanak"], "guclu")
+
+    def test_dayanak_dolgu_sozcukleri_sayilmaz(self):
+        self.assertEqual(bilgi_bankasi.anlamli_sozcukler("Hangi jel daha etkili, nasıl?"), ["jel", "etkili"])
+        self.assertEqual(bilgi_bankasi.dayanak([])["dayanak"], "yok")
+
+    def test_dayanak_esigi_ortam_degiskeniyle(self):
+        os.environ["KLINIK_KOC_DENEME_ESIK"] = "0.5"
+        try:
+            self.assertEqual(bilgi_bankasi._esik("DENEME_ESIK", 0.9), 0.5)
+        finally:
+            del os.environ["KLINIK_KOC_DENEME_ESIK"]
+        self.assertEqual(bilgi_bankasi._esik("YOK_BOYLE_ESIK", 0.9), 0.9)
+
     def test_degismeyen_ders_atlanir(self):
         bilgi_bankasi.dizinle(yol=self.db, sessiz=True)
         r = bilgi_bankasi.dizinle(yol=self.db, sessiz=True)
@@ -172,6 +219,10 @@ class McpSunucusu(unittest.TestCase):
                 adlar = {t["name"] for t in cagir("tools/list")["tools"]}
                 self.assertTrue({"bilgi_ara", "vakalar", "vaka_oku", "karne", "kayit_yaz", "anlatima_devam"} <= adlar)
                 self.assertTrue(arac("bilgi_ara", sorgu="süpürasyon", k=3)["sonuclar"])
+                dd = arac("bilgi_ara", sorgu="Diş beyazlatmada hangi jel daha etkilidir?")
+                self.assertIn(dd["dayanak"], ("yok", "zayif"))
+                self.assertIn("talimat", dd)
+                self.assertEqual(arac("bilgi_ara", sorgu="Karnıyarık nasıl yapılır?")["dayanak"], "yok")
                 self.assertEqual(arac("vakalar", ders="peri-implantitis-cerrahi")["vakalar"][0]["vaka"], "ornek-implant-kanama")
                 self.assertIn("talimat", arac("vaka_oku", ders="peri-implantitis-cerrahi", vaka="ornek-implant-kanama"))
                 arac("kayit_yaz", ogrenci="Test Öğrenci", ders="peri-implantitis-cerrahi", cevaplar=[
@@ -655,6 +706,81 @@ class DikteTerimSozlugu(unittest.TestCase):
             yol = sunucu.olcum_kaydet({"sonuc": {"tur": "dikte-karsilastirmasi"}, "md": "# x"}, d)
             self.assertTrue(os.path.exists(yol))
             self.assertTrue(os.path.exists(yol[:-5] + ".md"))
+
+
+class EgitmenSenaryolari(unittest.TestCase):
+    """qa-testi/egitmen-senaryolari.json (ve varsa ozel/egitmen-senaryolari-*.json) yapı denetimi."""
+    ALANLAR = ("id", "baslik", "egitmen", "ders", "ogrenci_mesajlari", "beklenen", "kural", "kirmizi_cizgi")
+
+    def dosyalar(self):
+        import glob
+        return [os.path.join(KOK, "qa-testi", "egitmen-senaryolari.json")] + \
+            sorted(glob.glob(os.path.join(KOK, "ozel", "egitmen-senaryolari*.json")))
+
+    @staticmethod
+    def basliklar(dosya):
+        with open(os.path.join(KOK, "egitmenler", dosya), encoding="utf-8") as f:
+            return {x[3:].strip() for x in f if x.startswith("## ")}
+
+    def denetle(self, yol):
+        with open(yol, encoding="utf-8") as f:
+            d = json.load(f)
+        self.assertIsInstance(d.get("senaryolar"), list)
+        self.assertTrue(d["senaryolar"])
+        idler = [s.get("id") for s in d["senaryolar"]]
+        self.assertEqual(len(idler), len(set(idler)), "yinelenen senaryo kimliği")
+        for s in d["senaryolar"]:
+            ad = "%s: %s" % (os.path.basename(yol), s.get("id"))
+            for alan in self.ALANLAR:
+                self.assertTrue(s.get(alan), "%s: '%s' eksik" % (ad, alan))
+            for alan in ("ogrenci_mesajlari", "beklenen", "kirmizi_cizgi", "kural"):
+                self.assertIsInstance(s[alan], list, ad)
+            self.assertIn(s["egitmen"], ("inci", "mercan", "ikisi"), ad)
+            klasor = os.path.join(KOK, "lessons", s["ders"])
+            eg_yol = os.path.join(klasor, "egitmen.json")
+            self.assertTrue(os.path.exists(eg_yol), "%s: ders yok: %s" % (ad, s["ders"]))
+            with open(eg_yol, encoding="utf-8") as f:
+                eg = json.load(f)
+            if s["egitmen"] != "ikisi":
+                izinli = {eg.get("egitmen")} | set(eg.get("izinliEgitmenler") or [])
+                self.assertIn(s["egitmen"], izinli, "%s: dersin eğitmeni değil" % ad)
+            if s.get("hedef"):
+                self.assertIn(s["hedef"], {h["id"] for h in eg.get("hedefler", [])}, "%s: hedef yok" % ad)
+            if s.get("yanilgi"):
+                self.assertIn(s["yanilgi"], {y["id"] for y in eg.get("yanilgilar", [])}, "%s: yanılgı yok" % ad)
+            if s.get("vaka"):
+                vyol = os.path.join(klasor, "vakalar", s["vaka"] + ".json")
+                self.assertTrue(os.path.exists(vyol), "%s: vaka yok" % ad)
+                if s.get("dugum"):
+                    with open(vyol, encoding="utf-8") as f:
+                        v = json.load(f)
+                    self.assertIn(s["dugum"], {n.get("id") for n in v.get("dugumler", [])}, "%s: düğüm yok" % ad)
+            for k in s["kural"]:
+                self.assertIn(k.get("dosya"), ("ortak.md", "inci.md", "mercan.md"), ad)
+                self.assertIn(k.get("bolum"), self.basliklar(k["dosya"]),
+                              "%s: %s içinde '%s' bölümü yok" % (ad, k["dosya"], k.get("bolum")))
+
+    def test_senaryo_dosyalari(self):
+        for yol in self.dosyalar():
+            with self.subTest(dosya=os.path.basename(yol)):
+                self.denetle(yol)
+
+    def test_beklenen_senaryolar_var(self):
+        with open(self.dosyalar()[0], encoding="utf-8") as f:
+            idler = {s["id"].split("-")[0] for s in json.load(f)["senaryolar"]}
+        self.assertTrue({"S01", "S02", "S03", "S04", "S05", "S06", "S07", "S08", "S09"} <= idler)
+
+    def test_bozuk_senaryo_yakalanir(self):
+        with open(self.dosyalar()[0], encoding="utf-8") as f:
+            d = json.load(f)
+        d["senaryolar"][0]["hedef"] = "H99"
+        d["senaryolar"][1]["kural"] = [{"dosya": "ortak.md", "bolum": "42. Olmayan bölüm"}]
+        with tempfile.TemporaryDirectory() as g:
+            yol = os.path.join(g, "s.json")
+            with open(yol, "w", encoding="utf-8") as f:
+                json.dump(d, f, ensure_ascii=False)
+            with self.assertRaises(AssertionError):
+                self.denetle(yol)
 
 
 class YayinDenetimi(unittest.TestCase):
