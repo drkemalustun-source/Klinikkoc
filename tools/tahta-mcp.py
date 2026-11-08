@@ -1072,7 +1072,12 @@ VAKA_TALIMAT = """Vakayı şöyle yürüt (vaka bir sınav değil, klinik akıl 
   (vaka_karar|vaka_acik|vaka_veri), puan, en_yuksek (karar: 1, acik: rubrik toplamı, veri: gerekli bulgu sayısı),
   ilk_deneme, ipucu, tehlikeli, karsilanan_olcutler, eksik_olcutler.
 - son düğümünde 'anlat'ı söyle, kapanis.ozet ve ogrenme_noktalari ile toparla, kayit_yaz'a vaka_sonucu yaz
-  (yeniden_anlatilan_bolumler dahil). Sonra karnesini görmek isteyip istemediğini sor.
+  (yeniden_anlatilan_bolumler dahil).
+- Kapanışta bir "Ya şöyle olsaydı?" sorusu sor: vakanın tek bir bulgusunu değiştir (ör. "ateş de olsaydı",
+  "lezyon dişetiyle sınırlı kalsaydı") ve tanının ya da tedavinin nasıl değişeceğini sor. Değiştirdiğin bulgu, ders
+  kaynağında ya da vaka kartında tabloları birbirinden ayıran bir bulgu olarak geçmeli; kaynakta olmayan senaryo
+  kurma. Bir soru yeter; cevabı kayit_yaz içinde uygulama türüyle işle.
+- Sonra karnesini görmek isteyip istemediğini sor.
 - Görseli göstermeden önce gorsel_bak ile bak; gorsel_aciklama'nın ötesinde yorum yapma."""
 
 
