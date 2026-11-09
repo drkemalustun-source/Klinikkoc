@@ -14,7 +14,8 @@ Kullanım:
 
 Ses motoru ve ses ses/ses-ayari.json'dan gelir (varsayılan: Pocket TTS Türkçe, female_3,
 wite-tech/pocket-tts-turkish, CC-BY-4.0). Pocket ayrı bir Python ortamında çalışır; bir kez:
-  python tools/ses-uret.py --kur-pocket [Python 3.10–3.13 yolu]
+  python tools/ses-uret.py --kur-pocket [Python 3.10–3.13 yolu]   (yol verilmezse uygun Python aranır)
+  python tools/ses-uret.py --pocket-durum   /   --dene-pocket
 Eski Piper sesi için: --motor piper (ya da --ses tr_TR-dfki-medium).
 
 Yaptıkları:
@@ -168,6 +169,9 @@ def main():
                     help="pocket: female_1..3 / male_1..3; piper: tr_TR-<ad>-<kalite> (vars. ayar dosyasından)")
     ap.add_argument("--kur-pocket", nargs="?", const="", metavar="PYTHON",
                     help="Pocket ses ortamını (.ses-ortami) kur ve çık; isteğe bağlı Python 3.10–3.13 yolu")
+    ap.add_argument("--pocket-durum", action="store_true",
+                    help="Pocket ses ortamı kurulu mu? (çıkış kodu 0: kurulu) ve çık")
+    ap.add_argument("--dene-pocket", action="store_true", help="Pocket ile kısa bir cümle seslendir, çal ve çık")
     ap.add_argument("--hiz", type=float, default=1.2, help="oynatıcının başlangıç hızı (vars. 1.2)")
     ap.add_argument("--kalite", type=float, default=0.6,
                     help="MP3 sıkıştırma 0 (en iyi) – 1 (en küçük); vars. 0.6")
@@ -180,6 +184,12 @@ def main():
         sys.exit(subprocess.call([sys.executable, "-m", "pip", "install", "--upgrade"] + PAKETLER))
     if a.kur_pocket is not None:
         sys.exit(pocket_ses.kur(a.kur_pocket or None))
+    if a.pocket_durum:
+        kurulu = pocket_ses.ortam_kurulu()
+        print("Pocket ses ortamı " + ("kurulu." if kurulu else "kurulu değil."))
+        sys.exit(0 if kurulu else 1)
+    if a.dene_pocket:
+        sys.exit(pocket_ses.sesi_dene())
     if a.deneme and not a.cikti:
         ap.error("--deneme ile --cikti klasörü de verin (dersin kendi ses klasörü bozulmasın)")
     if a.motor is None:

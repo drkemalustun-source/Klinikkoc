@@ -28,7 +28,7 @@ vakaya geri döner. Sorular not için değildir; karne yalnız öğrencinin kend
 
 | | Oynatıcı | Canlı eğitmen |
 |---|---|---|
-| Nasıl açılır | `index.html` (tarayıcıda) | Claude masaüstü uygulaması + `KUR.bat` (Windows) ya da `KUR.command` (Mac) |
+| Nasıl açılır | `index.html` (tarayıcıda) | Claude masaüstü uygulaması + `KUR-Windows.bat` ya da `KUR-Mac.command` |
 | Maliyet | Ücretsiz, internetsiz çalışır | Öğrencinin kendi Claude aboneliği; ek ücret yok, API anahtarı gerekmez |
 | Ne yapar | Hazır anlatım, sorular, açık uçlu soru + öz değerlendirme, karne | Yukarıdakilere ek olarak: sohbet, sesli konuşma, dallanan vaka, rubrikle puanlama, kaynakta arama |
 | Ayrıntı | [belgeler/oynatici.md](belgeler/oynatici.md) | [belgeler/canli-tahta.md](belgeler/canli-tahta.md) |
@@ -39,9 +39,9 @@ vakaya geri döner. Sorular not için değildir; karne yalnız öğrencinin kend
 
 - Yalnız oynatıcı: `index.html` dosyasına çift tıklayın.
 - Canlı eğitmen: [Python](https://www.python.org/downloads/) ve Claude masaüstü uygulaması kurulu olmalı.
-  `KUR.bat` dosyasına çift tıklayın, Claude uygulamasını tamamen kapatıp açın, sonra yazın:
+  `KUR-Windows` dosyasına çift tıklayın, Claude uygulamasını tamamen kapatıp açın, sonra yazın:
   **"Tahtayı aç, peri-implantitis dersine başlayalım. Adım Ayşe, numaramın son üç hanesi 123."**
-- Mac'te `KUR.bat` yerine `KUR.command` dosyasına çift tıklayın. macOS ilk açılışta "geliştiricisi doğrulanamadı"
+- Mac'te `KUR-Windows` yerine `KUR-Mac` dosyasına çift tıklayın. macOS ilk açılışta "geliştiricisi doğrulanamadı"
   derse dosyaya sağ tıklayıp **Aç → Aç** deyin. Python 3 yoksa kurulum bunu söyler
   ([python.org](https://www.python.org/downloads/macos/)). Claude'u kapatmak için Cmd+Q.
 

@@ -1004,5 +1004,50 @@ class ClaudeAyarDosyasi(unittest.TestCase):
         self.assertIn("klinik-koc", _json_oku(yol)["mcpServers"])
 
 
+class PocketPythonBulma(unittest.TestCase):
+    """Pocket için Python 3.10–3.13 aranır; 3.14 atlanır; hiçbiri yoksa kur() açık mesajla 2 döner."""
+
+    def setUp(self):
+        import pocket_ses
+        self.p = pocket_ses
+        self.eski = (pocket_ses._surum, pocket_ses._uv)
+
+    def tearDown(self):
+        self.p._surum, self.p._uv = self.eski
+
+    def test_314_atlanir_313_secilir(self):
+        def sahte(komut):
+            if komut == [sys.executable]:
+                return (3, 14), sys.executable
+            if komut[-1] in ("-3.13",) or komut[0].endswith("python3.13"):
+                return (3, 13), "/yol/python313"
+            return None
+        self.p._surum = sahte
+        self.p._uv = lambda: None
+        import shutil
+        eski_which = shutil.which
+        shutil.which = lambda ad: "/usr/bin/" + ad if ad == "python3.13" else None
+        try:
+            self.assertEqual(self.p.uygun_python(), "/yol/python313")
+        finally:
+            shutil.which = eski_which
+
+    def test_hic_yoksa_kur_2_doner(self):
+        self.p._surum = lambda komut: ((3, 14), "x") if komut == [sys.executable] else None
+        self.p._uv = lambda: None
+        import io
+        import contextlib
+        cikti = io.StringIO()
+        with contextlib.redirect_stdout(cikti):
+            self.assertEqual(self.p.kur(), 2)
+        self.assertIn("Python 3.10–3.13 gerekir", cikti.getvalue())
+
+    def test_surum_siniri(self):
+        self.assertTrue(self.p._uygun_mu((3, 10)))
+        self.assertTrue(self.p._uygun_mu((3, 13)))
+        self.assertFalse(self.p._uygun_mu((3, 14)))
+        self.assertFalse(self.p._uygun_mu((3, 9)))
+
+
 if __name__ == "__main__":
     unittest.main()
