@@ -41,6 +41,10 @@ vakaya geri döner. Sorular not için değildir; karne yalnız öğrencinin kend
 - Canlı eğitmen: [Python](https://www.python.org/downloads/) ve Claude masaüstü uygulaması kurulu olmalı.
   `KUR-Windows` dosyasına çift tıklayın, Claude uygulamasını tamamen kapatıp açın, sonra yazın:
   **"Tahtayı aç, peri-implantitis dersine başlayalım. Adım Ayşe, numaramın son üç hanesi 123."**
+  Windows dosya uzantılarını gizleyebilir; adı yalnız **KUR-Windows** görünen dosyaya çift tıklayın.
+  Başarıyı denetlemek için: Claude'da **Ayarlar › Geliştirici** ekranında "klinik-koc" **Çalışıyor** görünmeli.
+- Ses: KUR, doğal Türkçe kadın sesini (~1 GB) isteğe bağlı kurar; kurulmazsa daha basit bir yedek ses kullanılır.
+  Hangi sesin çaldığı tahtanın üst çubuğunda yazar.
 - Mac'te `KUR-Windows` yerine `KUR-Mac` dosyasına çift tıklayın. macOS ilk açılışta "geliştiricisi doğrulanamadı"
   derse dosyaya sağ tıklayıp **Aç → Aç** deyin. Python 3 yoksa kurulum bunu söyler
   ([python.org](https://www.python.org/downloads/macos/)). Claude'u kapatmak için Cmd+Q.
