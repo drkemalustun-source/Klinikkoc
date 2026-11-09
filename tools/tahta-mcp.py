@@ -13,6 +13,9 @@ Kurulum (bir kez):
 Kaldırma:
   python tools/tahta-mcp.py --kaldir
 
+Claude ayar dosyasını bulamazsa (Ayarlar › Geliştirici › "Yapılandırmayı düzenle" ile açılan dosya):
+  python tools/tahta-mcp.py --kur --ayar "<dosyanın yolu>"
+
 Yalnızca Python'un kendi kitaplığı gerekir. Doğal ses için ayrıca Piper:
   python tools/ses-uret.py --kur   (zaten kuruluysa gerekmez)
 """
@@ -1772,47 +1775,167 @@ def calis():
 
 
 # ---------- Claude masaüstü ayarı ----------
-def ayar_dosyalari():
-    yollar = []
-    if os.name == "nt":
-        appdata = os.environ.get("APPDATA", "")
-        yerel = os.environ.get("LOCALAPPDATA", "")
-        # Microsoft Store / MSIX kurulumu ayarı paket klasöründe tutar.
-        for p in glob.glob(os.path.join(yerel, "Packages", "Claude_*", "LocalCache", "Roaming", "Claude")):
-            yollar.append(p)
-        yollar.append(os.path.join(appdata, "Claude"))
-    elif sys.platform == "darwin":
-        yollar.append(os.path.expanduser("~/Library/Application Support/Claude"))
+# Claude masaüstü uygulamasının MCP ayarı (claude_desktop_config.json) kuruluma göre farklı yerdedir:
+#  - Windows, Microsoft Store (MSIX) kurulumu, yeni sürümler: %LOCALAPPDATA%\Claude-Data\claude_<paket>\
+#    (uygulama veriyi buraya taşır, eski paket klasörüne ".user-data-left.*" işareti bırakır)
+#  - Windows, MSIX eski sürümler: %LOCALAPPDATA%\Packages\Claude_<paket>\LocalCache\Roaming\Claude\
+#  - Windows, .exe kurulumu: %APPDATA%\Claude\
+#  - macOS: ~/Library/Application Support/Claude/   - Linux: ~/.config/Claude/
+# Kesin yol, uygulamada Ayarlar › Geliştirici › "Yapılandırmayı düzenle" düğmesinin açtığı dosyadır;
+# bulunamazsa kullanıcı onu --ayar "<yol>" ile verebilir.
+AYAR_ADI = "claude_desktop_config.json"
+
+
+def _paket_kimligi(klasor_adi):
+    """'Claude_pzs8sxrjxfjjc' / 'claude_pzs8sxrjxfjjc' → 'pzs8sxrjxfjjc'."""
+    return klasor_adi.split("_", 1)[1].lower() if "_" in klasor_adi else ""
+
+
+def ayar_adaylari(isletim=None, ortam=None):
+    """Olası ayar dosyalarını [(yol, tur, aciklama)] olarak döndürür.
+
+    tur: "asil"  → Claude'un okuduğu dosya (kur buraya yazar)
+         "eski"  → eskiden kullanılan, artık okunmayan dosya (yalnız bilgi için listelenir)
+    Klasörü olmayan adaylar listelenmez. Hiç aday yoksa boş liste döner.
+    """
+    isletim = isletim or ("nt" if os.name == "nt" else sys.platform)
+    ortam = os.environ if ortam is None else ortam
+    sonuc = []
+    if isletim == "nt":
+        appdata = ortam.get("APPDATA", "")
+        yerel = ortam.get("LOCALAPPDATA", "")
+        tasinan = set()
+        if yerel:
+            for d in sorted(glob.glob(os.path.join(yerel, "Claude-Data", "claude_*"))):
+                if os.path.isdir(d):
+                    tasinan.add(_paket_kimligi(os.path.basename(d)))
+                    sonuc.append((os.path.join(d, AYAR_ADI), "asil", "Microsoft Store kurulumu (yeni yer)"))
+        msix_var = False
+        if yerel:
+            for paket in sorted(glob.glob(os.path.join(yerel, "Packages", "Claude_*"))):
+                d = os.path.join(paket, "LocalCache", "Roaming", "Claude")
+                if not os.path.isdir(d):
+                    continue
+                msix_var = True
+                ayrildi = glob.glob(os.path.join(d, ".user-data-left*"))
+                if ayrildi or _paket_kimligi(os.path.basename(paket)) in tasinan:
+                    sonuc.append((os.path.join(d, AYAR_ADI), "eski", "Microsoft Store paket klasörü (veri taşınmış)"))
+                else:
+                    sonuc.append((os.path.join(d, AYAR_ADI), "asil", "Microsoft Store paket klasörü"))
+        if appdata and os.path.isdir(os.path.join(appdata, "Claude")):
+            if msix_var or tasinan:
+                # Store kurulumunda uygulama %APPDATA%\Claude'u okumaz.
+                sonuc.append((os.path.join(appdata, "Claude", AYAR_ADI), "eski", "%APPDATA%\\Claude (Store kurulumu bunu okumaz)"))
+            else:
+                sonuc.append((os.path.join(appdata, "Claude", AYAR_ADI), "asil", "Claude .exe kurulumu"))
     else:
-        yollar.append(os.path.expanduser("~/.config/Claude"))
-    var = [p for p in yollar if os.path.isdir(p)]
-    return [os.path.join(p, "claude_desktop_config.json") for p in (var or yollar[-1:])]
+        if isletim == "darwin":
+            d = os.path.expanduser("~/Library/Application Support/Claude")
+        else:
+            d = os.path.join(ortam.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"), "Claude")
+        if os.path.isdir(d):
+            sonuc.append((os.path.join(d, AYAR_ADI), "asil", "Claude masaüstü"))
+    return sonuc
+
+
+def ayar_dosyalari():
+    """Claude'un okuduğu ayar dosyaları (kur bunlara yazar)."""
+    return [y for y, tur, _ in ayar_adaylari() if tur == "asil"]
+
+
+YOL_GOSTER = ("Claude'un ayar dosyası bulunamadı.\n"
+              "Claude masaüstü uygulamasını açın → Ayarlar → Geliştirici → \"Yapılandırmayı düzenle\".\n"
+              "Açılan dosyanın yolunu kopyalayıp şunu çalıştırın:\n"
+              "  python tools/tahta-mcp.py --kur --ayar \"<dosyanın yolu>\"")
+
+
+def _ayar_yolu_arg():
+    if "--ayar" in sys.argv:
+        i = sys.argv.index("--ayar")
+        if i + 1 >= len(sys.argv):
+            sys.exit("--ayar'dan sonra dosya yolunu yazın.")
+        yol = os.path.abspath(os.path.expanduser(sys.argv[i + 1].strip('"')))
+        if os.path.isdir(yol):
+            yol = os.path.join(yol, AYAR_ADI)
+        return yol
+    return None
+
+
+def sunucu_girdisi():
+    return {"command": sys.executable, "args": [os.path.abspath(__file__)],
+            "env": {"PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}}
+
+
+def ayara_yaz(yol, kaldir=False):
+    """Yalnız mcpServers[AD]'yi değiştirir; dosyadaki öteki alanlar (preferences vb.) olduğu gibi kalır."""
+    os.makedirs(os.path.dirname(yol), exist_ok=True)
+    ayar = {}
+    if os.path.exists(yol) and os.path.getsize(yol) > 0:
+        try:
+            with open(yol, encoding="utf-8-sig") as f:
+                ayar = json.load(f) or {}
+        except Exception:
+            sys.exit("Ayar dosyası okunamadı (bozuk JSON?): %s\nDosyayı düzeltip yeniden deneyin." % yol)
+        shutil.copy2(yol, yol + ".yedek")
+    sunucular = ayar.setdefault("mcpServers", {})
+    if kaldir:
+        sunucular.pop(AD, None)
+    else:
+        sunucular[AD] = sunucu_girdisi()
+    gecici = yol + ".yaziliyor"
+    with open(gecici, "w", encoding="utf-8") as f:
+        json.dump(ayar, f, ensure_ascii=False, indent=2)
+    os.replace(gecici, yol)
 
 
 def kur(kaldir=False):
-    for yol in ayar_dosyalari():
-        os.makedirs(os.path.dirname(yol), exist_ok=True)
-        ayar = {}
-        if os.path.exists(yol):
-            try:
-                ayar = _json_oku(yol) or {}
-            except Exception:
-                sys.exit("Ayar dosyası okunamadı (bozuk JSON?): %s\nDosyayı düzeltip yeniden deneyin." % yol)
-            shutil.copy2(yol, yol + ".yedek")
-        sunucular = ayar.setdefault("mcpServers", {})
-        if kaldir:
-            sunucular.pop(AD, None)
-        else:
-            sunucular[AD] = {"command": sys.executable, "args": [os.path.abspath(__file__)],
-                             "env": {"PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}}
-        with open(yol, "w", encoding="utf-8") as f:
-            json.dump(ayar, f, ensure_ascii=False, indent=2)
-        print(("Kaldırıldı: " if kaldir else "Eklendi: ") + yol)
+    elle = _ayar_yolu_arg()
+    hedefler = [elle] if elle else ayar_dosyalari()
+    if not hedefler:
+        print(YOL_GOSTER)
+        sys.exit(1)
+    for yol in hedefler:
+        ayara_yaz(yol, kaldir)
+        print(("Kaldırıldı: " if kaldir else "Eklendi (Claude'un okuduğu dosya): ") + yol)
+    if not elle:
+        for yol, tur, aciklama in ayar_adaylari():
+            if tur == "eski":
+                print("Atlandı (eski yer, Claude artık okumuyor): %s" % yol)
     if not kaldir:
-        print("\nŞimdi Claude masaüstü uygulamasını TAMAMEN kapatın (saat yanındaki simgeye sağ tık → Quit/Çık)")
-        print("ve yeniden açın. Sohbet kutusunun altındaki araçlar menüsünde 'klinik-koc' görünmelidir.")
+        print("\nŞimdi Claude masaüstü uygulamasını TAMAMEN kapatın: saatin yanındaki ^ → Claude simgesi →")
+        print("sağ tık → Çık (Mac'te Cmd+Q). Sonra yeniden açın.")
+        print("Denetim: Claude'da Ayarlar › Geliştirici ekranında '%s' \"Çalışıyor\" görünmeli." % AD)
+        print("Görünmüyorsa: aynı ekranda \"Yapılandırmayı düzenle\"ye basın, açılan dosyanın yolunu")
+        print("  python tools/tahta-mcp.py --kur --ayar \"<yol>\"  ile verin.")
         print("Sonra Claude'a şunu yazın:  Tahtayı aç ve bana Şekil 2'yi anlat.")
         kayit_yeri_hazirla()
+
+
+def ayar_raporu():
+    """--dene için: bulunan her ayar dosyasında bu sunucu var mı? Sorun varsa uyarı satırları döndürür."""
+    satirlar, uyarilar = [], []
+    adaylar = ayar_adaylari()
+    if not adaylar:
+        uyarilar.append(YOL_GOSTER)
+    for yol, tur, aciklama in adaylar:
+        durum = "dosya yok"
+        if os.path.exists(yol):
+            try:
+                with open(yol, encoding="utf-8-sig") as f:
+                    g = ((json.load(f) or {}).get("mcpServers") or {}).get(AD)
+                if g:
+                    hedef = (g.get("args") or [""])[0]
+                    durum = AD + " var" + ("" if os.path.exists(hedef) else " AMA dosyası yok: " + hedef)
+                    if tur == "asil" and not os.path.exists(hedef):
+                        uyarilar.append("%s girdisi var olmayan bir dosyayı gösteriyor: %s\nKUR'u bu klasörden yeniden çalıştırın." % (AD, hedef))
+                else:
+                    durum = AD + " YOK"
+            except Exception as e:
+                durum = "okunamadı (%s)" % e
+        satirlar.append("  [%s] %s\n        %s — %s" % ("asıl" if tur == "asil" else "eski", aciklama, yol, durum))
+        if tur == "asil" and AD + " var" not in durum:
+            uyarilar.append("Claude'un okuduğu dosyada %s yok: %s\nKUR'u yeniden çalıştırın." % (AD, yol))
+    return satirlar, uyarilar
 
 
 def kayit_yeri_hazirla():
@@ -1833,6 +1956,14 @@ def kendini_dene():
     print("Kayıt klasörü:", KAYIT_KOK)
     d = sunucu_acik()
     print("Yerel sunucu:", "açık, tahta " + ("bağlı" if d and d.get("bagli") else "bağlı değil") if d else "kapalı (Claude açacak)")
+    satirlar, uyarilar = ayar_raporu()
+    print("Claude ayar dosyaları:")
+    for x in satirlar:
+        print(x)
+    for u in uyarilar:
+        print("UYARI: " + u)
+    if not uyarilar:
+        print("Tamam: Claude'un okuduğu ayar dosyasında %s var." % AD)
 
 
 if __name__ == "__main__":
