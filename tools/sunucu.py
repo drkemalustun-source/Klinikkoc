@@ -428,7 +428,8 @@ class Canli:
                     kalan = bitis - time.time()
                     if yeni or degisti or kalan <= 0:
                         return {"komutlar": yeni, "dinliyor": dinliyor,
-                                "bekleyen_konusma": [x["metin"] for x in self.konusmalar]}
+                                "bekleyen_konusma": [x["metin"] for x in self.konusmalar],
+                                "ses": self.ses_bilgisi()}
                     # Kanal yoklaması kısa aralarla yenilenir; ışık titremesin diye ara ara bakılır.
                     self.kosul.wait(min(kalan, 2.0))
             finally:
@@ -455,7 +456,7 @@ class Canli:
             self.sayfa_durumu = durum or {}
             self.son_gorulme = time.time()
             self.kosul.notify_all()
-            return {"sayac": self.sayac}
+            return {"sayac": self.sayac, "ses": self.ses_bilgisi()}
 
     def bitti(self, no, sonuc, durum):
         with self.kosul:
@@ -483,16 +484,60 @@ class Canli:
         return self._ses_mod
 
     def pocket_baslat(self):
-        """Sunucu açılırken çağrılır: ayarda motor=pocket ise model arka planda yüklenmeye başlar."""
+        """Sunucu açılırken çağrılır: ayarda motor=pocket ise model arka planda yüklenmeye başlar.
+        Pocket kurulu değilse (ya da motor=piper ise) yedek Piper sesi arka planda hazırlanır; böylece ilk cümle
+        model indirmesini (~63 MB) beklemez."""
         a = pocket_ses.ayar()
         if a.get("motor") == "pocket":
             POCKET.baslat()
+        if a.get("motor") != "pocket" or not pocket_ses.ortam_python():
+            threading.Thread(target=self._piper_isit, daemon=True).start()
+
+    def _piper_isit(self):
+        with self.ses_kilit:
+            try:
+                self._ses_yukle()
+            except BaseException as e:  # voice_files sys.exit ile de çıkabilir
+                self.ses_hata = str(e)
+
+    def piper_durumu(self):
+        """'hazır' | 'yüklenecek' | hata metni (Piper kurulu değil vb.)."""
+        if self.ses:
+            return "hazır"
+        if self.ses_hata:
+            return self.ses_hata
+        try:
+            import importlib.util as iu
+            if iu.find_spec("piper") is None:
+                return "Piper kurulu değil (python tools/ses-uret.py --kur)"
+        except Exception:
+            pass
+        return "yüklenecek"
+
+    def ses_bilgisi(self):
+        """Hangi sesin GERÇEKTEN kullanılacağı: {"motor": pocket|piper|tarayici, "yazi": kısa açıklama, "ayrinti": ...}."""
+        a = pocket_ses.ayar()
+        yedek = (a.get("yedek") or "tr_TR-dfki-medium").replace("tr_TR-", "").replace("-medium", "")
+        piper = self.piper_durumu()
+        piper_olur = piper in ("hazır", "yüklenecek")
+        if a.get("motor") == "pocket":
+            if POCKET.durum == "hazır":
+                return {"motor": "pocket", "yazi": "Pocket (%s)" % a.get("ses"), "ayrinti": "Pocket %s: hazır" % a.get("ses")}
+            if POCKET.durum == "yükleniyor" and piper_olur:
+                return {"motor": "piper", "yazi": "Pocket yükleniyor · şimdilik Piper",
+                        "ayrinti": "Pocket %s yükleniyor (~1 dk); o zamana kadar Piper %s (yedek)" % (a.get("ses"), yedek)}
+            neden = "Pocket %s: %s" % (a.get("ses"), POCKET.durum)
+        else:
+            neden = "ayarda motor=piper"
+        if piper_olur:
+            return {"motor": "piper", "yazi": "Piper %s (yedek)" % yedek if a.get("motor") == "pocket" else "Piper %s" % yedek,
+                    "ayrinti": "%s → Piper %s kullanılıyor (%s)" % (neden, yedek, piper)}
+        return {"motor": "tarayici", "yazi": "tarayıcı sesi (yedek)",
+                "ayrinti": "%s; Piper: %s → tarayıcının Türkçe sesi kullanılıyor (daha basit ses). "
+                           "Doğal ses için KUR'u yeniden çalıştırın." % (neden, piper)}
 
     def ses_durumu(self):
-        a = pocket_ses.ayar()
-        if a.get("motor") == "pocket":
-            return "Pocket %s: %s" % (a.get("ses"), POCKET.durum)
-        return "hazır" if self.ses else (self.ses_hata or "ilk anlatımda yüklenecek")
+        return self.ses_bilgisi()["ayrinti"]
 
     def _ses_yukle(self):
         if self.ses:
@@ -519,9 +564,9 @@ class Canli:
         with self.ses_kilit:
             try:
                 s = self._ses_yukle()
-            except Exception as e:
+            except BaseException as e:  # model indirilemezse voice_files sys.exit ile çıkabilir
                 self.ses_hata = str(e)
-                raise
+                raise RuntimeError(self.ses_hata)
             mod, voice = s["mod"], s["voice"]
             yazi = mod.pronounce(mod.plain(metin), s["sozluk"])
             parcalar = [c.audio_int16_array.tobytes() for c in voice.synthesize(yazi)]

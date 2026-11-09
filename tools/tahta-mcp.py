@@ -1489,8 +1489,10 @@ def ar_tahtayi_ac(_):
     if not d.get("bagli"):
         return metin({"durum": "bekleniyor", "not": "Tarayıcıda canli.html açılıyor; birkaç saniye sonra tekrar dene."})
     return metin({"durum": "hazır", "tahta": d.get("sayfa"), "ses": d.get("ses"), "dikte": dikte_durumu(d),
-                  "not": "Tahta açık. Kullanıcı ilk açılışta sayfada 'başlat' düğmesine bir kez dokunmalı; "
-                         "dokunmadıysa ses çalmaz ama yazılar görünür."})
+                  "not": "Tahta açık. 'ses' alanı gerçekten kullanılacak sesi söyler (yedek sese düşüldüyse kullanıcıya bir "
+                         "cümleyle söyle). Kullanıcı ilk açılışta sayfada 'başlat' düğmesine bir kez dokunmalı. Tarayıcı sesi "
+                         "engellerse anlatım o cümlede bekler ve tahta_durumu'nda sayfa.ses_engelli true olur: kullanıcıdan "
+                         "ekrandaki 'Sesi açmak için dokunun' düğmesine basmasını iste."})
 
 
 def dikte_durumu(d):

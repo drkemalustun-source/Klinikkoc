@@ -1049,5 +1049,37 @@ class PocketPythonBulma(unittest.TestCase):
         self.assertFalse(self.p._uygun_mu((3, 9)))
 
 
+class SesBilgisi(unittest.TestCase):
+    """Tahta hangi sesin GERÇEKTEN kullanılacağını söyler: Pocket → Piper (yedek) → tarayıcı sesi."""
+
+    def setUp(self):
+        import sunucu
+        self.s = sunucu
+        self.c = sunucu.Canli()
+        self.eski = (sunucu.POCKET.durum, sunucu.pocket_ses.ayar)
+        sunucu.pocket_ses.ayar = lambda: {"motor": "pocket", "ses": "female_3", "yedek": "tr_TR-dfki-medium"}
+
+    def tearDown(self):
+        self.s.POCKET.durum, self.s.pocket_ses.ayar = self.eski
+
+    def test_pocket_hazir(self):
+        self.s.POCKET.durum = "hazır"
+        self.assertEqual(self.c.ses_bilgisi()["motor"], "pocket")
+
+    def test_pocket_yok_piper_var(self):
+        self.s.POCKET.durum = "Pocket ses ortamı yok"
+        self.c.ses = {"hazir": True}
+        b = self.c.ses_bilgisi()
+        self.assertEqual(b["motor"], "piper")
+        self.assertIn("yedek", b["yazi"])
+
+    def test_hicbiri_yok_tarayici(self):
+        self.s.POCKET.durum = "Pocket ses ortamı yok"
+        self.c.ses_hata = "Piper kurulu değil"
+        b = self.c.ses_bilgisi()
+        self.assertEqual(b["motor"], "tarayici")
+        self.assertIn("tarayıcı", self.c.ses_durumu())
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -181,7 +181,18 @@ def main():
     a = ap.parse_args()
 
     if a.kur:
-        sys.exit(subprocess.call([sys.executable, "-m", "pip", "install", "--upgrade"] + PAKETLER))
+        kod = subprocess.call([sys.executable, "-m", "pip", "install", "--upgrade"] + PAKETLER)
+        if kod:
+            print("Piper paketleri kurulamadı; tahta tarayıcının Türkçe sesiyle konuşacak.")
+            sys.exit(kod)
+        # Yedek Piper sesinin modeli de şimdi iner (~63 MB); ilk anlatım indirmeyi beklemesin.
+        yedek = ayar.get("yedek") or "tr_TR-dfki-medium"
+        try:
+            voice_files(yedek)
+            print("Yedek ses modeli hazır: " + yedek)
+        except BaseException as e:
+            print("Yedek ses modeli indirilemedi (%s); ilk anlatımda yeniden denenecek." % e)
+        sys.exit(0)
     if a.kur_pocket is not None:
         sys.exit(pocket_ses.kur(a.kur_pocket or None))
     if a.pocket_durum:

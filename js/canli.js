@@ -47,8 +47,12 @@
     toastTimer = setTimeout(() => { t.hidden = true; }, ms);
   }
 
+  // Başka sekme tahtayı devralınca bu sekmenin bekleyen istekleri kesilir (aynı komutu iki sekme almasın).
+  const sekmeKesici = new AbortController();
+  let sekmeKapandi = false;
   async function api(yol, govde) {
-    const r = await fetch('/api/canli/' + yol, govde === undefined ? { cache: 'no-store' } : {
+    if (sekmeKapandi) throw new Error('Tahta başka sekmede açık');
+    const r = await fetch('/api/canli/' + yol, govde === undefined ? { cache: 'no-store', signal: sekmeKesici.signal } : {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(govde)
     });
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).hata || ('HTTP ' + r.status));
@@ -101,7 +105,9 @@
           } else {
             if (this.piperVar) {
               this.piperVar = false;
-              toast('Piper sesi bulunamadı; tarayıcının Türkçe sesi kullanılıyor.');
+              toast('Bu bilgisayarın sesi açılamadı; tarayıcının Türkçe sesi (yedek) kullanılıyor.', 6000);
+              sesGoster({ motor: 'tarayici', yazi: 'tarayıcı sesi (yedek)',
+                ayrinti: 'Sunucu sesi (Pocket/Piper) yanıt vermedi; tarayıcının Türkçe sesi kullanılıyor.' }, true);
             }
             this.web.setRate(hiz);
             let j = i;
@@ -135,11 +141,13 @@
         a.onerror = son;
         a.src = url;
         a.playbackRate = hiz;
-        (durak.aktif ? Promise.resolve() : a.play()).catch(() => {
-          // Tarayıcı sesi engelledi: başlat ekranı yeniden gösterilir, metin altyazıda kalır.
-          $('#baslat').hidden = false;
-          son();
+        const oynat = () => (durak.aktif ? Promise.resolve() : a.play().then(() => { this.izinli = true; })).catch(async (e) => {
+          if (bitti || !benim()) return;
+          if (e && e.name !== 'NotAllowedError') return son(); // ses bozuk: sonraki cümleye geç
+          // Tarayıcı sesi engelledi: anlatım bu cümlede bekler, büyük düğmeye dokununca sürer.
+          if (await sesIzniIste(my, this)) oynat(); else son();
         });
+        oynat();
         const iv = setInterval(() => { if (my !== this.token) { if (benim()) a.pause(); son(); } }, 150);
       });
     },
@@ -152,6 +160,47 @@
       dot.classList.remove('konusuyor');
     }
   };
+
+  // Hangi ses kullanılıyor? Üst çubukta gösterilir; yedek seste sarı. kalici: tarayıcı yedeğine düşüldü
+  // (sayfa yenilenene kadar sunucu bilgisi bunu ezmesin).
+  const sesEl = $('#sesMotor');
+  let sesYedekKalici = false;
+  function sesGoster(b, kalici) {
+    if (!b || !sesEl) return;
+    if (sesYedekKalici && !kalici) return;
+    if (kalici) sesYedekKalici = true;
+    sesEl.hidden = false;
+    sesEl.textContent = 'Ses: ' + b.yazi;
+    sesEl.title = b.ayrinti || b.yazi;
+    sesEl.classList.toggle('yedek', b.motor !== 'pocket');
+  }
+
+  // Tarayıcı otomatik oynatmayı engellediyse büyük "Sesi açmak için dokunun" düğmesi. true: dokunuldu;
+  // false: anlatım bu arada durduruldu/değişti.
+  let sesEngelli = false;
+  function sesIzniIste(my, s) {
+    return new Promise((resolve) => {
+      const kutu = $('#sesAc');
+      sesEngelli = true;
+      kutu.hidden = false;
+      durumEl.textContent = 'Ses engellendi · ekrandaki düğmeye dokunun';
+      api('duraklat', { duraklatildi: durak.aktif, durum: durum() }).catch(() => {}); // Claude durumu görsün
+      const bitir = (ok) => {
+        clearInterval(iv);
+        if (ok) {
+          $('#baslat').hidden = true; // dokunuş izni de açar
+          const v = board.video; // engellenmiş video da bu dokunuşla başlar
+          if (v && v.durum === 'bekliyor' && v.dugmeAcik) { v.dugmeGizle(); v.oynat(); }
+        }
+        $('#sesAcDugme').onclick = null;
+        kutu.hidden = true;
+        sesEngelli = false;
+        resolve(ok);
+      };
+      $('#sesAcDugme').onclick = () => bitir(true);
+      const iv = setInterval(() => { if (my !== s.token) bitir(false); }, 200);
+    });
+  }
 
   // ---------- Duraklat ----------
   // Anlatımı iptal etmeden bekletir: çalan ses olduğu yerde durur, cümle ve adım döngüleri durak.bekle()'de
@@ -708,6 +757,8 @@
       duraklatildi: durak.aktif,
       kaldigi_yer: kaldigiYer(),
       video: board.video ? board.video.durum : null,
+      ses_engelli: sesEngelli, // tarayıcı sesi engelledi; kullanıcı ekrandaki düğmeye dokunmalı
+      ses_motoru: sesEl && !sesEl.hidden ? sesEl.textContent.replace(/^Ses: /, '') : null,
       dikte: dikte.motor(),
       hiz
     };
@@ -785,9 +836,19 @@
       if (v.durum === 'hata') { uyarilar.push('Video oynatılamadı (' + (v.hata || 'hata') + ')'); return; }
       if (k.askida && v.durum === 'oynuyor') { v.duraklat(); askidaDurdu = true; }
       if (!k.askida && askidaDurdu && !durak.aktif) { askidaDurdu = false; v.oynat(); }
-      if (v.durum === 'bekliyor' && Date.now() - basla > 25000 && !durak.aktif && !k.askida) {
-        uyarilar.push('Video başlamadı: tarayıcı kendiliğinden oynatmayı engellemiş olabilir (kullanıcı ▶ basmadı).');
-        return;
+      if (v.durum === 'bekliyor' && !durak.aktif && !k.askida) {
+        const gecen = Date.now() - basla;
+        if ((v.engellendi || gecen > 4000) && !v.dugmeAcik && v.dugmeGoster) {
+          // Tarayıcı kendiliğinden oynatmayı engelledi: videonun üstünde büyük ▶; anlatıcı da söyler.
+          v.dugmeGoster();
+          // Ses de engelliyse söylenemez (yalnız düğme); ses açıksa anlatıcı da söyler.
+          if (ses.izinli) ses.anlat('Video kendiliğinden başlamadı. Başlatmak için videonun üstündeki büyük oynat düğmesine dokunun.');
+        }
+        if (gecen > 25000) {
+          uyarilar.push('Video başlamadı: tarayıcı kendiliğinden oynatmayı engelledi. Tahtada videonun üstünde büyük ▶ '
+            + 'düğmesi gösteriliyor; kullanıcıdan ▶\'e basmasını iste, sonra tahta_durumu ile videonun oynadığını denetle.');
+          return;
+        }
       }
       await Promise.race([v.bitti, new Promise((r) => setTimeout(r, 250))]);
     }
@@ -1061,17 +1122,22 @@
   async function yokla() {
     try {
       const r = await api('merhaba', { durum: durum() });
-      son = (await r.json()).sayac || 0;
+      const j = await r.json();
+      son = j.sayac || 0;
+      sesGoster(j.ses);
     } catch (e) {
       baglanti(false);
       return setTimeout(yokla, 3000);
     }
     baglanti(true);
     for (;;) {
+      if (sekmeKapandi) return;
       try {
         const r = await api('al?son=' + son + '&dinliyor=' + (claudeDinliyor ? 1 : 0) + '&bekleyen=' + bekleyenSoz.length);
         const j = await r.json();
+        if (sekmeKapandi) return;
         const komutlar = j.komutlar;
+        sesGoster(j.ses);
         baglanti(true);
         if (typeof j.dinliyor === 'boolean' && j.dinliyor !== claudeDinliyor) dinlemeIsareti(j.dinliyor);
         if (Array.isArray(j.bekleyen_konusma)) bekleyenGoster(j.bekleyen_konusma);
@@ -1089,6 +1155,7 @@
         }
         isle();
       } catch (e) {
+        if (sekmeKapandi) return;
         baglanti(false);
         await new Promise((r) => setTimeout(r, 3000));
         // Sunucu yeniden açıldıysa sayaç sıfırlanmış olabilir.
@@ -1139,6 +1206,8 @@
     // Boş bir sesle izni aç.
     ses.audio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
     ses.audio.play().catch(() => {});
+    const v = board.video; // tarayıcının engellediği video da bu dokunuşla başlar
+    if (v && v.durum === 'bekliyor' && v.dugmeAcik) { v.dugmeGizle(); v.oynat(); }
     if (tam) tamEkran();
   }
   dikte.goster();
@@ -1153,5 +1222,26 @@
     '"Şekil 2\'yi göster ve Sınıf Ib\'yi işaretle."',
     '"Bana bu konudan iki soru sor."'
   ] }, true);
+  // ---------- Tek sekme ----------
+  // Aynı tahta ikinci bir sekmede açılınca eski sekme bağlantıyı bırakır ve bunu söyler.
+  try {
+    const kanal = new BroadcastChannel('klinikkoc-canli-tahta');
+    const benimKimlik = Date.now() + '-' + Math.random().toString(36).slice(2);
+    kanal.onmessage = (e) => {
+      if (!e.data || e.data.tur !== 'yeni' || e.data.kimlik === benimKimlik || sekmeKapandi) return;
+      sekmeKapandi = true;
+      sekmeKesici.abort();
+      ses.dur();
+      if (board.video) board.video.duraklat();
+      $('#baslat').hidden = true;
+      $('#sesAc').hidden = true;
+      $('#baskaSekme').hidden = false;
+      dot.classList.remove('bagli');
+      durumEl.textContent = 'Bu tahta başka bir sekmede açık';
+    };
+    kanal.postMessage({ tur: 'yeni', kimlik: benimKimlik });
+  } catch (e) { /* BroadcastChannel yoksa eski davranış */ }
+  $('#buradaDevam').addEventListener('click', () => location.reload());
+
   yokla();
 })(window.AT = window.AT || {});

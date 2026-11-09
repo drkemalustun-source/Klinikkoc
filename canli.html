@@ -19,6 +19,7 @@
         <div class="lesson-name" id="dersAdi">Canlı tahta · Claude</div>
         <div class="section-name" id="durum">Bağlanıyor…</div>
       </div>
+      <span class="canli-ses" id="sesMotor" role="status" hidden></span>
       <span class="claude-isik" id="claudeIsik" role="status" title="Claude şu an dinlemiyor."><i></i><span>Claude dinlemiyor</span></span>
       <button class="ctrl-btn speed" id="hiz" aria-label="Anlatım hızı" title="Anlatım hızı">1,2×</button>
       <button class="icon-btn" id="tamEkran" aria-label="Tam ekran" title="Tam ekran (F)">
@@ -96,6 +97,26 @@
       <div class="q-actions">
         <button class="btn" id="baslatPencere">Pencerede başlat</button>
         <button class="btn primary" id="baslatTam">Tam ekran başlat</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tarayıcı sesi engellediğinde anlatım burada bekler; dokununca aynı cümleden sürer. -->
+  <div class="canli-baslat canli-ses-ac" id="sesAc" hidden>
+    <button class="canli-buyuk-dugme" id="sesAcDugme" type="button">
+      <span aria-hidden="true">🔊</span> Sesi açmak için dokunun
+      <small>Tarayıcı sesi kendiliğinden çalmaya izin vermedi. Anlatım kaldığı cümleden sürecek.</small>
+    </button>
+  </div>
+
+  <!-- Aynı tahta başka bir sekmede açılınca bu sekme bağlantıyı bırakır (iki sekme aynı komutları almasın). -->
+  <div class="canli-baslat" id="baskaSekme" hidden>
+    <div class="q-card">
+      <div class="q-tag">Canlı tahta</div>
+      <h3 class="q-prompt">Bu tahta başka bir sekmede açık.</h3>
+      <p class="canli-not">Claude artık o sekmeyi yönetiyor. Bu sekmeyi kapatabilirsiniz.</p>
+      <div class="q-actions">
+        <button class="btn" id="buradaDevam">Bu sekmede devam et</button>
       </div>
     </div>
   </div>

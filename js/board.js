@@ -40,6 +40,20 @@
     return d;
   }
 
+  // Tarayıcı kendiliğinden oynatmayı engellerse videonun üstünde büyük ▶ (dokununca oynar).
+  function oynatDugmesi(sahne, d, oynat) {
+    const b = el('button', 'video-oynat');
+    b.type = 'button';
+    b.hidden = true;
+    b.setAttribute('aria-label', 'Videoyu oynat');
+    b.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg>';
+    b.addEventListener('click', () => { b.hidden = true; d.dugmeAcik = false; oynat(); });
+    sahne.appendChild(b);
+    d.dugmeAcik = false;
+    d.dugmeGoster = () => { if (d.durum === 'oynuyor' || d.durum === 'bitti' || d.durum === 'hata') return; b.hidden = false; d.dugmeAcik = true; };
+    d.dugmeGizle = () => { b.hidden = true; d.dugmeAcik = false; };
+  }
+
   function dosyaOynatici(sahne, url, bas, bit, c) {
     const d = denetim();
     const v = el('video');
@@ -51,23 +65,28 @@
     sahne.appendChild(v);
     let hazir = false;
     v.addEventListener('loadedmetadata', () => { hazir = true; if (bas) v.currentTime = bas; });
-    v.addEventListener('playing', () => { if (d.durum !== 'bitti') d.durum = 'oynuyor'; });
+    v.addEventListener('playing', () => { if (d.durum !== 'bitti') d.durum = 'oynuyor'; d.engellendi = false; d.dugmeGizle(); });
     v.addEventListener('pause', () => { if (d.durum === 'oynuyor') d.durum = 'durdu'; });
     v.addEventListener('ended', () => d._bitir('bitti'));
     v.addEventListener('timeupdate', () => { if (bit != null && v.currentTime >= bit) { v.pause(); d._bitir('bitti'); } });
     v.addEventListener('error', () => {
       sahne.appendChild(el('p', 'video-hata', 'Video açılamadı: ' + decodeURIComponent(url.split('/').pop())));
       d._bitir('hata', 'açılamadı');
+      d.dugmeGizle();
     });
     d.oynat = () => {
       if (d.durum === 'bitti' && bit != null) return;
       const p = v.play();
-      if (p && p.catch) p.catch(() => { d.durum = 'durdu'; }); // tarayıcı engellediyse kullanıcı ▶'a basar
+      if (p && p.catch) p.catch((e) => {
+        // Tarayıcı engelledi: büyük ▶ gösterilir; durum 'bekliyor' kalır ki anlatım beklesin ve Claude'a söylensin.
+        if (e && e.name === 'NotAllowedError' && d.durum === 'bekliyor') { d.engellendi = true; d.dugmeGoster(); } else if (d.durum !== 'bekliyor') d.durum = 'durdu';
+      });
     };
     d.duraklat = () => v.pause();
     d.git = (sn) => { const t = Math.max(0, sn); if (hazir) v.currentTime = t; else v.addEventListener('loadedmetadata', () => { v.currentTime = t; }, { once: true }); if (d.durum === 'bitti') d.durum = 'durdu'; };
     d.kapat = () => { v.pause(); v.removeAttribute('src'); v.load(); };
     d.el = v;
+    oynatDugmesi(sahne, d, () => { const p = v.play(); if (p && p.catch) p.catch(() => {}); });
     return d;
   }
 
@@ -117,7 +136,7 @@
       const st = m && (m.event === 'onStateChange' ? m.info : (m.info && m.info.playerState));
       if (st == null) return;
       haber = true;
-      if (st === 1) d.durum = 'oynuyor';
+      if (st === 1) { d.durum = 'oynuyor'; d.dugmeGizle(); }
       else if (st === 2 && d.durum === 'oynuyor') d.durum = 'durdu';
       else if (st === 0) d._bitir('bitti');
     };
@@ -134,6 +153,8 @@
     d.git = (sn) => gonder('seekTo', [Math.max(0, sn), true]);
     d.kapat = () => { gonder('pauseVideo'); window.removeEventListener('message', dinle); };
     d.el = f;
+    // Dokunuştan sonra oynatıcıya yeniden "oynat" denir; olmazsa düğme kalkar ve YouTube'un kendi ▶'ı kullanılır.
+    oynatDugmesi(sahne, d, () => gonder('playVideo'));
     return d;
   }
 
