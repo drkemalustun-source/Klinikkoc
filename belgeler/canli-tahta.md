@@ -19,17 +19,33 @@ Claude masaüstü  →  tools/tahta-mcp.py  →  tools/sunucu.py (localhost:8810
 
 ## Kurulum (bir kez)
 
-1. Bu klasörde bir komut istemi açın (klasörün adres çubuğuna `cmd` yazıp Enter).
-2. `python tools/tahta-mcp.py --kur` yazın. Claude'un ayar dosyasına "klinik-koc" eklenir
-   (eski ayar `.yedek` olarak saklanır).
-3. Claude masaüstü uygulamasını **tamamen** kapatın: saatin yanındaki Claude simgesine sağ tık → Çık (Quit).
-   Yeniden açın.
+1. Klasördeki **KUR-Windows** dosyasına çift tıklayın (Mac'te **KUR-Mac**). Windows dosya uzantılarını
+   gizleyebilir; dosyanın adı yalnız "KUR-Windows" görünebilir. Kurulum üç adımdır:
+   1. Piper ses paketleri ve yedek ses dosyası (~63 MB).
+   2. Claude'un ayar dosyasına "klinik-koc" eklenir (eski ayar `.yedek` olarak saklanır). Kurulum,
+      Claude'un **gerçekten okuduğu** dosyayı bulur: Microsoft Store sürümünde
+      `%LOCALAPPDATA%\Claude-Data\claude_<paket>\claude_desktop_config.json`, .exe sürümünde
+      `%APPDATA%\Claude\`, Mac'te `~/Library/Application Support/Claude/`. Claude'un artık okumadığı eski
+      yerler "atlandı" diye yazılır.
+   3. İsteğe bağlı doğal Türkçe kadın sesi (Pocket, ~1 GB indirme). Kurulum sorar (E/H). Pocket,
+      Python 3.10–3.13 ister; kurulum uygun sürümü kendi arar (bilgisayardaki Python 3.14 ise başka bir sürüm
+      ya da `uv` aranır). Bulamazsa "python.org'dan 3.12 kurun" der; o zamana kadar yedek ses kullanılır.
+      Kurulumun sonunda Pocket kısa bir cümle söyler; sesi duyuyorsanız hazırdır.
+2. Claude masaüstü uygulamasını **tamamen** kapatın: saatin yanındaki **^** → Claude simgesi → sağ tık → **Çık**
+   (Mac'te Cmd+Q). Yeniden açın.
+3. **Denetim:** Claude'da **Ayarlar › Geliştirici** ekranında "klinik-koc" **Çalışıyor** görünmeli.
 4. Yeni bir sohbette yazın: **"Tahtayı aç ve bana Şekil 2'yi anlat."**
    Claude araçları ilk kullanırken izin ister; "Her zaman izin ver" demeniz işinizi kolaylaştırır.
 5. Tarayıcıda canlı tahta açılır. Bir kez **"Tam ekran başlat"**a dokunun (tarayıcı, sesin çalması için bunu ister).
 
-Denetim: `python tools/tahta-mcp.py --dene` dersleri ve araçları listeler.
-Kaldırma: `python tools/tahta-mcp.py --kaldir`.
+Komutla kurulum (aynı adımlar): `python tools/ses-uret.py --kur`, `python tools/tahta-mcp.py --kur`,
+`python tools/ses-uret.py --kur-pocket`. Pocket kurulu mu: `--pocket-durum`; sesi dene: `--dene-pocket`.
+
+Denetim: `python tools/tahta-mcp.py --dene` dersleri, araçları ve bulduğu her Claude ayar dosyasını
+("asıl" / "eski") listeler; Claude'un okuduğu dosyada "klinik-koc" yoksa açıkça uyarır.
+Ayar dosyası bulunamazsa: Claude'da **Ayarlar › Geliştirici › "Yapılandırmayı düzenle"**ye basın, açılan dosyanın
+yolunu kopyalayıp `python tools/tahta-mcp.py --kur --ayar "<yol>"` yazın.
+Kaldırma: `python tools/tahta-mcp.py --kaldir` (gerekirse `--ayar "<yol>"` ile).
 
 ## Claude'un araçları
 
@@ -189,14 +205,24 @@ bilgisayarında kalır. Herkesle paylaşılacak bir video için YouTube bağlant
   bekler. Duraklatılmışken mikrofona basarsanız söz alırsınız; kare düğme ya da Esc anlatımı keser.
 - Tahtadaki **kare** düğme ya da **Esc** anlatımı keser. **F** tam ekran. Hız düğmesi 1,0 / 1,2 / 1,4.
 - Sesi bu bilgisayardaki Pocket TTS Türkçe kadın 3 sesi üretir (ayar: `ses/ses-ayari.json`). Sunucu
-  açılırken ~10–30 sn yüklenir; o sırada ya da hata olursa Piper dfki, o da yoksa tarayıcının Türkçe sesi.
+  açılırken ~10–60 sn yüklenir; o sırada ya da Pocket kurulu değilse Piper dfki (yedek), o da yoksa
+  tarayıcının Türkçe sesi. **Hangi sesin çaldığı tahtanın üst çubuğunda yazar** ("Ses: Pocket",
+  "Ses: Piper (yedek)", "Ses: tarayıcı sesi (yedek)"; yedekte sarı). Claude da `tahtayi_ac` sonucunda görür.
+- Tarayıcı sesi kendiliğinden çalmaya izin vermezse anlatım o cümlede bekler ve ekranda büyük
+  **"🔊 Sesi açmak için dokunun"** düğmesi çıkar; dokununca aynı cümleden sürer.
+- Tahtayı ikinci bir sekmede açarsanız eski sekme "Bu tahta başka bir sekmede açık" der ve bağlantıyı bırakır.
 - Bu mod öğretim üyesi içindir. Öğrenci sürümü (index.html) değişmedi; öğrenciye maliyet yine sıfırdır.
 
 ## Sorun giderme
 
 | Belirti | Çözüm |
 |---|---|
-| Claude'da "klinik-koc" araçları görünmüyor | Claude'u sistem tepsisinden tamamen kapatıp açın; `--kur` komutunu yeniden çalıştırın |
+| Claude'da "klinik-koc" araçları görünmüyor | Claude'u tepsiden tamamen kapatıp açın (^ → Claude → sağ tık → Çık). **Ayarlar › Geliştirici**'de listede mi? Değilse `python tools/tahta-mcp.py --dene` ne diyor bakın; "Yapılandırmayı düzenle" ile açılan dosyanın yolunu `--kur --ayar "<yol>"` ile verin |
+| Listede "klinik-koc" var ama hata veriyor | `--dene` çıktısında "dosyası yok" yazıyorsa program klasörü taşınmıştır: KUR'u yeni klasörden yeniden çalıştırın |
+| Üst çubukta "Ses: tarayıcı sesi (yedek)" | Doğal ses kurulu değil ya da açılamadı. KUR'u yeniden çalıştırıp Pocket'e "E" deyin; Python 3.14 ise python.org'dan 3.12 kurun |
+| Ekranda "Sesi açmak için dokunun" | Tarayıcı sesi engelledi; düğmeye dokunun, anlatım kaldığı cümleden sürer |
+| Videonun üstünde büyük ▶ | Tarayıcı videonun kendiliğinden başlamasını engelledi; ▶'e dokunun |
+| "Bu tahta başka bir sekmede açık" | Aynı tahta iki sekmede açılmış; eski sekmeyi kapatın |
 | "Tahta sayfası açık değil" | Claude'a "tahtayı aç" deyin ya da tarayıcıda `http://localhost:8810/canli.html` açın |
 | Yazılar geliyor, ses yok | Tahtada "başlat" düğmesine dokunun; bilgisayarın sesini denetleyin |
 | Sol üstteki nokta kırmızı | Sunucu penceresi kapanmış; Claude'a "tahtayı aç" deyin |

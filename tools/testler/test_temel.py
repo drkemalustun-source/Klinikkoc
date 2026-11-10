@@ -934,5 +934,152 @@ class YayinDenetimi(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout)
 
 
+class ClaudeAyarDosyasi(unittest.TestCase):
+    """Windows'ta Claude'un okuduğu ayar dosyası bulunur; eski yerler atlanır; öteki ayarlar korunur."""
+
+    def setUp(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("tahta_mcp_ayar", os.path.join(KOK, "tools", "tahta-mcp.py"))
+        self.m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.m)
+        self.g = tempfile.mkdtemp()
+        self.ortam = {"APPDATA": os.path.join(self.g, "Roaming"), "LOCALAPPDATA": os.path.join(self.g, "Local")}
+        os.makedirs(os.path.join(self.g, "Roaming", "Claude"))
+        self.msix = os.path.join(self.g, "Local", "Packages", "Claude_pzs8sxrjxfjjc", "LocalCache", "Roaming", "Claude")
+        os.makedirs(self.msix)
+
+    def _tur(self, adaylar):
+        return {os.path.relpath(y, self.g): t for y, t, _ in adaylar}
+
+    def test_tasinmis_msix_yeni_yer_asil(self):
+        yeni = os.path.join(self.g, "Local", "Claude-Data", "claude_pzs8sxrjxfjjc")
+        os.makedirs(yeni)
+        _metin_yaz(os.path.join(self.msix, ".user-data-left.claude_pzs8sxrjxfjjc"), "")
+        tur = self._tur(self.m.ayar_adaylari("nt", self.ortam))
+        self.assertEqual(tur[os.path.join("Local", "Claude-Data", "claude_pzs8sxrjxfjjc", "claude_desktop_config.json")], "asil")
+        self.assertEqual(tur[os.path.relpath(os.path.join(self.msix, "claude_desktop_config.json"), self.g)], "eski")
+        self.assertEqual(tur[os.path.join("Roaming", "Claude", "claude_desktop_config.json")], "eski")
+        self.assertEqual(list(tur.values()).count("asil"), 1)
+
+    def test_tasinmamis_msix_paket_klasoru_asil(self):
+        tur = self._tur(self.m.ayar_adaylari("nt", self.ortam))
+        self.assertEqual(tur[os.path.relpath(os.path.join(self.msix, "claude_desktop_config.json"), self.g)], "asil")
+        self.assertEqual(tur[os.path.join("Roaming", "Claude", "claude_desktop_config.json")], "eski")
+
+    def test_exe_kurulumu_appdata_asil(self):
+        import shutil
+        shutil.rmtree(os.path.join(self.g, "Local"))
+        tur = self._tur(self.m.ayar_adaylari("nt", self.ortam))
+        self.assertEqual(tur, {os.path.join("Roaming", "Claude", "claude_desktop_config.json"): "asil"})
+
+    def test_hic_aday_yoksa_bos(self):
+        self.assertEqual(self.m.ayar_adaylari("nt", {"APPDATA": os.path.join(self.g, "yok"), "LOCALAPPDATA": ""}), [])
+
+    def test_yazma_oteki_alanlari_korur_ve_tekrar_yazilabilir(self):
+        yol = os.path.join(self.g, "ayar.json")
+        asil = {"preferences": {"a": 1}, "coworkUserFilesPath": "C:/x",
+                "mcpServers": {"akilli-tahta": {"command": "py", "args": ["t.py"]}}}
+        _metin_yaz(yol, "\ufeff" + json.dumps(asil))  # Not Defteri BOM ekleyebilir
+        self.m.ayara_yaz(yol)
+        self.m.ayara_yaz(yol)
+        d = _json_oku(yol)
+        self.assertEqual(d["preferences"], {"a": 1})
+        self.assertEqual(d["coworkUserFilesPath"], "C:/x")
+        self.assertIn("akilli-tahta", d["mcpServers"])
+        self.assertIn(self.m.AD, d["mcpServers"])
+        self.assertTrue(os.path.exists(yol + ".yedek"))
+        self.m.ayara_yaz(yol, kaldir=True)
+        d = _json_oku(yol)
+        self.assertNotIn(self.m.AD, d["mcpServers"])
+        self.assertIn("akilli-tahta", d["mcpServers"])
+
+    def test_kur_ayar_secenegi(self):
+        yol = os.path.join(self.g, "elle", "claude_desktop_config.json")
+        os.makedirs(os.path.dirname(yol))
+        _metin_yaz(yol, json.dumps({"preferences": {}}))
+        ortam = dict(os.environ, KLINIK_KOC_KAYIT=os.path.join(self.g, "kayit"))
+        r = subprocess.run([sys.executable, os.path.join(KOK, "tools", "tahta-mcp.py"), "--kur", "--ayar", yol],
+                           capture_output=True, text=True, encoding="utf-8", env=ortam)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("klinik-koc", _json_oku(yol)["mcpServers"])
+
+
+class PocketPythonBulma(unittest.TestCase):
+    """Pocket için Python 3.10–3.13 aranır; 3.14 atlanır; hiçbiri yoksa kur() açık mesajla 2 döner."""
+
+    def setUp(self):
+        import pocket_ses
+        self.p = pocket_ses
+        self.eski = (pocket_ses._surum, pocket_ses._uv)
+
+    def tearDown(self):
+        self.p._surum, self.p._uv = self.eski
+
+    def test_314_atlanir_313_secilir(self):
+        def sahte(komut):
+            if komut == [sys.executable]:
+                return (3, 14), sys.executable
+            if komut[-1] in ("-3.13",) or komut[0].endswith("python3.13"):
+                return (3, 13), "/yol/python313"
+            return None
+        self.p._surum = sahte
+        self.p._uv = lambda: None
+        import shutil
+        eski_which = shutil.which
+        shutil.which = lambda ad: "/usr/bin/" + ad if ad == "python3.13" else None
+        try:
+            self.assertEqual(self.p.uygun_python(), "/yol/python313")
+        finally:
+            shutil.which = eski_which
+
+    def test_hic_yoksa_kur_2_doner(self):
+        self.p._surum = lambda komut: ((3, 14), "x") if komut == [sys.executable] else None
+        self.p._uv = lambda: None
+        import io
+        import contextlib
+        cikti = io.StringIO()
+        with contextlib.redirect_stdout(cikti):
+            self.assertEqual(self.p.kur(), 2)
+        self.assertIn("Python 3.10–3.13 gerekir", cikti.getvalue())
+
+    def test_surum_siniri(self):
+        self.assertTrue(self.p._uygun_mu((3, 10)))
+        self.assertTrue(self.p._uygun_mu((3, 13)))
+        self.assertFalse(self.p._uygun_mu((3, 14)))
+        self.assertFalse(self.p._uygun_mu((3, 9)))
+
+
+class SesBilgisi(unittest.TestCase):
+    """Tahta hangi sesin GERÇEKTEN kullanılacağını söyler: Pocket → Piper (yedek) → tarayıcı sesi."""
+
+    def setUp(self):
+        import sunucu
+        self.s = sunucu
+        self.c = sunucu.Canli()
+        self.eski = (sunucu.POCKET.durum, sunucu.pocket_ses.ayar)
+        sunucu.pocket_ses.ayar = lambda: {"motor": "pocket", "ses": "female_3", "yedek": "tr_TR-dfki-medium"}
+
+    def tearDown(self):
+        self.s.POCKET.durum, self.s.pocket_ses.ayar = self.eski
+
+    def test_pocket_hazir(self):
+        self.s.POCKET.durum = "hazır"
+        self.assertEqual(self.c.ses_bilgisi()["motor"], "pocket")
+
+    def test_pocket_yok_piper_var(self):
+        self.s.POCKET.durum = "Pocket ses ortamı yok"
+        self.c.ses = {"hazir": True}
+        b = self.c.ses_bilgisi()
+        self.assertEqual(b["motor"], "piper")
+        self.assertIn("yedek", b["yazi"])
+
+    def test_hicbiri_yok_tarayici(self):
+        self.s.POCKET.durum = "Pocket ses ortamı yok"
+        self.c.ses_hata = "Piper kurulu değil"
+        b = self.c.ses_bilgisi()
+        self.assertEqual(b["motor"], "tarayici")
+        self.assertIn("tarayıcı", self.c.ses_durumu())
+
+
 if __name__ == "__main__":
     unittest.main()
