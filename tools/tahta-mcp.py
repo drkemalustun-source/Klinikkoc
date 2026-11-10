@@ -37,6 +37,7 @@ import webbrowser
 KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(KOK, "tools"))
 import bilgi_bankasi  # noqa: E402
+import ders_paketi  # noqa: E402
 import ders_sonu  # noqa: E402
 import karne as karne_  # noqa: E402
 import kayit_aktar  # noqa: E402
@@ -238,6 +239,16 @@ ARACLAR = [
         "inputSchema": {"type": "object", "properties": {
             "ders": {"type": "string", "description": "verilmezse makale listesi olan dersler listelenir"},
             "ac": {"type": "boolean", "description": "makaleler sayfasını tarayıcıda aç"}}},
+    },
+    {
+        "name": "ders_paketi_ekle",
+        "description": "Öğretmenin verdiği ders paketini (.zip) bu bilgisayara kurar ve makalelerini arka planda aramaya "
+                       "başlar. Program derssiz gelir; öğrenci 'ders listesi boş', 'ders yok' derse ya da bir zip'ten söz "
+                       "ederse bunu kullan. zip verilmezse ders paketleri sayfasını açar (öğrenci zip'i oraya sürükler). "
+                       "Ders zaten kuruluysa öğrenciye güncellemek isteyip istemediğini sor; isterse uzerine: true.",
+        "inputSchema": {"type": "object", "properties": {
+            "zip": {"type": "string", "description": "paketin bu bilgisayardaki yolu, ör. İndirilenler'deki dosya"},
+            "uzerine": {"type": "boolean", "description": "ders kuruluysa yenisiyle değiştir (kayıtlar korunur)"}}},
     },
     {
         "name": "makale_bul",
@@ -636,6 +647,10 @@ def ar_dersler(_):
             "gorseller": {k: v.get("caption") or v.get("alt") for k, v in (d.get("assets") or {}).items()
                           if not k.startswith("sayfa-")},
         })
+    if not out:
+        return metin({"dersler": [], "not": "Bu bilgisayarda hiç ders yok: program derssiz gelir. Öğrenciye öğretmeninin verdiği "
+                                            "ders paketini (.zip) sor; yolunu verirse ders_paketi_ekle ile kur, vermezse "
+                                            "ders_paketi_ekle'yi yolsuz çağırıp paket sayfasını aç."})
     return metin(out)
 
 
@@ -1808,6 +1823,27 @@ def ar_makaleler(a):
     return metin(out)
 
 
+def ar_ders_paketi_ekle(a):
+    yol = (a.get("zip") or "").strip().strip('"')
+    if not yol:
+        sayfayi_ac("makaleler.html#paketKutu")
+        return metin({"durum": "sayfa açıldı", "not": "Ders paketleri sayfası tarayıcıda açıldı. Öğrenciden zip dosyasını "
+                                                      "'Ders paketi ekle' alanına sürüklemesini iste."})
+    yol = os.path.expanduser(yol)
+    if not os.path.isfile(yol):
+        raise ValueError("Dosya bulunamadı: %s. Dosyanın tam yolunu sor ya da zip vermeden çağırıp sayfayı aç." % yol)
+    try:
+        r = ders_paketi.yukle(yol, bool(a.get("uzerine")))
+    except FileExistsError as e:
+        return metin({"durum": "zaten kurulu", "not": "%s Öğrenci isterse uzerine: true ile yeniden çağır." % e})
+    out = {"durum": "kuruldu", "ders": r["ders"], "baslik": r["baslik"], "makale": r["makale"]}
+    if r["makale"]:
+        out["makaleler"] = makale_bulucu.arka_planda_hazirla(r["ders"])
+        out["not"] = ("Makaleler arka planda aranıyor; birkaç dakika sonra makaleler aracıyla durumu kontrol et. "
+                      "Eksik kalanları öğrenci yayıncı sayfasından indirip ekleyebilir.")
+    return metin(out)
+
+
 def ar_makale_bul(a):
     ders = a.get("ders")
     ders_yolu(ders)
@@ -1950,7 +1986,7 @@ ISLEYICILER = {"egitmen_hazirla": ar_egitmen_hazirla, "kayit_oku": ar_kayit_oku,
                "makale_bul": ar_makale_bul, "makale_ekle": ar_makale_ekle,
                "sihirbaz_oku": ar_sihirbaz_oku, "sihirbaz_oner": ar_sihirbaz_oner,
                "ders_bitir": ar_ders_bitir, "tekrar_karti_yaz": ar_tekrar_karti_yaz, "depolama": ar_depolama,
-               "ders_arsivle": ar_ders_arsivle, "arsivden_geri_yukle": ar_arsivden_geri_yukle}
+               "ders_arsivle": ar_ders_arsivle, "ders_paketi_ekle": ar_ders_paketi_ekle, "arsivden_geri_yukle": ar_arsivden_geri_yukle}
 
 
 def metin(veri, hata=False):

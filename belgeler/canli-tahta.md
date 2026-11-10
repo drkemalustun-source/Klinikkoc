@@ -62,6 +62,7 @@ Kaldırma: `python tools/tahta-mcp.py --kaldir` (gerekirse `--ayar "<yol>"` ile)
 | `olcme_testi` / `olcme_kaydet` | Öğretmenin onayladığı pilot testi (ön / son / gecikmeli) seçenekleri karıştırarak verir; yanıtları puanlayıp kayda yazar |
 | `tahtayi_ac` | Yerel sunucu kapalıysa açar, tahta sayfasını açar ve bağlanmasını bekler |
 | `dersler` | Bilgisayardaki dersleri, bölümlerini ve görsellerini listeler |
+| `ders_paketi_ekle` | Öğretmenin verdiği ders paketini (.zip) kurar ve makalelerini aramaya başlar; yol verilmezse paket sayfasını açar |
 | `ders_oku` | Ders planını ya da bir bölümün anlatımını, tahta komutlarını ve sorularını okur |
 | `gorsel_bak` | Ders görselini Claude'a gösterir (işaretleyeceği yeri seçmek için) |
 | `tahta` | Adım adım: önce tahtaya yazar/çizer, sonra o adımı sesli anlatır |
@@ -88,7 +89,9 @@ dosyalarındadır. Ortak kurallar: kaynağın dışına çıkmamak, öğretmen n
 soru seçmek, açık uçlu yanıtı SOLO'ya göre değerlendirmek, yalnız olgu sorularında "ne kadar eminsin?" diye
 sormak, cevabı erken vermemek, ısrara boyun eğmemek, mola/devam ve rapor.
 
-Başlamak için Claude'a yazın: **"Tahtayı aç, peri-implantitis dersine başlayalım. Adım Ayşe."**
+Program derssiz gelir; önce öğretmenin verdiği ders paketini ekleyin (Claude'a **"İndirilenler'deki ders paketini kur"**
+deyin ya da paketi **Ders paketleri ve makaleler** sayfasına bırakın). Sonra Claude'a yazın:
+**"Tahtayı aç, akut periodontal lezyonlar dersine başlayalım. Adım Ayşe."**
 Vaka çalışmak için: **"Bu dersin vakasını çözelim."** Karne için: **"Karnemi göster."**
 Claude önce eğitmeni yükler, kaydınızda tekrar zamanı gelen konu varsa kısa bir tekrarla başlar.
 

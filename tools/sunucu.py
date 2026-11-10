@@ -1014,8 +1014,15 @@ def main():
     a = ap.parse_args()
     if a.kur_duyu:
         sys.exit(kur_duyu())
-    sunucu = http.server.ThreadingHTTPServer(("127.0.0.1", a.port), Isleyici)
     adres = "http://localhost:%d/%s" % (a.port, a.sayfa)
+    try:
+        sunucu = http.server.ThreadingHTTPServer(("127.0.0.1", a.port), Isleyici)
+    except OSError:
+        # Sunucu zaten açık (ör. Claude başlattı): yalnız sayfayı açarız.
+        print("KlinikKoç zaten açık: " + adres)
+        if not a.acma:
+            webbrowser.open(adres)
+        return
     print("KlinikKoç sunucusu çalışıyor: " + adres)
     print("Kapatmak için bu pencerede Ctrl+C'ye basın.")
     d = DUYU.durum()

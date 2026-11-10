@@ -50,6 +50,14 @@ svg { stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; 
 .lesson-card .resume { color: var(--accent); margin-top: .4em; }
 .home-foot { margin-top: auto; padding-top: 2em; color: var(--chalk-dim); font-size: .7em; display: flex; flex-wrap: wrap; gap: .4em 1.5em; }
 .home-link { color: var(--info); }
+.empty-home {
+  grid-column: 1 / -1; background: var(--board-2); border: 1px dashed var(--board-line); border-radius: var(--radius);
+  padding: 1.6em 1.4em; max-width: 60ch;
+}
+.empty-home h2 { margin: 0 0 .4em; font-size: 1.2em; color: var(--accent); }
+.empty-home p { margin: 0 0 1.1em; color: var(--chalk-dim); line-height: 1.5; }
+.empty-actions { display: flex; flex-wrap: wrap; gap: .6em; }
+.empty-actions .btn { text-decoration: none; display: inline-flex; align-items: center; }
 
 /* ---------- Ders ekranı ---------- */
 #lesson {

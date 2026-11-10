@@ -2,7 +2,7 @@
 
 Bir vaka kartı, bir hastanın başvurusundan kapanışına kadar öğrencinin vereceği kararları sıralayan
 tek bir JSON dosyasıdır: `lessons/<ders>/vakalar/<vaka>.json`. Şema: [`schema/vaka.schema.json`](../schema/vaka.schema.json).
-Çalışan örnek: [`lessons/peri-implantitis-cerrahi/vakalar/ornek-implant-kanama.json`](../lessons/peri-implantitis-cerrahi/vakalar/ornek-implant-kanama.json) (kurgusal).
+Çalışan örnek: [`ornek-dersler/peri-implantitis-cerrahi/vakalar/ornek-implant-kanama.json`](../ornek-dersler/peri-implantitis-cerrahi/vakalar/ornek-implant-kanama.json) (kurgusal).
 Boş şablon: [`sablonlar/vaka-karti-bos.json`](../sablonlar/vaka-karti-bos.json).
 
 ## Bölümler

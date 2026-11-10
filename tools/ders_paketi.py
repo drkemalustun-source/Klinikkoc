@@ -11,6 +11,7 @@ listedeki makaleleri indirmeye başlar (tools/makale_bulucu.py).
 
 Kullanım:
   python tools/ders_paketi.py --yukle <paket.zip> [--uzerine]
+  python tools/ders_paketi.py --olustur <ders-klasoru> [--cikis <paket.zip>]   (hazır bir ders klasöründen paket yapar)
 """
 import argparse
 import json
@@ -148,12 +149,46 @@ def yukle(zip_yolu, uzerine=False):
     return {"ders": ders, "baslik": giris["title"], "makale": makale, "yer": hedef}
 
 
+def paket_olustur(klasor, cikis=None):
+    """Hazır bir ders klasöründen (ör. ornek-dersler/<ders>) kurulabilir ders paketi yapar.
+    Öğrenci bilgisayarında üretilen klasörler (ses, makale metni, video) ve özel vakalar pakete girmez."""
+    klasor = os.path.abspath(klasor)
+    ders = os.path.basename(klasor.rstrip(os.sep))
+    if not any(os.path.isfile(os.path.join(klasor, a)) for a in ("ders.json", "egitmen.json")):
+        raise ValueError("Bu klasörde ders.json ya da egitmen.json yok: %s" % klasor)
+    cikis = os.path.abspath(cikis or ders + ".zip")
+    os.makedirs(os.path.dirname(cikis), exist_ok=True)
+    atla = ATLA + ("videolar/",)
+    with zipfile.ZipFile(cikis, "w", zipfile.ZIP_DEFLATED) as z:
+        for kok, klasorler, dosyalar in os.walk(klasor):
+            klasorler[:] = sorted(k for k in klasorler if k != "__pycache__")
+            for ad in sorted(dosyalar):
+                yol = os.path.join(kok, ad)
+                ic = os.path.relpath(yol, klasor).replace(os.sep, "/")
+                if any(ic.startswith(a) for a in atla) or "/ozel-" in "/" + ic or ad in (".DS_Store", "Thumbs.db"):
+                    continue
+                z.write(yol, ders + "/" + ic)
+    with zipfile.ZipFile(cikis) as z:
+        paketi_incele(z)
+    return cikis
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--yukle", metavar="ZIP", required=True)
+    g = ap.add_mutually_exclusive_group(required=True)
+    g.add_argument("--yukle", metavar="ZIP")
+    g.add_argument("--olustur", metavar="KLASOR", help="ders klasöründen paket zip'i yap")
+    ap.add_argument("--cikis", metavar="ZIP", help="--olustur için paketin yazılacağı yer")
     ap.add_argument("--uzerine", action="store_true", help="ders kuruluysa güncelle")
     ap.add_argument("--makalesiz", action="store_true", help="kurduktan sonra makaleleri indirme")
     a = ap.parse_args()
+    if a.olustur:
+        try:
+            print("Paket hazır:", paket_olustur(a.olustur, a.cikis))
+        except ValueError as e:
+            print("Paket yapılamadı:", e)
+            return 1
+        return 0
     try:
         r = yukle(a.yukle, a.uzerine)
     except (ValueError, FileExistsError, zipfile.BadZipFile) as e:

@@ -18,6 +18,17 @@ import bilgi_bankasi  # noqa: E402
 import karne  # noqa: E402
 import vaka_denetle  # noqa: E402
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import ornek_ders  # noqa: E402
+
+
+def setUpModule():
+    ornek_ders.kur()
+
+
+def tearDownModule():
+    ornek_ders.kaldir()
+
 
 def _metin_yaz(yol, metin, **ek):
     with open(yol, "w", encoding="utf-8", **ek) as f:
@@ -35,7 +46,7 @@ def _json_oku(yol):
         return json.load(f)
 
 
-ORNEK_VAKA = os.path.join(KOK, "lessons", "peri-implantitis-cerrahi", "vakalar", "ornek-implant-kanama.json")
+ORNEK_VAKA = os.path.join(KOK, "ornek-dersler", "peri-implantitis-cerrahi", "vakalar", "ornek-implant-kanama.json")
 
 
 class SahteModel:
@@ -923,9 +934,11 @@ class YayinDenetimi(unittest.TestCase):
         import yayin_denetimi as yd
         k = yd._gitignore_kurallari()
         for yol in ("lessons/ozel-akut/egitmen.json", "lessons/peri/vakalar/ozel-nug.json", "ozel/not.md",
-                    "kayitlar/ali/x.json", "tools/__pycache__/a.pyc", "lessons/peri/audio/a.mp3", "paket.zip"):
+                    "kayitlar/ali/x.json", "tools/__pycache__/a.pyc", "lessons/peri/audio/a.mp3", "paket.zip",
+                    "lessons/peri/egitmen.json"):  # kurulu dersler hiçbir zaman depoya girmez
             self.assertTrue(yd.yok_sayilir_mi(yol, k), yol)
-        for yol in ("lessons/peri/egitmen.json", "lessons/peri/vakalar/ornek.json", "tools/yayin_denetimi.py",
+        for yol in ("ornek-dersler/peri/egitmen.json", "ornek-dersler/peri/vakalar/ornek.json",
+                    "lessons/katalog.json", "tools/yayin_denetimi.py",
                     "belgeler/ozel-icerik.md"):
             self.assertFalse(yd.yok_sayilir_mi(yol, k), yol)
 

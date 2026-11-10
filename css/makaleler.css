@@ -4,6 +4,7 @@
 .mk-head p { color: var(--chalk-dim); max-width: 62ch; margin: 0 0 1em; }
 .mk-geri { color: var(--chalk-dim); text-decoration: none; }
 .mk-geri:hover { color: var(--chalk); }
+.mk-geri + .mk-geri { margin-left: 1.2em; }
 .mk-kutu { background: var(--board-2); border: 1px solid var(--board-line); border-radius: var(--radius);
   padding: 1em 1.2em; margin: 0 0 1em; }
 .mk-kutu h2 { font-size: 1.05em; margin: 0 0 .5em; }

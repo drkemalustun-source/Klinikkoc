@@ -118,9 +118,10 @@ def denetle():
         except OSError:
             pass
 
-    for klasor in sorted(glob.glob(os.path.join(KOK, "lessons", "*", ""))):
+    for klasor in sorted(glob.glob(os.path.join(KOK, "lessons", "*", "")) +
+                         glob.glob(os.path.join(KOK, "ornek-dersler", "*", ""))):
         ders = os.path.basename(os.path.dirname(klasor))
-        on = "lessons/%s/" % ders
+        on = os.path.relpath(klasor, KOK).replace(os.sep, "/").rstrip("/") + "/"
         if not any(x.startswith(on) for x in kume):
             continue  # derse ait hiçbir dosya depoya girmiyor (ör. .gitignore ile dışarıda)
         dj = os.path.join(klasor, "ders.json")

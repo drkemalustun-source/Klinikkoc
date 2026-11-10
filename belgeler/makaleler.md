@@ -49,8 +49,7 @@ gelince (3, 7, 21, 60 gün aralıklarla) `tekrar_listesi`nde çıkar; sonuç `te
 
 **Depolama sınırı.** Varsayılan 2 GB; "Makaleler ve ders paketleri" sayfasının **Depolama ve arşiv** bölümünden
 değiştirilir. Sayılan: ders klasörleri, arama dizini ve derslerin makale PDF'leri. Sınır aşılınca sayfa ve eğitmen
-"Hangi dersleri arşive kaldıralım?" diye sorar. **Arşivleme otomatik değildir**; öğrenci seçer. Programla gelen
-dersler arşivlenmez.
+"Hangi dersleri arşive kaldıralım?" diye sorar. **Arşivleme otomatik değildir**; öğrenci seçer.
 
 **Arşivleme.** Sıra şöyledir; bir adım başarısız olursa hiçbir şey silinmez:
 

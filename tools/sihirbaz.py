@@ -235,8 +235,11 @@ def dois_ayikla(metin):
 
 def _yazar_kisaltma(yazar):
     soy = (yazar.get("family") or yazar.get("name") or "").strip()
-    ad = (yazar.get("given") or "").replace(".", " ")
-    bas = "".join(p[0] for p in re.split(r"[\s-]+", ad) if p)
+    ad = (yazar.get("given") or "").strip()
+    if re.fullmatch(r"[A-ZÇĞİÖŞÜ]{1,3}", ad):  # zaten baş harfler: "PN"
+        bas = ad
+    else:
+        bas = "".join(p[0] for p in re.split(r"[\s.-]+", ad) if p)
     return (soy + (" " + bas.upper() if bas else "")).strip()
 
 

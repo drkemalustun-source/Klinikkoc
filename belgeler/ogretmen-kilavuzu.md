@@ -35,7 +35,37 @@ Her alt hedefe bir hedef düzey verin (`"bloom": "uygula"` gibi). Düzeyler:
 - Seçmeli sorularda her yanlış seçeneğe neden yanlış olduğunu (`why`) yazın.
 - Açık uçlu sorularda (`"type": "open"`) **rubrik** ve **örnek cevap** zorunludur. Rubrikte her satır
   cevapta aranan tek bir öğedir; olmazsa olmaz öğeleri `"required": true` ile işaretleyin.
-  Örnek: `lessons/tanitim/ders.json` içindeki `y5b` adımı.
+  Örnek:
+
+```json
+{
+  "id": "y5b",
+  "question": {
+    "type": "open",
+    "goal": "T2.1",
+    "bloom": "uygula",
+    "prompt": "Kendi dersinizden bir adım düşünün: anlatıcı \"kök yüzeyi\" dediği anda tahtada bir şeklin o bölgesi işaretlensin. Bu adımı nasıl yazardınız? Kendi cümlelerinizle anlatın.",
+    "rubric": [
+      {
+        "criterion": "Anlatım metnine (say) bir işaret koyar, ör. {1}",
+        "points": 1,
+        "required": true
+      },
+      {
+        "criterion": "Tahtaya önce görseli gösteren bir image komutu ekler",
+        "points": 1
+      },
+      {
+        "criterion": "Bölgeyi işaretleyen highlight komutuna aynı işaret numarasını (cue: 1) verir",
+        "points": 1,
+        "required": true
+      }
+    ],
+    "modelAnswer": "Adımın anlatım metnine işaretin yerini koyarım: \"Şimdi {1}kök yüzeyine bakalım.\" Tahta komutlarına önce şekli açan bir image komutu, sonra cue değeri 1 olan bir highlight komutu eklerim. Anlatıcı {1} işaretine geldiği anda vurgu belirir.",
+    "explanation": "Metindeki {1} işareti ile komuttaki cue: 1 eşleşir; anlatıcı o noktaya gelince komut çalışır."
+  }
+}
+```
 
 ## 4. Vaka kartları
 

@@ -9,6 +9,14 @@
   };
   let ders = new URLSearchParams(location.search).get('ders') || '';
   let izleme = null;
+  if (location.protocol === 'file:') {
+    // Dosyaya çift tıklanarak açıldı: bu sayfa yerel sunucu olmadan çalışmaz.
+    const u = document.createElement('div');
+    u.className = 'dp-uyari';
+    u.textContent = 'Bu sayfa KlinikKoç açıkken çalışır. Program klasöründeki BASLAT-Windows (Mac\'te BASLAT-Mac) dosyasına çift tıklayın ya da Claude\'a "ders paketi sayfasını aç" deyin.';
+    document.addEventListener('DOMContentLoaded', () => document.querySelector('main').prepend(u));
+    if (document.readyState !== 'loading') document.querySelector('main').prepend(u);
+  }
 
   async function api(yol, secenek) {
     const y = await fetch('/api/makale/' + yol, secenek);
@@ -145,6 +153,7 @@
       ders = v.ders;
       history.replaceState(null, '', '?ders=' + encodeURIComponent(ders));
       await dersleriYukle();
+      depolamaYukle();
     } catch (e) {
       if (e.kod === 409) {
         mesaj.innerHTML = '';

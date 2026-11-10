@@ -8,6 +8,14 @@
   let BLOOM = Object.keys(BLOOM_AD);
   let ders = new URLSearchParams(location.search).get('ders') || '';
   let T = null;
+  if (location.protocol === 'file:') {
+    // Dosyaya çift tıklanarak açıldı: bu sayfa yerel sunucu olmadan çalışmaz.
+    const u = document.createElement('div');
+    u.className = 'dp-uyari';
+    u.textContent = 'Bu sayfa KlinikKoç açıkken çalışır. Program klasöründeki BASLAT-Windows (Mac\'te BASLAT-Mac) dosyasına çift tıklayın ya da Claude\'a "ders paketi sayfasını aç" deyin.';
+    document.addEventListener('DOMContentLoaded', () => document.querySelector('main').prepend(u));
+    if (document.readyState !== 'loading') document.querySelector('main').prepend(u);
+  }
 
   async function api(yol, govde, ham) {
     const sec = govde === undefined ? {} : { method: 'POST', body: ham ? govde : JSON.stringify(govde) };

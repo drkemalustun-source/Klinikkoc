@@ -276,7 +276,7 @@ class SihirbazTest(unittest.TestCase):
 
     # --- Paketleme: kademeler ---
     def vaka_zip(self, kimlik="ng-vakasi"):
-        with open(os.path.join(KOK, "lessons", "peri-implantitis-cerrahi", "vakalar", "ornek-implant-kanama.json"),
+        with open(os.path.join(KOK, "ornek-dersler", "peri-implantitis-cerrahi", "vakalar", "ornek-implant-kanama.json"),
                   encoding="utf-8") as f:
             v = json.load(f)
         v = copy.deepcopy(v)

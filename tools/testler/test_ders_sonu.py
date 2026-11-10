@@ -253,6 +253,30 @@ class DersSonuTest(unittest.TestCase):
         self.assertEqual(ds.geri_yukle(ds.arsiv_listesi()[0]["dosya"], makale_ara=False)["kayit_ayni"], [kimlik])
         self.assertEqual(len(dp.yukle(kimlik, DERS)[0]["cevaplar"]), 5)
 
+    def test_ornek_dersten_paket(self):
+        """Program derssiz gelir: örnek ders ornek-dersler/ klasöründen pakete çevrilip kurulur."""
+        import shutil
+        kaynak = os.path.join(self.tmp.name, "peri-implantitis-cerrahi")
+        shutil.copytree(os.path.join(KOK, "ornek-dersler", "peri-implantitis-cerrahi"), kaynak)
+        for ic in ("audio/a.mp3", "makale-metin/x/sayfa-001.txt", "videolar/v.mp4", "vakalar/ozel-gercek.json"):
+            yol = os.path.join(kaynak, ic)
+            os.makedirs(os.path.dirname(yol), exist_ok=True)
+            with open(yol, "w") as f:
+                f.write("x")
+        zip_yolu = ders_paketi.paket_olustur(kaynak, os.path.join(self.tmp.name, "cikti", "peri.zip"))
+        with zipfile.ZipFile(zip_yolu) as z:
+            adlar = z.namelist()
+        self.assertIn("peri-implantitis-cerrahi/ders.json", adlar)
+        self.assertIn("peri-implantitis-cerrahi/vakalar/ornek-implant-kanama.json", adlar)
+        for yasak in ("/audio/", "/makale-metin/", "/videolar/", "/vakalar/ozel-"):
+            self.assertFalse([a for a in adlar if yasak in a], yasak)
+        r = ders_paketi.yukle(zip_yolu)
+        self.assertEqual(r["ders"], "peri-implantitis-cerrahi")
+        with open(os.path.join(self.kok, "lessons", "katalog.json"), encoding="utf-8") as f:
+            self.assertIn("peri-implantitis-cerrahi", [g["id"] for g in json.load(f)["lessons"]])
+        with self.assertRaises(ValueError):
+            ders_paketi.paket_olustur(os.path.join(self.tmp.name, "cikti"))
+
     def test_gecersiz_arsiv(self):
         y = os.path.join(self.tmp.name, "x.zip")
         with zipfile.ZipFile(y, "w") as z:

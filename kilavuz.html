@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#16201c">
+  <title>KlinikKoç · Kullanım kılavuzu</title>
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/tahta.css">
+  <link rel="stylesheet" href="css/makaleler.css">
+  <link rel="stylesheet" href="css/kilavuz.css">
+</head>
+<body>
+  <main class="mk kl">
+    <header class="mk-head">
+      <a class="mk-geri" href="index.html">‹ Dersler</a> <a class="mk-geri" href="makaleler.html">Ders paketleri ve makaleler</a>
+      <h1>Kullanım kılavuzu</h1>
+      <p>KlinikKoç'u kurmaktan bir dersi bitirip arşive kaldırmaya kadar her adım, ekran görüntüleriyle.
+        Öğrenciyseniz 1–4. bölümler, öğretmenseniz 5. bölüm sizin için.</p>
+    </header>
+
+    <nav class="kl-icindekiler" aria-label="İçindekiler">
+      <h2>İçindekiler</h2>
+      <ol>
+        <li><a href="#nedir">KlinikKoç nedir?</a></li>
+        <li><a href="#kurulum">Kurulum</a>
+          <ol>
+            <li><a href="#kurulum-windows">Windows</a></li>
+            <li><a href="#kurulum-mac">Mac</a></li>
+            <li><a href="#acmak">KlinikKoç'u açmak</a></li>
+          </ol></li>
+        <li><a href="#ogrenci">Öğrenci: ders eklemek ve çalışmak</a>
+          <ol>
+            <li><a href="#paket">Ders paketi eklemek</a></li>
+            <li><a href="#makaleler">Makaleler</a></li>
+            <li><a href="#oynatici">Oynatıcıyla çalışmak</a></li>
+            <li><a href="#canli">Canlı tahtada Claude ile çalışmak</a></li>
+            <li><a href="#karne">Karne ve rapor</a></li>
+          </ol></li>
+        <li><a href="#bitirmek">Ders bitince</a>
+          <ol>
+            <li><a href="#tamamlama">Tamamlama raporu</a></li>
+            <li><a href="#tekrar">Tekrar kartları</a></li>
+            <li><a href="#depolama">Depolama ve arşiv</a></li>
+            <li><a href="#kayitlar">Kayıtlarınız nerede?</a></li>
+          </ol></li>
+        <li><a href="#ogretmen">Öğretmen: ders hazırlama sihirbazı</a>
+          <ol>
+            <li><a href="#sihirbaz-acmak">Sihirbazı açmak</a></li>
+            <li><a href="#sihirbaz-adimlar">Altı adım</a></li>
+            <li><a href="#kademeler">Paylaşım kademeleri</a></li>
+            <li><a href="#dagitmak">Paketi öğrencilere vermek</a></li>
+          </ol></li>
+        <li><a href="#sorunlar">Sorun giderme</a></li>
+      </ol>
+    </nav>
+
+    <article class="kl-metin">
+
+      <section id="nedir">
+        <h2>1. KlinikKoç nedir?</h2>
+        <p>KlinikKoç, diş hekimliği öğrencileri için açık kaynaklı ve kâr amacı gütmeyen bir çalışma aracıdır.
+          Dersi Türkçe sesli anlatır, tahtada şekil gösterir, sonra sizi klinik vakalarda adım adım karar vermeye
+          çalıştırır. Takıldığınız yerde ilgili konuyu yeniden anlatır.</p>
+        <ul>
+          <li><b>Program derssiz gelir.</b> Her ders, öğretmeninizin verdiği bir <b>ders paketidir</b> (.zip dosyası).
+            Paketi eklediğinizde ders listede belirir.</li>
+          <li><b>Sorular not için değildir.</b> Cevaplarınız, karneniz ve raporlarınız yalnız sizin bilgisayarınızda durur;
+            hiçbir yere gönderilmez.</li>
+          <li><b>İki çalışma biçimi vardır:</b> internetsiz çalışan <i>oynatıcı</i> (hazır anlatım ve sorular) ve
+            Claude masaüstü uygulamasıyla çalışan <i>canlı tahta</i> (sohbet, sesli soru-cevap, vaka, rubrikle puanlama).
+            Canlı tahta sizin Claude aboneliğinizle çalışır; ek ücret ya da API anahtarı gerekmez.</li>
+        </ul>
+      </section>
+
+      <section id="kurulum">
+        <h2>2. Kurulum</h2>
+        <p>Kurulum bir kez yapılır. Gerekenler: <a href="https://www.python.org/downloads/">Python 3</a> (3.12 önerilir)
+          ve canlı tahta için Claude masaüstü uygulaması. KlinikKoç klasörünü indirip bir yere açın
+          (ör. Belgeler). Klasörün yerini sonra değiştirmeyin; değiştirirseniz kurulumu yeniden çalıştırın.</p>
+
+        <div class="kl-iki">
+          <div id="kurulum-windows">
+            <h3>Windows</h3>
+            <ol class="kl-adim">
+              <li>Python'u kurarken ilk ekrandaki <b>"Add python.exe to PATH"</b> kutusunu işaretleyin.</li>
+              <li>KlinikKoç klasöründeki <b>KUR-Windows</b> dosyasına çift tıklayın. Windows dosya uzantılarını
+                gizleyebilir; adı yalnız "KUR-Windows" görünür.</li>
+              <li>Kurulum üç adım yapar: ses paketleri ve PDF okuyucu, Claude'a KlinikKoç araçlarının eklenmesi,
+                isteğe bağlı doğal Türkçe ses (yaklaşık 1 GB, "E" ya da "H" ile seçilir).</li>
+              <li>Claude'u <b>tamamen</b> kapatın: saatin yanındaki <b>^</b> işareti → Claude simgesi → sağ tık → <b>Çık</b>.
+                Sonra yeniden açın.</li>
+              <li>Denetim: Claude'da <b>Ayarlar › Geliştirici</b> ekranında "klinik-koc" <b>Çalışıyor</b> görünmeli.</li>
+            </ol>
+          </div>
+          <div id="kurulum-mac">
+            <h3>Mac</h3>
+            <ol class="kl-adim">
+              <li>KlinikKoç klasöründeki <b>KUR-Mac</b> dosyasına çift tıklayın.</li>
+              <li>macOS "geliştiricisi doğrulanamadı" derse dosyaya sağ tıklayıp <b>Aç → Aç</b> deyin.</li>
+              <li>Python 3 yoksa kurulum bunu söyler; python.org'dan kurup KUR-Mac'i yeniden çalıştırın.
+                "SSL: CERTIFICATE_VERIFY_FAILED" hatası görürseniz Uygulamalar → Python 3.x klasöründeki
+                <b>Install Certificates</b> dosyasına çift tıklayın.</li>
+              <li>Claude'u Cmd+Q ile kapatıp yeniden açın.</li>
+              <li>Denetim: <b>Ayarlar › Geliştirici</b> ekranında "klinik-koc" <b>Çalışıyor</b> görünmeli.</li>
+            </ol>
+          </div>
+        </div>
+
+        <h3 id="acmak">KlinikKoç'u açmak</h3>
+        <p>KlinikKoç'u üç yoldan açabilirsiniz:</p>
+        <ul>
+          <li><b>BASLAT-Windows</b> (Mac'te <b>BASLAT-Mac</b>) dosyasına çift tıklayın. Bir pencere açılır ve ana sayfa
+            tarayıcıda görünür. Pencere açık kaldıkça KlinikKoç çalışır; işiniz bitince pencereyi kapatın.
+            Ders paketi eklemek, makaleler ve öğretmen sihirbazı bu yolla (ya da Claude'la) açıldığında çalışır.</li>
+          <li>Claude'a yazın: <span class="kl-soyle"><b>Claude'a:</b> "KlinikKoç'un ders paketleri sayfasını aç."</span></li>
+          <li>Yalnız oynatıcı için <code>index.html</code> dosyasına çift tıklamak da yeter (internetsiz çalışır),
+            ama o zaman ders paketi eklenemez.</li>
+        </ul>
+        <figure class="kl-sekil">
+          <img src="belgeler/kilavuz/ogrenci-0-bos-ana-sayfa.png" width="900" height="560" loading="lazy"
+               alt="KlinikKoç ana sayfası: Henüz ders yok kutusu, Ders paketi ekle ve Kılavuzu okuyun düğmeleri">
+          <figcaption>İlk açılışta ders listesi boştur. <b>Ders paketi ekle</b> sizi paket sayfasına götürür.
+            Sayfanın altında bu kılavuzun, ders paketleri sayfasının ve öğretmen sihirbazının bağlantıları vardır.</figcaption>
+        </figure>
+      </section>
+
+      <section id="ogrenci">
+        <h2>3. Öğrenci: ders eklemek ve çalışmak</h2>
+
+        <h3 id="paket">Ders paketi eklemek</h3>
+        <ol class="kl-adim">
+          <li>Öğretmeninizden ders paketini (ör. <code>akut-periodontal-lezyonlar-acik.zip</code>) alın ve
+            bilgisayarınıza kaydedin. Zip'i açmayın; olduğu gibi kullanılır.</li>
+          <li>Ana sayfada <b>Ders paketi ekle</b>'ye basın (ya da altta <b>Ders paketleri ve makaleler</b>).</li>
+          <li>Zip dosyasını <b>Ders paketi ekle</b> alanına sürükleyip bırakın ya da alana tıklayıp dosyayı seçin.</li>
+          <li>"Kuruldu" yazısı çıkar ve makaleler kendiliğinden aranmaya başlar. Ders artık ana sayfadaki listededir.</li>
+        </ol>
+        <figure class="kl-sekil">
+          <img src="belgeler/kilavuz/ogrenci-1-paket-ekle.png" width="862" height="223" loading="lazy"
+               alt="Ders paketi ekle alanı ve Kuruldu mesajı">
+          <figcaption>Paket kurulunca ders adı ve aranan makale sayısı yazar. Ders zaten kuruluysa
+            <b>Güncelle</b> düğmesi çıkar; güncellemek ilerlemenizi silmez.</figcaption>
+        </figure>
+        <p>Claude kullanıyorsanız paketi ona da kurdurabilirsiniz:</p>
+        <p class="kl-soyle"><b>Claude'a:</b> "İndirilenler klasöründeki akut-periodontal-lezyonlar-acik.zip ders paketini kur."</p>
+
+        <h3 id="makaleler">Makaleler</h3>
+        <p>Ders paketinde makalelerin kendisi değil, yalnız <b>listesi</b> (künye ve DOI) vardır. KlinikKoç makaleleri
+          bilgisayarınıza kendisi indirir, okur ve eğitmenin aramasına ekler. Böylece eğitmen sorularınızı bu makalelere
+          dayanarak cevaplar.</p>
+        <figure class="kl-sekil">
+          <img src="belgeler/kilavuz/ogrenci-2-ders-sec.png" width="862" height="212" loading="lazy"
+               alt="Ders seçimi, Hazır ve Eksik sayıları, Makaleleri bul ve indir düğmesi, makale klasörünün yeri">
+          <figcaption>Dersi seçin. Üstte kaç makalenin hazır, kaçının eksik olduğu görünür.
+            <b>Makaleleri bul ve indir</b> aramayı yeniden başlatır; <b>Makale klasörünü aç</b> PDF'lerin durduğu klasörü açar.</figcaption>
+        </figure>
+        <p>Makaleler şu sırayla aranır: bilgisayarınızdaki makale klasörü, açık erişimli sürüm (OpenAlex, Europe PMC),
+          son olarak yayıncının sayfası. Bilgisayarınız <b>üniversite ağındaysa</b> (kampüste eduroam ya da üniversitenin
+          VPN'i) abonelikli dergiler de çoğu zaman iner. KlinikKoç hiçbir kullanıcı adı ya da şifre kullanmaz.</p>
+        <figure class="kl-sekil">
+          <img src="belgeler/kilavuz/ogrenci-3-makale-listesi.png" width="818" height="335" loading="lazy"
+               alt="Makale listesi: biri Hazır, biri Eksik; eksik olanın yanında Yayıncı sayfasını aç düğmesi">
+          <figcaption><b>Hazır</b>: indirildi ve aramaya eklendi. <b>Eksik</b>: bulunamadı.
+            <b>Okunamadı</b>: PDF indi ama içinden yazı çıkmadı (taranmış bir PDF olabilir).</figcaption>
+        </figure>
+        <p><b>Eksik bir makaleyi elle eklemek:</b> yanındaki <b>Yayıncı sayfasını aç</b> düğmesine basın, PDF'i
+          indirin (gerekirse üniversite ağından ya da kütüphane üzerinden), sonra PDF'i aşağıdaki alana sürükleyin.
+          KlinikKoç PDF'teki DOI'den hangi makale olduğunu kendisi bulur.</p>
+        <figure class="kl-sekil">
+          <img src="belgeler/kilavuz/ogrenci-4-pdf-birak.png" width="818" height="97" loading="lazy"
+               alt="PDF'leri buraya bırakın alanı">
+          <figcaption>Listede olmayan kendi makalenizi de buraya bırakabilirsiniz; "siz eklediniz" diye ayrı görünür.</figcaption>
+        </figure>
+        <div class="kl-not">İnen bütün PDF'ler <code>Belgeler\KlinikKoç Makaleler\&lt;ders adı&gt;</code> klasöründe durur
+          (Mac'te <code>Belgeler/KlinikKoç Makaleler</code>). Bu klasör sizindir: ders silinse ya da arşivlense de PDF'ler
+          burada kalır ve ders yeniden kurulunca tekrar indirilmez.</div>
+
+        <h3 id="oynatici">Oynatıcıyla çalışmak (internetsiz)</h3>
+        <figure class="kl-sekil">
+          <img src="belgeler/kilavuz/ogrenci-6-ders-listesi.png" width="900" height="560" loading="lazy"
+               alt="Ana sayfada bir ders kartı: başlık, düzey ve süre">
+          <figcaption>Kurulu dersler ana sayfada kart olarak görünür. Karta dokunmak dersi açar; kaldığınız yer ve
+            tekrar zamanı gelen sorular kartta yazar.</figcaption>
+        </figure>
+        <p>Oynatıcı dersi adım adım anlatır: tahtada şekil belirir, ilgili yer işaretlenir, altta anlatılan cümle
+          altyazı olarak görünür. Bölüm sonlarında <b>Kendini yokla</b> soruları gelir.</p>
+        <figure class="kl-sekil">
+          <img src="belgeler/kilavuz/ogrenci-7-oynatici.png" width="1100" height="700" loading="lazy"
+               alt="Oynatıcıda bir Kendini yokla sorusu, altta oynat-duraklat düğmeleri ve ilerleme çubuğu">
+          <figcaption>Sorunun üstünde bağlı olduğu hedef ve düşünme düzeyi (ör. H1.a · Anla) yazar. Emin değilseniz
+            <b>İpucu</b> isteyin ya da <b>Şimdilik geç</b> deyin; geçtiğiniz soru sonra yeniden gelir.</figcaption>
+        </figure>
+        <div class="kl-tablo"><table>
+          <thead><tr><th>Ne yapmak istiyorsunuz?</th><th>Nasıl?</th></tr></thead>
+          <tbody>
+            <tr><td>Durdurmak / sürdürmek</td><td>Ortadaki sarı düğme ya da <kbd>Boşluk</kbd></td></tr>
+            <tr><td>Sonraki / önceki adım</td><td><kbd>→</kbd> <kbd>←</kbd> ya da tahtada parmağınızı sola / sağa kaydırın</td></tr>
+            <tr><td>Anlatım hızı</td><td>Sağ alttaki <b>1,0×</b> düğmesi</td></tr>
+            <tr><td>İçindekiler, hedefler, ayarlar</td><td>Sağ üstteki düğmeler (hedefler tablosunda yeşil: ulaşıldı, kırmızı: tekrar edin)</td></tr>
+            <tr><td>Tam ekran</td><td>Sağ üstteki köşeli düğme ya da <kbd>F</kbd></td></tr>
+          </tbody>
+        </table></div>
+
+        <h3 id="canli">Canlı tahtada Claude ile çalışmak</h3>
+        <p>Canlı tahtada dersi Claude'un eğitmeni yönetir: anlatır, sorularınızı cevaplar, vakada size karar verdirir,
+          açık uçlu cevaplarınızı puanlama ölçütüyle (rubrik) değerlendirir. Lisans derslerinde eğitmen <b>İnci</b>,
+          uzmanlık derslerinde <b>Mercan</b>'dır; hangisi olduğunu ders paketi belirler.</p>
+        <p>Claude masaüstü uygulamasında yeni bir sohbet açıp yazın:</p>
+        <p class="kl-soyle"><b>Claude'a:</b> "Tahtayı aç, akut periodontal lezyonlar dersine başlayalım. Adım Ayşe, numaramın son üç hanesi 123."</p>
+        <ol class="kl-adim">
+          <li>Claude araçları ilk kullanırken izin ister; <b>Her zaman izin ver</b> demeniz işinizi kolaylaştırır.</li>
+          <li>Tarayıcıda canlı tahta açılır. Bir kez <b>Tam ekran başlat</b>'a (ya da <b>Pencerede başlat</b>'a) dokunun;
+            tarayıcı sesin çalması için bunu ister.</li>
+          <li>İlk girişte eğitmen adınızı ve kısa bir ayırt ediciyi (ör. numaranızın son üç hanesi) sorar.
+            Böylece aynı adlı iki öğrencinin kaydı karışmaz.</li>
+        </ol>
+        <figure class="kl-sekil">
+          <img src="belgeler/kilavuz/ogrenci-8-canli-tahta.png" width="1100" height="720" loading="lazy"
+               alt="Canlı tahta: kemik defekti sınıflaması şekli, işaretlenmiş bölge, terim kartı, altta Claude'un cümlesi ve yazma kutusu">
+          <figcaption>Üst çubukta hangi sesin kullanıldığı ve Claude'un sizi dinleyip dinlemediği görünür.
+            Altta mikrofon ve duraklat düğmeleri, yazma kutusu ve durdur düğmesi vardır.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Yazarak sormak:</b> kutuya yazıp <kbd>Enter</kbd>'a basın. Yazmaya başladığınızda anlatım kendiliğinden duraklar.</li>
+          <li><b>Sesle sormak:</b> mikrofona dokunun (<kbd>M</kbd>) ve konuşun. Söyledikleriniz 2–3 saniye kutuda görünür;
+            yanlış yazılmış bir terim varsa kutuya dokunup düzeltin.</li>
+          <li><b>Duraklatmak:</b> <kbd>P</kbd> ya da <kbd>Boşluk</kbd>; <b>durdurmak:</b> <kbd>Esc</kbd>.</li>
+          <li>Tahtada "Sorunuz bekliyor" yazarsa Claude o an sizi dinlemiyordur: sohbete <b>"tahtaya bak"</b> yazın.</li>
+        </ul>
+        <p>İşinize yarayacak birkaç cümle:</p>
+        <p class="kl-soyle"><b>Claude'a:</b> "Bu dersin vakasını çözelim." · "Bunu bir daha anlatır mısın?" ·
+          "Sözlü sınav provası yapalım." · "Mola verelim, sonra kaldığımız yerden devam ederiz."</p>
+
+        <h3 id="karne">Karne ve rapor</h3>
+        <p>Karne hedef başına ve düşünme düzeyine (hatırla, anla, uygula, çözümle, değerlendir, oluştur) göre
+          nerede olduğunuzu gösterir; en çok zorlandığınız soruları ve vakalardaki riskli seçimleri listeler.
+          Not değildir, kendinizi geliştirmeniz içindir.</p>
+        <p class="kl-soyle"><b>Claude'a:</b> "Karnemi göster." · "Öğretmenim için rapor yaz."</p>
+        <p>Rapor bilgisayarınızdaki kayıt klasörüne yazılır. Öğretmeninize vermek isterseniz dosyayı kendiniz gönderirsiniz.</p>
+      </section>
+
+      <section id="bitirmek">
+        <h2>4. Ders bitince</h2>
+
+        <h3 id="tamamlama">Tamamlama raporu</h3>
+        <p>Dersi bitirdiğinizde Claude'a söyleyin. Eğitmen önce derse dair bir notunuz olup olmadığını sorar,
+          sonra <b>tamamlama raporunu</b> yazar: hedefleriniz, zorlandığınız konular, vakalar, çalışma süresi ve notunuz.
+          Ders yerinde kalır; istediğiniz zaman yeniden açabilirsiniz.</p>
+        <p class="kl-soyle"><b>Claude'a:</b> "Bu dersi bitirdim."</p>
+
+        <h3 id="tekrar">Tekrar kartları</h3>
+        <p>Dersi bitirince zorlandığınız sorulardan en çok 10 <b>tekrar kartı</b> çıkar. Kartlar 3, 7, 21 ve 60 gün sonra
+          yeniden sorulur; bildikçe aralık uzar, yanılırsanız ertesi güne döner. Kartlar çok küçüktür (yalnız yazı) ve
+          ders arşive kaldırılsa bile sizinle kalır.</p>
+        <p class="kl-soyle"><b>Claude'a:</b> "Bugün tekrar zamanı gelen kartlarım var mı?"</p>
+        <p>Eğitmen bir derse başlarken zamanı gelen kartlarınızı da kendiliğinden sorar.</p>
+
+        <h3 id="depolama">Depolama ve arşiv</h3>
+        <p>Dersler ve makaleler zamanla yer kaplar. Varsayılan sınır <b>2 GB</b>'tır; <b>Ders paketleri ve makaleler</b>
+          sayfasının en altındaki <b>Depolama ve arşiv</b> bölümünden değiştirebilirsiniz. Sınır aşılınca sayfa ve eğitmen
+          size hangi dersleri arşive kaldırmak istediğinizi sorar. <b>Arşivleme kendiliğinden yapılmaz;</b> siz seçersiniz.</p>
+        <figure class="kl-sekil">
+          <img src="belgeler/kilavuz/ogrenci-5-depolama.png" width="860" height="643" loading="lazy"
+               alt="Depolama ve arşiv bölümü: kullanım çubuğu, sınır kutusu, dersler listesi ve Seçilenleri arşive kaldır düğmesi">
+          <figcaption>Her dersin ne kadar yer kapladığı (ders dosyaları, arama dizini, makale PDF'leri) ve son açılma
+            tarihi görünür. Arşive kaldırmak istediklerinizi işaretleyip <b>Seçilenleri arşive kaldır</b>'a basın ve onaylayın.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Arşive ne girer?</b> Dersin dosyaları, ilerlemeniz, karneleriniz, raporlarınız ve makale listesi.
+            Arşiv <code>Belgeler\KlinikKoç Arşiv</code> klasöründe tek bir zip olarak durur.</li>
+          <li><b>Ne kalır?</b> Makale PDF'leri makale klasöründe, tekrar kartlarınız ve kayıtlarınız yerinde kalır.</li>
+          <li><b>Güvenli mi?</b> Önce arşiv yazılıp denetlenir; ancak sorun yoksa ders bilgisayardan kaldırılır.</li>
+          <li><b>Geri getirmek:</b> <b>Arşivdeki dersler</b> listesinde <b>Geri yükle</b>'ye basın ya da arşiv zip'ini
+            alttaki alana bırakın. Ders, ilerlemenizle birlikte geri gelir; bu bilgisayarda daha yeni bir kaydınız varsa o korunur.</li>
+        </ul>
+
+        <h3 id="kayitlar">Kayıtlarınız nerede?</h3>
+        <p>Kayıtlarınız program klasörünün dışında durur; programın yeni sürümünü kurup eskisini silseniz de kaybolmaz.</p>
+        <div class="kl-tablo"><table>
+          <thead><tr><th>Ne?</th><th>Windows</th><th>Mac</th></tr></thead>
+          <tbody>
+            <tr><td>İlerleme, karne, raporlar, tekrar kartları</td><td><code>%APPDATA%\KlinikKoc\kayitlar</code></td>
+              <td><code>~/Library/Application Support/KlinikKoc/kayitlar</code></td></tr>
+            <tr><td>Makale PDF'leri</td><td><code>Belgeler\KlinikKoç Makaleler</code></td><td><code>Belgeler/KlinikKoç Makaleler</code></td></tr>
+            <tr><td>Arşivlenen dersler</td><td><code>Belgeler\KlinikKoç Arşiv</code></td><td><code>Belgeler/KlinikKoç Arşiv</code></td></tr>
+          </tbody>
+        </table></div>
+        <ul>
+          <li>Windows'ta yolu Dosya Gezgini'nin adres çubuğuna yazın; Mac'te Finder → Git → Klasöre Git… ile açın.</li>
+          <li><b>Başka bilgisayara taşımak:</b> Claude'a "kayıtlarımı dışa aktar" deyin; masaüstüne tek bir dosya yazılır.
+            Öbür bilgisayarda "şu dosyadaki kayıtlarımı içe al" deyin.</li>
+          <li><b>Silmek:</b> Claude'u kapatıp kayıt klasörünü (ya da içindeki kendi adınızla başlayan klasörü) çöp kutusuna atın.</li>
+        </ul>
+      </section>
+
+      <section id="ogretmen">
+        <h2>5. Öğretmen: ders hazırlama sihirbazı</h2>
+        <p>Sihirbaz, bir dersi dosya yazmadan, ekrandan adım adım hazırlamanızı sağlar. Sonunda öğrencilere vereceğiniz
+          ders paketleri çıkar. <b>Sihirbaz önerir, siz onaylarsınız:</b> onaylamadığınız hiçbir şey derse girmez.</p>
+
+        <h3 id="sihirbaz-acmak">Sihirbazı açmak</h3>
+        <p>KlinikKoç'u <a href="#acmak">BASLAT dosyasıyla ya da Claude'la açın</a>, ana sayfanın altındaki
+          <b>Öğretmen: ders hazırlama sihirbazı</b> bağlantısına basın. Daha önce başladığınız taslaklar <b>Ders taslağı</b>
+          listesinde durur; yeni bir ders için <b>Yeni ders aç</b>'a basın.</p>
+        <figure class="kl-sekil">
+          <img src="belgeler/kilavuz/ogretmen-1-yeni-ders.png" width="862" height="353" loading="lazy"
+               alt="Yeni ders aç: ders başlığı ve kısa kimlik kutuları, Taslağı aç düğmesi">
+          <figcaption>Başlığı yazın; kısa kimlik kendiliğinden oluşur (Türkçe harfsiz, tireli). Kimlik paketin ve klasörün adı olur.</figcaption>
+        </figure>
+
+        <h3 id="sihirbaz-adimlar">Altı adım</h3>
+        <p><b>1. Ders kartı.</b> Başlık, yaklaşık süre, düzey (Lisans / Uzmanlık) ve eğitmen (İnci lisans, Mercan uzmanlık).</p>
+        <figure class="kl-sekil">
+          <img src="belgeler/kilavuz/ogretmen-2-ders-karti.png" width="862" height="332" loading="lazy" alt="Ders kartı adımı">
+        </figure>
+
+        <p><b>2. Makaleler.</b> DOI'leri ya da kaynakçayı olduğu gibi yapıştırın. Künye, özet ve açık erişim bilgisi
+          internetten (Crossref, OpenAlex) gelir. İnternet yoksa makale yine eklenir; sonra <b>Eksik künyeleri yeniden sor</b>'a basın.
+          Bir makaleyi <b>ana kaynak</b> yapabilirsiniz. Pakete makalenin kendisi değil, yalnız künyesi girer.</p>
+        <figure class="kl-sekil">
+          <img src="belgeler/kilavuz/ogretmen-3a-doi-yapistir.png" width="862" height="294" loading="lazy" alt="DOI yapıştırma kutusu">
+        </figure>
+        <figure class="kl-sekil">
+          <img src="belgeler/kilavuz/ogretmen-3b-makaleler.png" width="862" height="622" loading="lazy"
+               alt="Eklenen makalelerin künyeleri, açık erişim etiketi ve ana kaynak seçimi">
+          <figcaption>Açık erişimli makaleler etiketlenir. Abonelikli makaleleri öğrenciler üniversite ağından indirir ya da elle ekler.</figcaption>
+        </figure>
+
+        <p><b>3. Ders notu ve vakalar.</b> Word (.docx), PDF, .txt ya da .md notunuzu bırakın; başlıklarından
+          (Word'de Başlık 1 / Başlık 2 biçemi) bölümlere ayrılır. Eski .doc biçimini Word'de .docx olarak kaydedin.
+          Vaka kartı (.json) ya da kart ve görsellerinin zip'i de bırakılabilir. Bırakmadan önce <b>paylaşım kademesini</b> seçin.</p>
+        <figure class="kl-sekil">
+          <img src="belgeler/kilavuz/ogretmen-4-ders-notu.png" width="862" height="598" loading="lazy"
+               alt="Ders notu bırakma alanı, paylaşım kademesi seçimi ve eklenen notun bölüm sayısı">
+        </figure>
+
+        <p><b>4. Sorular ve eğitimde dikkat edilecekler.</b> Eğitmenin uyacağı notlar (ör. "tanıyı tedaviden önce sor"),
+          öğrencilerin sık yaptığı yanlışlar ve kendi sorularınız.</p>
+        <figure class="kl-sekil">
+          <img src="belgeler/kilavuz/ogretmen-5-dikkat-sorular.png" width="862" height="703" loading="lazy"
+               alt="Eğitimde dikkat edilecekler kutusu ve soru ekleme alanı">
+        </figure>
+
+        <p><b>5. Öneriler ve onay.</b> İki yol vardır:</p>
+        <ul>
+          <li><b>Hızlı öneriler (internetsiz):</b> not başlıklarından hedef taslakları, fiilden Bloom düzeyi, notta geçen
+            terimler ve hedef başına bir açık uçlu soru. Kaba bir başlangıçtır.</li>
+          <li><b>Claude'un önerileri:</b> Claude notunuzu ve makale özetlerini okuyup hedef, Bloom düzeyi, terim, soru,
+            örnek cevap, rubrik ve yanılgı önerir. Öneriler bu sayfaya gelir.
+            <span class="kl-soyle"><b>Claude'a:</b> "Akut periodontal lezyonlar dersi için sihirbaz önerilerini hazırla."</span></li>
+        </ul>
+        <figure class="kl-sekil">
+          <img src="belgeler/kilavuz/ogretmen-6a-oneriler.png" width="860" height="900" loading="lazy"
+               alt="Öneri kartları: her birinde düzenlenebilir metin, Bloom düzeyi, Kabul et ve Sil düğmeleri">
+          <figcaption>Her öneriyi düzeltip <b>Kabul et</b> ya da <b>Sil</b>. Hiçbiri siz onaylamadan derse girmez.</figcaption>
+        </figure>
+        <figure class="kl-sekil">
+          <img src="belgeler/kilavuz/ogretmen-6b-onaylananlar.png" width="860" height="620" loading="lazy"
+               alt="Onaylanan hedefler, terimler ve sorular listesi">
+          <figcaption>Onayladıklarınız ayrı listede toplanır; açık uçlu sorulara örnek cevabınızı buradan yazabilirsiniz.</figcaption>
+        </figure>
+
+        <p><b>6. Denetle ve paketle.</b> Eksikler kırmızı, dikkat edilecekler sarı görünür. Kırmızı kalmayınca
+          <b>Paketle</b>'ye basın. Paketler <code>Belgeler\KlinikKoç Ders Paketleri</code> klasörüne yazılır ve ders
+          bu bilgisayara da kurulur; canlı tahtada hemen kendiniz deneyebilirsiniz.</p>
+        <figure class="kl-sekil">
+          <img src="belgeler/kilavuz/ogretmen-7-paketle.png" width="862" height="414" loading="lazy"
+               alt="Paketle sonucu: herkese açık paket ve fakülte paketinin yeri, hedef, makale ve not sayıları">
+          <figcaption>İki paket çıkar: herkese açık paket (<code>…-acik.zip</code>) ve fakülte paketi (<code>…-fakulte.zip</code>).
+            Onay bekleyen öneriler varsa uyarı çıkar; onlar pakete girmez.</figcaption>
+        </figure>
+        <div class="kl-not">Kendinizi denerken adınızı <b>"deneme"</b> verin; bu kayıtlar karnede "DENEME KAYDI" diye
+          görünür ve araştırma aktarımına katılmaz.</div>
+
+        <h3 id="kademeler">Paylaşım kademeleri</h3>
+        <p>Her not, vaka ve soru için bir kademe seçersiniz:</p>
+        <div class="kl-tablo"><table>
+          <thead><tr><th>Kademe</th><th>Herkese açık paket</th><th>Fakülte paketi</th><th>Yalnız bu bilgisayar</th></tr></thead>
+          <tbody>
+            <tr><td>Herkese açık (CC BY 4.0)</td><td>var</td><td>var</td><td>var</td></tr>
+            <tr><td>Yalnız fakülte</td><td>yok</td><td>var</td><td>var</td></tr>
+            <tr><td>Hiç paylaşılmaz</td><td>yok</td><td>yok</td><td>var</td></tr>
+          </tbody>
+        </table></div>
+        <ul>
+          <li>Fakülte paketi öğrencinin bilgisayarına <code>ozel-…</code> adıyla kurulur ve açık depoya hiçbir zaman girmez.</li>
+          <li>Hasta fotoğrafı kullanacaksanız kimliği belirlenemeyen ve eğitim için onam alınmış görseller seçin.</li>
+          <li>Pakette olmayan bir not bölümü sorulursa eğitmen "bu kısmı bu pakette okuyamıyorum" der; uydurmaz.</li>
+        </ul>
+
+        <h3 id="dagitmak">Paketi öğrencilere vermek</h3>
+        <ul>
+          <li>Kendi fakültenizin öğrencilerine <b>fakülte paketini</b>, başka üniversitelerden öğrencilere ya da herkese
+            <b>açık paketi</b> verin. Paket bir zip dosyasıdır; e-posta, ders sayfası ya da USB bellekle iletilebilir.</li>
+          <li>Paketlerde abonelikli makalelerin PDF'i hiçbir zaman yoktur; öğrenci makaleleri kendi bilgisayarına indirir.</li>
+          <li>Dersi güncellediğinizde yeniden paketleyip yeni zip'i verin; öğrenci <b>Güncelle</b> dediğinde ilerlemesi korunur.</li>
+        </ul>
+      </section>
+
+      <section id="sorunlar">
+        <h2>6. Sorun giderme</h2>
+        <details class="kl-sorun">
+          <summary>Ana sayfada "Henüz ders yok" yazıyor</summary>
+          <p>Program derssiz gelir. Öğretmeninizin verdiği ders paketini <a href="#paket">ekleyin</a>.</p>
+        </details>
+        <details class="kl-sorun">
+          <summary>Ders paketleri sayfası "KlinikKoç açıkken çalışır" diyor</summary>
+          <p>Sayfayı dosyaya çift tıklayarak açmışsınız. <b>BASLAT-Windows</b> (Mac'te <b>BASLAT-Mac</b>) dosyasına
+            çift tıklayın ya da Claude'a "ders paketleri sayfasını aç" deyin.</p>
+        </details>
+        <details class="kl-sorun">
+          <summary>"Paketin içinde tek bir ders klasörü olmalı" ya da "Bu bir KlinikKoç ders paketi değil"</summary>
+          <p>Zip'i açıp yeniden sıkıştırmış olabilirsiniz. Öğretmeninizin verdiği zip'i hiç açmadan bırakın.</p>
+        </details>
+        <details class="kl-sorun">
+          <summary>Makalelerin çoğu "Eksik" kalıyor</summary>
+          <ul>
+            <li>Bilgisayarınız internete bağlı mı? Abonelikli dergiler için kampüste eduroam'a ya da üniversitenizin VPN'ine bağlanıp
+              <b>Makaleleri bul ve indir</b>'e yeniden basın.</li>
+            <li>Bazı yayıncılar otomatik indirmeye izin vermez: <b>Yayıncı sayfasını aç</b> ile PDF'i indirip sayfaya bırakın.</li>
+            <li>"Okunamadı" görünüyorsa PDF taranmış bir görüntü olabilir; yayıncıdan metinli sürümünü indirin.</li>
+          </ul>
+        </details>
+        <details class="kl-sorun">
+          <summary>Claude'da "klinik-koc" görünmüyor ya da araçlar çalışmıyor</summary>
+          <ul>
+            <li>Claude'u tamamen kapatıp açtınız mı? (Windows'ta saatin yanındaki ^ → Claude → sağ tık → Çık; Mac'te Cmd+Q.)</li>
+            <li>KUR dosyasını yeniden çalıştırın; sonunda bulduğu Claude ayar dosyalarını listeler.</li>
+            <li>KlinikKoç klasörünü taşıdıysanız KUR'u yeni yerde yeniden çalıştırın.</li>
+          </ul>
+        </details>
+        <details class="kl-sorun">
+          <summary>Ses çıkmıyor</summary>
+          <ul>
+            <li>Canlı tahtada bir kez <b>Tam ekran başlat</b>'a dokundunuz mu? "Sesi açmak için dokunun" düğmesi görünüyorsa ona basın.</li>
+            <li>Üst çubukta "tarayıcı sesi (yedek)" yazıyorsa doğal ses kurulmamıştır; KUR'u yeniden çalıştırıp "E" deyin.</li>
+            <li>Oynatıcıda "Türkçe ses bulunamadı" uyarısı çıkarsa anlatım altyazıyla sürer.</li>
+          </ul>
+        </details>
+        <details class="kl-sorun">
+          <summary>Mikrofonla söylediklerim yanlış yazılıyor</summary>
+          <p>Söylediğiniz kutuda 2–3 saniye görünür; kutuya dokunup düzeltin. Mikrofonun yanındaki küçük etiketten
+            yerel tanıyıcıyı (Duyu-small) seçebilirsiniz; tıbbi terimlerde daha doğrudur.</p>
+        </details>
+        <details class="kl-sorun">
+          <summary>Depolama sınırı aşıldı uyarısı</summary>
+          <p>Bitirdiğiniz dersleri <a href="#depolama">arşive kaldırın</a> ya da sınırı yükseltin. Hiçbir ders kendiliğinden silinmez.</p>
+        </details>
+        <p>Başka bir sorun için: <a href="https://github.com/drkemalustun-source/klinikkoc/issues">GitHub'da bildirin</a>
+          (ad, numara ya da hasta bilgisi yazmayın).</p>
+      </section>
+
+    </article>
+  </main>
+</body>
+</html>

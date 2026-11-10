@@ -23,6 +23,8 @@ jobs:
       - name: Dersleri denetle
         run: |
           node tools/paketle.mjs
+          node tools/paketle.mjs --ornek
+          git diff --exit-code -- ornek-dersler || (echo "Örnek dersin ders.js kopyaları güncel değil: 'node tools/paketle.mjs --ornek' çalıştırın." && exit 1)
           git diff --exit-code -- lessons/katalog.json lessons/katalog.js onbellek-listesi.json || (echo "Ders listesi güncel değil: 'node tools/paketle.mjs' çalıştırıp sonucu ekleyin." && exit 1)
       - name: Vaka kartlarını denetle
         run: python tools/vaka_denetle.py
