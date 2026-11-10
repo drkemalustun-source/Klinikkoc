@@ -260,7 +260,7 @@ class Canli:
                  "duraklatildi": self.duraklatildi,
                  "claude_dinliyor": self.dinliyor(),
                  "ses": self.ses_durumu(),
-                 "kok": KOK}  # hangi kurulumdan çalıştığı: tahta aracı kendi klasörüyle karşılaştırır
+                 "kok": KOK, "surum": degerlendirme.program_surumu()}  # hangi kurulumdan çalıştığı: tahta aracı kendi klasörüyle karşılaştırır
             if al and self.konusmalar:
                 d["bekleyen_konusmalar"] = [dict(x) for x in self.konusmalar]
                 self._konusma_ekle(d)

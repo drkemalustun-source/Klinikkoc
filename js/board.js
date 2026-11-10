@@ -320,6 +320,19 @@
         frame.style.height = (fw / ar) + 'px';
       };
       img.addEventListener('load', fit);
+      if (a.makaleden) {
+        // Şekil pakette yok; öğrencinin kendi makale PDF'inden çıkarılır (tools/makale_sekil.py).
+        // Makale henüz eklenmediyse boş kare yerine nereye bakılacağını söyle.
+        img.addEventListener('error', () => {
+          const m = a.makaleden;
+          const not = el('div', 'figure-missing');
+          not.appendChild(el('strong', null, (c.caption || a.caption || 'Şekil').split('.')[0] + ' makalede'));
+          not.appendChild(el('span', null, 'Makalenin ' + (m.sayfa ? m.sayfa + '. sayfasına' : 'ilgili şekline') +
+            ' bakın. Makaleyi "Ders paketleri ve makaleler" sayfasından bu derse eklerseniz şekil burada görünür.'));
+          frame.replaceWith(not);
+          this.figure = null;
+        }, { once: true });
+      }
       if ('ResizeObserver' in window) new ResizeObserver(fit).observe(stage);
       else window.addEventListener('resize', fit);
       img.src = AT.lessonUrl(this.lesson, a.src);

@@ -121,7 +121,7 @@ def bos_taslak(ders, baslik=""):
               "olusturma": time.strftime("%Y-%m-%d %H:%M")})
     for k, v in (("duzey", "Lisans"), ("egitmen", "inci"), ("sure_dk", 20), ("kaynaklar", []), ("notlar", []),
                  ("vakalar", []), ("sorular", []), ("dikkat", []), ("yanilgilar", []), ("hedefler", []),
-                 ("terimler", []), ("oneriler", {})):
+                 ("terimler", []), ("gorseller", []), ("oneriler", {})):
         t.setdefault(k, v)
     return t
 
@@ -177,7 +177,7 @@ def kart_guncelle(ders, alanlar):
     return taslak_yaz(ders, t)
 
 
-LISTELER = {"dikkat", "yanilgilar", "sorular", "hedefler", "terimler", "kaynaklar", "notlar", "vakalar"}
+LISTELER = {"dikkat", "yanilgilar", "sorular", "hedefler", "terimler", "kaynaklar", "notlar", "vakalar", "gorseller"}
 
 
 def oge_kaydet(ders, liste_adi, oge):
@@ -884,6 +884,15 @@ def _ders_klasoru_yaz(t, hedef, kademeler, ders_adi):
         eg["aciklama"] = t["aciklama_ogrenci"]
     if t.get("geri_bildirim_eposta"):
         eg["geriBildirim"] = {"eposta": t["geri_bildirim_eposta"]}
+    kids = {k["id"] for k in t.get("kaynaklar", [])}
+    gorseller = {}
+    for g in t.get("gorseller", []):
+        m = g.get("makaleden") or {}
+        if g.get("id") and m.get("kaynak") in kids:  # yalnız yeri: öğrenci kendi PDF'inden çizer
+            gorseller[g["id"]] = {k: v for k, v in (("src", "gorseller/%s.png" % g["id"]), ("baslik", g.get("baslik")),
+                                                   ("aciklama", g.get("aciklama")), ("makaleden", m)) if v}
+    if gorseller:
+        eg["gorseller"] = gorseller
     _json_yaz(os.path.join(hedef, "egitmen.json"), eg)
     kaynaklar = []
     for k in t["kaynaklar"]:
@@ -955,6 +964,8 @@ def paketle(ders, cikis=None, kur=True):
             import ders_paketi
             r = ders_paketi.yukle(yerel_zip, uzerine=True)
             sonuc["kuruldu"] = r["ders"]
+            if t.get("gorseller"):  # makaleden şekiller: öğretmenin bu bilgisayardaki PDF'lerinden hemen çizilir
+                mb.sekilleri_cikar(r["ders"])
             import vaka_denetle
             for kart in sorted(glob.glob(os.path.join(ders_paketi.KOK, "lessons", r["ders"], "vakalar", "*.json"))):
                 h, _, _ = vaka_denetle.denetle(kart)

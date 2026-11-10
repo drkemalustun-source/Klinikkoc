@@ -50,6 +50,7 @@
           <ol>
             <li><a href="#sihirbaz-acmak">Sihirbazı açmak</a></li>
             <li><a href="#sihirbaz-adimlar">Altı adım</a></li>
+            <li><a href="#sekil-ekle">Makaleden şekil eklemek</a></li>
             <li><a href="#kademeler">Paylaşım kademeleri</a></li>
             <li><a href="#dagitmak">Paketi öğrencilere vermek</a></li>
             <li><a href="#geri-bildirim">Öğrencilerden gelen değerlendirmeler</a></li>
@@ -162,6 +163,10 @@
         <p>Makaleler şu sırayla aranır: bilgisayarınızdaki makale klasörü, açık erişimli sürüm (OpenAlex, Europe PMC),
           son olarak yayıncının sayfası. Bilgisayarınız <b>üniversite ağındaysa</b> (kampüste eduroam ya da üniversitenin
           VPN'i) abonelikli dergiler de çoğu zaman iner. KlinikKoç hiçbir kullanıcı adı ya da şifre kullanmaz.</p>
+        <p id="makale-sekilleri"><b>Makalenin şekilleri.</b> Abonelikli bir makalenin şekilleri ders paketinde yoktur; paket
+          yalnız şeklin makalede nerede olduğunu bilir. Makale bilgisayarınıza inince (ya da siz bırakınca) KlinikKoç
+          şekilleri sizin kopyanızdan çizip tahtaya koyar; listede "Makaleden şekil: 6/6" görünür. Makale eklenmeden önce
+          tahtada şeklin yerinde "Şekil … makalede" notu çıkar.</p>
         <figure class="kl-sekil">
           <img src="belgeler/kilavuz/ogrenci-3-makale-listesi.png" width="818" height="335" loading="lazy"
                alt="Makale listesi: biri Hazır, biri Eksik; eksik olanın yanında Yayıncı sayfasını aç düğmesi">
@@ -403,6 +408,13 @@
         </figure>
         <div class="kl-not">Kendinizi denerken adınızı <b>"deneme"</b> verin; bu kayıtlar karnede "DENEME KAYDI" diye
           görünür ve araştırma aktarımına katılmaz.</div>
+
+        <h3 id="sekil-ekle">Makaleden şekil eklemek</h3>
+        <p>Abonelikli makalenin şeklini dosya olarak derse koymayın. Makalenin PDF'i bu bilgisayarda hazırsa Claude'a
+          söyleyin; Claude sayfaya bakıp şeklin yerini (makale, sayfa, bölge) derse yazar ve kesilen şekli size gösterir.
+          Pakete şeklin kendisi girmez; her öğrencinin bilgisayarı şekli kendi indirdiği makaleden çizer. Eklenen şekiller
+          sihirbazın 3. adımında <b>Makaleden şekiller</b> listesinde görünür.</p>
+        <p class="kl-soyle"><b>Claude'a:</b> "Su 2010 makalesinin Şekil 3'ünü implant dersine sekil3 adıyla ekle."</p>
 
         <h3 id="kademeler">Paylaşım kademeleri</h3>
         <p>Her not, vaka ve soru için bir kademe seçersiniz:</p>

@@ -46,6 +46,20 @@ Claude'dan eklemek için: `makale_ekle(ders="kendi-makalelerim", dosya=...)`.
 `Belgeler/KlinikKoç Makaleler`). Bu klasör sizindir: istediğiniz yere yedekleyebilirsiniz. Bir ders
 silinse ya da arşivlense de PDF'ler burada kalır; ders yeniden kurulunca KlinikKoç önce buraya bakar.
 
+## Makaleden şekiller (öğrencinin kendi PDF'inden)
+
+Abonelikli makalenin şekilleri pakete giremez. Ders görseli dosya yerine yerini taşır:
+`ders.json` → `assets.<ad>` ya da `egitmen.json` → `gorseller.<ad>` içinde
+`"makaleden": {"kaynak": "<kaynaklar.json kimliği>", "sayfa": 3, "bolge": [sol, üst, sağ, alt]}` (0–1 oran,
+sol-üst köken; bölge yoksa bütün sayfa) ve `src` (ör. `gorseller/sekil3.png`). Makale "hazır" olunca
+(`hazirla` sonunda ve elle eklenince) `tools/makale_sekil.py` sayfayı pypdfium2 ile çizer, keser ve PNG olarak
+`src`'ye yazar (PNG kodlayıcı yalnız standart kitaplık). `ders_paketi.paket_olustur` bu dosyaları pakete koymaz;
+`paketle.mjs` dosyası olmayan `makaleden` görseli hata saymaz. Tahta, dosya yoksa "Şekil … makalede" notu
+gösterir; `gorsel_bak` Claude'a şeklin henüz olmadığını söyler. Öğretmen tarafı: MCP `makale_sayfasi_bak`
+(sayfa ya da bölge önizlemesi) ve `makale_sekli_ekle` (tanımı yazar, hemen çizer, kesilen şekli gösterir;
+sihirbaz taslağı varsa `gorseller` listesine de yazar, yeniden paketlemede korunur). pypdfium2'yi
+`makale_bulucu.py --kur` (KUR dosyası) kurar; yoksa makale metni yine okunur, şekiller eksik kalır.
+
 ## Ders bitince: rapor, tekrar kartları ve arşiv
 
 **Tamamlama raporu (her zaman).** Öğrenci dersi bitirince eğitmen `ders_bitir` aracıyla raporu yazar:

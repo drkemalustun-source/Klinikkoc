@@ -1155,6 +1155,22 @@ class PocketYenidenDeneme(unittest.TestCase):
         self.assertEqual(isci.durum, "hazır")
 
 
+class Surum(unittest.TestCase):
+    """Programın sürümü tek yerde: SURUM dosyası; config.js ve Claude aracı aynısını söyler."""
+
+    def test_surum_ayni(self):
+        with open(os.path.join(KOK, "SURUM"), encoding="utf-8") as f:
+            surum = f.read().strip()
+        self.assertRegex(surum, r"^\d+\.\d+\.\d+$")
+        with open(os.path.join(KOK, "config.js"), encoding="utf-8") as f:
+            self.assertIn("version: '%s'" % surum, f.read())
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("tahta_mcp_surum", os.path.join(KOK, "tools", "tahta-mcp.py"))
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        self.assertEqual(m.SURUM, surum)
+
+
 class IkiKurulum(unittest.TestCase):
     """Yan yana iki kurulum: açık sunucu başka klasördense tahtayi_ac bunu fark eder."""
 

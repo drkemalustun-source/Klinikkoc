@@ -45,6 +45,7 @@ import karne as karne_  # noqa: E402
 import kayit_aktar  # noqa: E402
 import kayit_deposu as kd  # noqa: E402
 import makale_bulucu  # noqa: E402
+import makale_sekil  # noqa: E402
 import sihirbaz  # noqa: E402
 import veri_yeri  # noqa: E402
 
@@ -65,7 +66,15 @@ def _ikili_oku(yol):
         return f.read()
 PORT = int(os.environ.get("KLINIK_KOC_PORT", "8810"))
 ADRES = "http://127.0.0.1:%d" % PORT
-SURUM = "0.4.0"
+def _surum_oku():
+    try:
+        with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "SURUM"), encoding="utf-8") as f:
+            return f.read().strip() or "0"
+    except OSError:
+        return "0"
+
+
+SURUM = _surum_oku()  # programın sürümü: kök klasördeki SURUM dosyası (config.js'teki ile aynı olmalı)
 AD = "klinik-koc"
 
 TALIMAT = """KlinikKoç: bu bilgisayardaki tarayıcıda açık bir kara tahta. Bu araçlarla
@@ -312,6 +321,31 @@ ARACLAR = [
                                   "items": {"type": "object"}},
             "form": {"type": "boolean", "description": "değerlendirme formunu tarayıcıda aç (varsayılan true)"}},
             "required": ["ogrenci", "ders"]},
+    },
+    {
+        "name": "makale_sayfasi_bak",
+        "description": "Öğretmen için: derse makaleden şekil eklerken makalenin bir sayfasını görüntü olarak gösterir "
+                       "(makalenin PDF'i bu bilgisayarda hazır olmalı). bolge verilirse yalnız o kısım. Şeklin yerini "
+                       "bulup makale_sekli_ekle'ye bolge vermek için kullan. bolge = [sol, üst, sağ, alt], sayfanın "
+                       "0–1 arası oranları (sol-üst köşe 0,0).",
+        "inputSchema": {"type": "object", "properties": {
+            "ders": {"type": "string"}, "kaynak": {"type": "string", "description": "kaynaklar.json'daki makale kimliği"},
+            "sayfa": {"type": "integer"}, "bolge": {"type": "array", "items": {"type": "number"}}},
+            "required": ["ders", "kaynak", "sayfa"]},
+    },
+    {
+        "name": "makale_sekli_ekle",
+        "description": "Öğretmen için: kurulu bir derse makalenin bir şeklini ekler. Pakete şeklin kendisi değil yalnız "
+                       "yeri (makale, sayfa, bölge) girer; her öğrencinin bilgisayarı şekli onun kendi PDF'inden çizer. "
+                       "Abonelikli makalelerin şekilleri için tek doğru yol budur. Önce makale_sayfasi_bak ile bölgeyi "
+                       "bul; bu araç kesilen şekli gösterir, kenarlar kesik ya da fazlaysa bolge'yi düzeltip yeniden "
+                       "çağır. Tahtada tahta aracının image komutunda gorsel adıyla kullanılır.",
+        "inputSchema": {"type": "object", "properties": {
+            "ders": {"type": "string"}, "ad": {"type": "string", "description": "görsel adı, ör. sekil1"},
+            "kaynak": {"type": "string"}, "sayfa": {"type": "integer"},
+            "bolge": {"type": "array", "items": {"type": "number"}, "description": "[sol, üst, sağ, alt] 0–1"},
+            "baslik": {"type": "string", "description": "ör. Şekil 1"}, "aciklama": {"type": "string"}},
+            "required": ["ders", "ad", "kaynak", "sayfa"]},
     },
     {
         "name": "degerlendirme_notu",
@@ -785,6 +819,13 @@ def ar_gorsel_bak(a):
             bilgi += "\n%s: %s" % ("Öğretmen notu" if k == "ogretmenNotu" else "Kaynak notu", eg_g[k])
     if not tur:
         return {"content": [{"type": "text", "text": bilgi + "\n(Bu görsel türü gösterilemiyor: %s)" % uz}]}
+    m = g.get("makaleden") or eg_g.get("makaleden")
+    if m and not os.path.exists(yol):
+        return {"content": [{"type": "text", "text": bilgi + (
+            "\nBu şekil pakette yok; öğrencinin makale PDF'inden (%s, s. %s) çıkarılır ve makale henüz eklenmemiş. "
+            "Tahtada yerine 'şekil makalede' notu çıkar. Öğrenciye makaleyi Makaleler sayfasından bu derse eklemesini "
+            "söyle; ekleyince şekil kendiliğinden gelir. Şekli görmeden üzerinde işaretleme yapma." % (
+                m.get("kaynak"), m.get("sayfa") or "?"))}]}
     veri = base64.b64encode(_ikili_oku(yol)).decode("ascii")
     return {"content": [{"type": "image", "data": veri, "mimeType": tur}, {"type": "text", "text": bilgi}]}
 
@@ -2071,6 +2112,46 @@ def ar_ders_bitir(a):
     return metin(out)
 
 
+def _makale_pdf(ders, kaynak):
+    ders_yolu(ders)
+    pdf = makale_sekil._pdf_yolu(ders, kaynak)
+    if not pdf:
+        raise ValueError("Bu makalenin PDF'i bu bilgisayarda hazır değil (%s). Önce makaleler sayfasından ekleyin." % kaynak)
+    if not makale_sekil.cizici_var():
+        raise ValueError("Şekil çizici (pypdfium2) kurulu değil: KUR dosyasını yeniden çalıştırın.")
+    return pdf
+
+
+def ar_makale_sayfasi_bak(a):
+    pdf = _makale_pdf(a.get("ders"), a.get("kaynak"))
+    veri = makale_sekil.onizleme(pdf, int(a.get("sayfa") or 1), a.get("bolge"))
+    return {"content": [{"type": "image", "data": base64.b64encode(veri).decode("ascii"), "mimeType": "image/png"},
+                        {"type": "text", "text": "Sayfa %s%s. Bölge [sol, üst, sağ, alt], 0–1 oran." % (
+                            a.get("sayfa"), " (yalnız bölge)" if a.get("bolge") else "")}]}
+
+
+def ar_makale_sekli_ekle(a):
+    ders = a.get("ders")
+    _makale_pdf(ders, a.get("kaynak"))
+    r = makale_sekil.tanimla(ders, a.get("ad"), a.get("kaynak"), a.get("sayfa"), a.get("bolge"),
+                             a.get("baslik"), a.get("aciklama"))
+    icerik = []
+    if r.get("dosya") and os.path.exists(r["dosya"]):
+        icerik.append({"type": "image", "data": base64.b64encode(_ikili_oku(r["dosya"])).decode("ascii"),
+                       "mimeType": "image/png"})
+    # Ders sihirbazla hazırlandıysa taslağa da yaz: yeniden paketlenince şekil tanımı kaybolmasın.
+    taslak_ders = next((t for t in (ders, ders[5:] if ders.startswith("ozel-") else None)
+                        if t and os.path.exists(sihirbaz.taslak_yolu(t))), None)
+    if taslak_ders:
+        sihirbaz.oge_kaydet(taslak_ders, "gorseller", {"id": a.get("ad"), "baslik": a.get("baslik"),
+                                                       "aciklama": a.get("aciklama"), "makaleden": r["makaleden"]})
+        r["sihirbaz_taslagi"] = taslak_ders
+    r["not"] = ("Kesilen şekle bak: eksik ya da fazla kenar varsa bolge'yi düzeltip yeniden çağır. Şekil dosyası pakete "
+                "girmez; öğrenci makaleyi ekleyince kendi bilgisayarında çizilir.")
+    icerik.append({"type": "text", "text": json.dumps(r, ensure_ascii=False)})
+    return {"content": icerik}
+
+
 def ar_degerlendirme_notu(a):
     ders = a.get("ders")
     ders_yolu(ders)
@@ -2145,7 +2226,8 @@ ISLEYICILER = {"egitmen_hazirla": ar_egitmen_hazirla, "kayit_oku": ar_kayit_oku,
                "makale_bul": ar_makale_bul, "makale_ekle": ar_makale_ekle,
                "sihirbaz_oku": ar_sihirbaz_oku, "sihirbaz_oner": ar_sihirbaz_oner,
                "ders_bitir": ar_ders_bitir, "degerlendirme_notu": ar_degerlendirme_notu,
-               "degerlendirme_ozeti": ar_degerlendirme_ozeti, "tekrar_karti_yaz": ar_tekrar_karti_yaz, "depolama": ar_depolama,
+               "degerlendirme_ozeti": ar_degerlendirme_ozeti,
+               "makale_sayfasi_bak": ar_makale_sayfasi_bak, "makale_sekli_ekle": ar_makale_sekli_ekle, "tekrar_karti_yaz": ar_tekrar_karti_yaz, "depolama": ar_depolama,
                "ders_arsivle": ar_ders_arsivle, "ders_paketi_ekle": ar_ders_paketi_ekle,
                "ses_yeniden_baslat": ar_ses_yeniden_baslat, "arsivden_geri_yukle": ar_arsivden_geri_yukle}
 
@@ -2446,6 +2528,7 @@ def kayit_yeri_hazirla():
 
 def kendini_dene():
     """Kurulumdan sonra hızlı denetim: araç listesi ve ders dosyaları okunuyor mu?"""
+    print("KlinikKoç sürümü:", SURUM)
     print("Python:", sys.executable)
     print("Klasör:", KOK)
     print("Dersler:", ", ".join(g["id"] for g in katalog()) or "yok")

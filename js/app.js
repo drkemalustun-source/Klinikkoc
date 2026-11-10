@@ -1,6 +1,7 @@
 /* Arayüz: ders listesi, ders ekranı, sorular, çekmece (içindekiler / hedefler / ayarlar). */
 (function (AT) {
   'use strict';
+  { const sv = document.getElementById('surum'); if (sv && AT.config && AT.config.version) sv.textContent = 'Sürüm ' + AT.config.version; }
 
   const $ = (s, r = document) => r.querySelector(s);
   const home = $('#home');

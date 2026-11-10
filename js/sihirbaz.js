@@ -67,7 +67,7 @@
   function ciz() {
     document.querySelectorAll('[data-alan]').forEach((g) => { g.value = T[g.dataset.alan] ?? ''; });
     $('#claudeKomut').textContent = `"${T.baslik} dersi için sihirbaz önerilerini hazırla."`;
-    kaynaklariCiz(); notlariCiz(); vakalariCiz(); listeCiz('dikkat', '#dikkatListe'); listeCiz('yanilgilar', '#yanilgiListe');
+    kaynaklariCiz(); notlariCiz(); vakalariCiz(); gorselleriCiz(); listeCiz('dikkat', '#dikkatListe'); listeCiz('yanilgilar', '#yanilgiListe');
     sorulariCiz(); hedefleriCiz(); terimleriCiz(); onerileriCiz(); denetle();
   }
 
@@ -132,6 +132,16 @@
       ol.append(li);
     }
     if (!T.notlar.length) ol.append(el('li', { class: 'mk-ince' }, 'Henüz not yok.'));
+  }
+  function gorselleriCiz() {
+    const ol = $('#gorselListe'); ol.innerHTML = '';
+    for (const g of T.gorseller || []) {
+      const m = g.makaleden || {};
+      ol.append(el('li', {}, el('div', { class: 'mk-ad' }, (g.baslik || g.id) + (g.aciklama ? ' · ' + g.aciklama : '')),
+        el('div', { class: 'mk-ince' }, `${m.kaynak}, sayfa ${m.sayfa}${m.bolge ? ', bölge ' + m.bolge.join(' ') : ', bütün sayfa'}`),
+        el('div', { class: 'mk-islem' }, el('button', { class: 'btn small ghost', onclick: () => sil('gorseller', g.id) }, 'Çıkar'))));
+    }
+    if (!(T.gorseller || []).length) ol.append(el('li', { class: 'mk-ince' }, 'Henüz şekil yok.'));
   }
   function vakalariCiz() {
     const ol = $('#vakaListe'); ol.innerHTML = '';

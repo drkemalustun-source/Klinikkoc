@@ -17,6 +17,7 @@ import bilgi_bankasi  # noqa: E402
 import ders_paketi  # noqa: E402
 import ders_sonu as ds  # noqa: E402
 import degerlendirme as dg  # noqa: E402
+import makale_sekil  # noqa: E402
 import makale_bulucu as mb  # noqa: E402
 from test_makale import makale_pdf  # noqa: E402
 
@@ -237,6 +238,53 @@ class DersSonuTest(unittest.TestCase):
         self.assertIn("S2'nin örnek cevabı yok", oz["metin"])
         self.assertIn("Vaka (Akut periodontal lezyonlar)", oz["metin"])
         self.assertIn("ek1: Hayır", oz["metin"])
+
+    def test_makaleden_sekil(self):
+        klasor = os.path.join(self.kok, "lessons", DERS)
+        r = makale_sekil.tanimla(DERS, "sekil1", "herrera", 1, [0.1, 0.1, 0.9, 0.5], "Şekil 1", "Defekt sınıfları")
+        with open(os.path.join(klasor, "egitmen.json"), encoding="utf-8") as fh:
+            g = json.load(fh)["gorseller"]["sekil1"]
+        self.assertEqual(g["src"], "gorseller/sekil1.png")
+        self.assertEqual(g["makaleden"], {"kaynak": "herrera", "sayfa": 1, "bolge": [0.1, 0.1, 0.9, 0.5]})
+        with self.assertRaises(ValueError):
+            makale_sekil.gorsel_tanimi("../x", "herrera", 1)
+        with self.assertRaises(ValueError):
+            makale_sekil.gorsel_tanimi("s", "herrera", 1, [0.5, 0.5, 0.51, 0.9])
+        hedef = os.path.join(klasor, "gorseller", "sekil1.png")
+        if makale_sekil.cizici_var():
+            self.assertEqual(r["durum"], "hazir")
+            with open(hedef, "rb") as fh:
+                self.assertEqual(fh.read(8), b"\x89PNG\r\n\x1a\n")
+        else:
+            self.assertEqual(makale_sekil.cikar(DERS), {"sekil1": "cizici-yok"})
+            makale_sekil.png_yaz(hedef, 2, 1, [b"\xff\x00\x00\x00\xff\x00"])  # öğrencide çizilmiş gibi
+        self.assertEqual(makale_sekil.cikar(DERS), {"sekil1": "var"})
+        self.assertEqual(mb.ozet(DERS)["sekiller"]["hazir"], 1)
+        # Çizilen şekil pakete girmez; tanımı girer
+        z = ders_paketi.paket_olustur(klasor, os.path.join(self.tmp.name, "p.zip"))
+        with zipfile.ZipFile(z) as zf:
+            adlar = zf.namelist()
+            self.assertNotIn(DERS + "/gorseller/sekil1.png", adlar)
+            self.assertIn("makaleden", zf.read(DERS + "/egitmen.json").decode("utf-8"))
+        # Makale yoksa eksik kalır, ders bozulmaz
+        os.remove(hedef)
+        d = mb.durum_oku(DERS)
+        d["kaynaklar"]["herrera"]["durum"] = "eksik"
+        mb.durum_yaz(DERS, d)
+        self.assertEqual(makale_sekil.cikar(DERS), {"sekil1": "makale-yok"})
+
+    def test_png_yaz(self):
+        yol = os.path.join(self.tmp.name, "k.png")
+        makale_sekil.png_yaz(yol, 3, 2, [b"\x00" * 9, b"\xff" * 9])
+        import struct
+        import zlib
+        with open(yol, "rb") as fh:
+            v = fh.read()
+        self.assertEqual(v[:8], b"\x89PNG\r\n\x1a\n")
+        self.assertEqual(struct.unpack(">II", v[16:24]), (3, 2))
+        i = v.index(b"IDAT")
+        n = struct.unpack(">I", v[i - 4:i])[0]
+        self.assertEqual(zlib.decompress(v[i + 4:i + 4 + n]), b"\x00" + b"\x00" * 9 + b"\x00" + b"\xff" * 9)
 
     def test_en_cok_on_kart(self):
         dp = ds.depo()

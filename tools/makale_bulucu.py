@@ -21,7 +21,7 @@ Kullanım:
   python tools/makale_bulucu.py --hazirla <ders> --agsiz    yalnız bilgisayardakilere bak (internet yok)
   python tools/makale_bulucu.py --durum <ders>              hangi makale hazır, hangisi eksik
   python tools/makale_bulucu.py --ekle <ders> <dosya.pdf> [--kaynak <id>]   elindeki PDF'i ekle
-  python tools/makale_bulucu.py --kur                       PDF okuyucuyu (pypdf) kurar
+  python tools/makale_bulucu.py --kur                       PDF okuyucuyu (pypdf) ve şekil çiziciyi (pypdfium2) kurar
 
 Ayar (isteğe bağlı): KLINIK_KOC_EPOSTA ortam değişkeni verilirse Unpaywall da sorulur.
 """
@@ -490,9 +490,19 @@ def hazirla(ders, ag_kullan=True, ilerleme=None, eposta=None, dizinle=True):
     finally:
         durum["calisiyor"] = False
         durum_yaz(ders, durum)
+    sekilleri_cikar(ders)
     if dizinle:
         aramaya_ekle(ders)
     return ozet(ders)
+
+
+def sekilleri_cikar(ders):
+    """Dersin makaleden alınacak görsellerini öğrencinin kendi PDF'inden çizer (bkz. makale_sekil.py)."""
+    try:
+        import makale_sekil
+        return makale_sekil.cikar(ders)
+    except Exception as e:  # görsel çıkmasa da ders ve makale metni çalışır
+        return {"hata": str(e)}
 
 
 def aramaya_ekle(ders):
@@ -558,6 +568,8 @@ def elle_ekle(ders, veri, ad="makale.pdf", kaynak_id=None, dizinle=True):
         sonuc.update(durum="hata", neden=str(e))
     durum["kaynaklar"][k["id"]] = sonuc
     durum_yaz(ders, durum)
+    if sonuc["durum"] == "hazir" and ders != KENDI:
+        sonuc["sekiller"] = sekilleri_cikar(ders)
     if dizinle and sonuc["durum"] == "hazir":
         aramaya_ekle(ders)
     return sonuc
@@ -598,9 +610,17 @@ def ozet(ders):
     sayi = {}
     for s in satirlar:
         sayi[s["durum"]] = sayi.get(s["durum"], 0) + 1
-    return {"ders": ders, "baslik": ders_basligi(ders), "klasor": makale_klasoru(ders),
-            "calisiyor": bool(durum.get("calisiyor")), "guncelleme": durum.get("guncelleme"),
-            "pdf_okuyucu": pypdf_var(), "sayilar": sayi, "makaleler": satirlar}
+    out = {"ders": ders, "baslik": ders_basligi(ders), "klasor": makale_klasoru(ders),
+           "calisiyor": bool(durum.get("calisiyor")), "guncelleme": durum.get("guncelleme"),
+           "pdf_okuyucu": pypdf_var(), "sayilar": sayi, "makaleler": satirlar}
+    try:
+        import makale_sekil
+        sk = makale_sekil.ozet(ders)
+        if sk["toplam"]:
+            out["sekiller"] = sk
+    except Exception:
+        pass
+    return out
 
 
 def makaleli_dersler():
@@ -645,10 +665,15 @@ def main():
     ap.add_argument("--kur", action="store_true", help="PDF okuyucuyu (pypdf) kur")
     a = ap.parse_args()
     if a.kur:
-        if pypdf_var():
-            print("PDF okuyucu (pypdf) zaten kurulu.")
+        eksik = [p for p in ("pypdf", "pypdfium2") if importlib.util.find_spec(p) is None]
+        if not eksik:
+            print("PDF okuyucu (pypdf) ve şekil çizici (pypdfium2) zaten kurulu.")
             return 0
-        return subprocess.call([sys.executable, "-m", "pip", "install", "--upgrade", "pypdf"])
+        kod = subprocess.call([sys.executable, "-m", "pip", "install", "--upgrade"] + eksik)
+        if kod and "pypdfium2" in eksik and importlib.util.find_spec("pypdf") is not None:
+            print("Şekil çizici (pypdfium2) kurulamadı; makale metni okunur ama ders görselleri makaleden çıkarılamaz.")
+            return 0
+        return kod
     if a.hazirla:
         def yaz(i, n, s):
             print("%2d/%d  %-8s %-40s %s" % (i, n, s.get("durum"), (s.get("kisa") or s.get("id") or "")[:40],

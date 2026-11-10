@@ -87,6 +87,14 @@ def _json_yaz(yol, veri):
     os.replace(gecici, yol)
 
 
+def program_surumu():
+    try:
+        with open(os.path.join(KOK, "SURUM"), encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return None
+
+
 def klasor():
     """Kaydedilen formların durduğu, öğrencinin gördüğü klasör."""
     return os.path.join(veri_yeri.belgeler(), "KlinikKoç Değerlendirmeler")
@@ -256,7 +264,8 @@ def md_metni(f):
     soru = {s["id"]: s for s in sorular(f["ders"])} if os.path.isdir(ders_klasoru(f["ders"])) else \
         {s["id"]: s for s in SORULAR}
     y = ["KlinikKoç ders değerlendirmesi: %s" % (f.get("ders_basligi") or f["ders"]),
-         "Ay: %s · Eğitmen: %s · Bilgisayar: %s" % (f.get("ay"), f.get("egitmen") or "-", f.get("cihaz") or "-"), ""]
+         "Ay: %s · Eğitmen: %s · Bilgisayar: %s · Program sürümü: %s" % (
+             f.get("ay"), f.get("egitmen") or "-", f.get("cihaz") or "-", f.get("program_surumu") or "-"), ""]
     for sid, v in f.get("cevaplar", {}).items():
         s = soru.get(sid, {"metin": sid, "tur": "metin"})
         if s["tur"] == "olcek":
@@ -280,7 +289,7 @@ def kaydet(ders, cevaplar, kimlik=None, tespitler=None, ozet_ekle=True):
     eg = egitmen_bilgisi(ders)
     temiz_tespit = [x for x in (_tespit(t) for t in (tespitler or []) if isinstance(t, dict)) if x][:EN_COK_TESPIT]
     f = {"tur": TUR, "surum": SURUM, "form": secrets.token_hex(4), "ders": ders,
-         "ders_basligi": mb.ders_basligi(ders), "paket_tarihi": eg.get("hazirlama"),
+         "ders_basligi": mb.ders_basligi(ders), "paket_tarihi": eg.get("hazirlama"), "program_surumu": program_surumu(),
          "dagitim": eg.get("dagitim"), "egitmen": eg.get("egitmen"),
          "ay": datetime.date.today().strftime("%Y-%m"),
          "cihaz": {"Windows": "Windows", "Darwin": "Mac"}.get(platform.system(), platform.system()),

@@ -148,7 +148,8 @@ function lint(id, lesson, dir) {
     warn(id, `${bloomMissing} soruda ne sorunun ne alt hedefin Bloom düzeyi (bloom) var; karnede düzeye göre başarı eksik kalır`);
   }
   for (const [k, a] of Object.entries(lesson.assets || {})) {
-    if (!/^(https?:|data:)/.test(a.src) && !existsSync(join(dir, a.src))) err(id, `görsel dosyası yok: ${k} -> ${a.src}`);
+    if (!/^(https?:|data:)/.test(a.src) && !a.makaleden && !existsSync(join(dir, a.src))) err(id, `görsel dosyası yok: ${k} -> ${a.src}`);
+    if (a.makaleden && !a.makaleden.kaynak) err(id, `görsel ${k}: makaleden.kaynak yok`);
   }
 }
 
@@ -183,7 +184,7 @@ for (const id of ids) {
   });
   const catEntry = catalog[catalog.length - 1];
   cacheFiles.push(`lessons/${id}/ders.json`, `lessons/${id}/ders.js`);
-  for (const a of Object.values(lesson.assets || {})) if (!/^(https?:|data:)/.test(a.src)) cacheFiles.push(`lessons/${id}/${a.src}`);
+  for (const a of Object.values(lesson.assets || {})) if (!/^(https?:|data:)/.test(a.src) && !a.makaleden) cacheFiles.push(`lessons/${id}/${a.src}`);
 
   // Kaynak dizini (tools/dizin-uret.py): canlı soru-cevap ve model kapalıyken arama için.
   const idx = (lesson.knowledge && lesson.knowledge.index) || 'kaynak-dizini.json';

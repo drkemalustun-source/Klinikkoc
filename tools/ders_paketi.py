@@ -149,6 +149,21 @@ def yukle(zip_yolu, uzerine=False):
     return {"ders": ders, "baslik": giris["title"], "makale": makale, "yer": hedef}
 
 
+def makaleden_gorseller(klasor):
+    """Ders klasöründe makaleden çıkarılan (makaleden alanı olan) görsellerin göreli yolları."""
+    out = set()
+    for dosya, alan in (("ders.json", "assets"), ("egitmen.json", "gorseller")):
+        try:
+            with open(os.path.join(klasor, dosya), encoding="utf-8") as f:
+                g = (json.load(f) or {}).get(alan) or {}
+        except (OSError, ValueError):
+            continue
+        for v in g.values():
+            if isinstance(v, dict) and v.get("makaleden") and v.get("src"):
+                out.add(os.path.normpath(v["src"]).replace(os.sep, "/"))
+    return out
+
+
 def paket_olustur(klasor, cikis=None):
     """Hazır bir ders klasöründen (ör. ornek-dersler/<ders>) kurulabilir ders paketi yapar.
     Öğrenci bilgisayarında üretilen klasörler (ses, makale metni, video) ve özel vakalar pakete girmez."""
@@ -159,6 +174,7 @@ def paket_olustur(klasor, cikis=None):
     cikis = os.path.abspath(cikis or ders + ".zip")
     os.makedirs(os.path.dirname(cikis), exist_ok=True)
     atla = ATLA + ("videolar/",)
+    makaleden = makaleden_gorseller(klasor)  # öğrenci kendi PDF'inden çıkarır; pakete girmez
     with zipfile.ZipFile(cikis, "w", zipfile.ZIP_DEFLATED) as z:
         for kok, klasorler, dosyalar in os.walk(klasor):
             klasorler[:] = sorted(k for k in klasorler if k != "__pycache__")
@@ -166,6 +182,8 @@ def paket_olustur(klasor, cikis=None):
                 yol = os.path.join(kok, ad)
                 ic = os.path.relpath(yol, klasor).replace(os.sep, "/")
                 if any(ic.startswith(a) for a in atla) or "/ozel-" in "/" + ic or ad in (".DS_Store", "Thumbs.db"):
+                    continue
+                if ic in makaleden:
                     continue
                 z.write(yol, ders + "/" + ic)
     with zipfile.ZipFile(cikis) as z:

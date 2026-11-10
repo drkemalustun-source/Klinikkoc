@@ -67,6 +67,15 @@
     oz.innerHTML = '';
     if (o.calisiyor) oz.appendChild(etiket('calisiyor', 'Makaleler aranıyor…'));
     for (const [k, n] of Object.entries(o.sayilar)) oz.appendChild(etiket(k, `${DURUM[k] || k}: ${n}`));
+    if (o.sekiller) {
+      // Ders görsellerinden makaleden çıkarılacaklar: makale eklenince kendiliğinden çizilir.
+      const sk = o.sekiller;
+      oz.appendChild(etiket(sk.hazir === sk.toplam ? 'hazir' : 'eksik', `Makaleden şekil: ${sk.hazir}/${sk.toplam}`));
+      if (!sk.cizici && sk.hazir < sk.toplam) {
+        oz.appendChild(Object.assign(document.createElement('span'), { className: 'mk-ince',
+          textContent: 'Şekil çizici kurulu değil; KUR dosyasını yeniden çalıştırın.' }));
+      }
+    }
     $('#klasorYolu').textContent = 'Makale klasörü: ' + o.klasor;
     $('#bulDugme').disabled = !!o.calisiyor;
     $('#bulDugme').hidden = ders === KENDI;
