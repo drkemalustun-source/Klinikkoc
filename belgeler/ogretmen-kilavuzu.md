@@ -53,3 +53,27 @@ python tools/bilgi_bankasi.py --dizinle   # arama dizinini günceller (canlı e�
 Fakülteye özel paket için `node tools/paketle.mjs --fakulte` çalıştırıp klasörü zip'leyin.
 Öğrenci zip'i açar, `KUR.bat`'a (Mac'te `KUR.command`'a) çift tıklar. Karnesi ve kaydı öğrencinin bilgisayarında kalır;
 isterse raporunu size kendisi gönderir.
+
+## 7. Pilot ölçme testleri (isteğe bağlı)
+
+Araştırma için ön test, son test ve gecikmeli test `egitmen.json` → `olcme` alanında tanımlanır. Sorular siz
+onaylayana kadar (`"durum": "onaylandi"`) eğitmen test yapmaz.
+
+```json
+"olcme": {
+  "durum": "onaylandi",
+  "plan": {"on": "A", "son": "B", "gecikmeli": "A", "gecikmeli_en_erken_gun": 21, "capraz": true},
+  "formlar": {"A": [ ... ], "B": [ ... ]}
+}
+```
+
+- **Çapraz formlar** (`"capraz": true`, iki form olmalı): öğrencilerin yarısı planı olduğu gibi (A→B→A), öbür yarısı
+  formları yer değiştirmiş olarak (B→A→B) alır. Böylece iki formun zorluk farkı sonuçları bozmaz. Grup öğrenci
+  numarasının son hanesinden belirlenir (çift: 1. grup, tek: 2. grup); numara verilmemişse kimlikten türetilir.
+  Grup bir kez belirlenir, kayda ve her testin kaydına (`grup`) yazılır.
+- **Kısa yazılı cevaplar** eğitmen tarafından ölçüte göre 0–2 puanlanır. Öğrencinin cevabı ayrıca kelimesi
+  kelimesine (`ham_yanit`) kaydedilir; böylece Claude'un puanlarını sonradan körlemeli insan puanlamasıyla
+  karşılaştırabilirsiniz (ör. Cohen kappa).
+- **Araştırma dosyası:** `python tools/kayit_aktar.py anonim --hepsi` kimliksiz tek dosya üretir. Ham kısa cevapları da
+  eklemek için `--ham-yanitlar` verin; bu serbest metindir, dosyayı paylaşmadan önce içinde ad ya da kimlik
+  geçmediğini kontrol edin.

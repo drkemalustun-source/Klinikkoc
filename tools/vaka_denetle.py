@@ -16,6 +16,12 @@ import os
 import re
 import sys
 
+
+def _json_oku(yol):
+    with open(yol, encoding="utf-8") as f:
+        return json.load(f)
+
+
 KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BLOOM = ("hatirla", "anla", "uygula", "cozumle", "degerlendir", "olustur")
 DUGUM_TURLERI = ("karar", "acik", "veri", "bilgi", "son")
@@ -41,7 +47,7 @@ def ders_bilgisi(ders):
         yol = os.path.join(klasor, ad)
         if not os.path.exists(yol):
             continue
-        d = json.load(open(yol, encoding="utf-8"))
+        d = _json_oku(yol)
         for g in d.get("goals") or []:
             hedefler.add(g.get("id"))
             hedefler.update(s.get("id") for s in g.get("subgoals") or [])

@@ -574,6 +574,8 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
         u = urllib.parse.urlparse(self.path)
         q = dict(urllib.parse.parse_qsl(u.query))
         yol = u.path[len("/api/duyu/"):]
+        if not self._yerel_mi():
+            return self._json(403, {"hata": "Yalnızca bu bilgisayardan"})
         try:
             if yol == "durum":
                 return self._json(200, DUYU.durum())
@@ -589,13 +591,24 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
         except Exception as e:  # hata tarayıcıda gösterilir
             return self._json(500, {"hata": "%s: %s" % (type(e).__name__, e)})
 
+    YEREL = ("localhost", "127.0.0.1", "::1")
+
     def _yerel_mi(self):
-        # Başka bir web sitesi tarayıcı üzerinden tahtaya komut gönderemesin.
+        """Başka bir web sitesi, öğrencinin tarayıcısı üzerinden tahtaya komut gönderemesin ve kuyruğu okuyamasın.
+        Üç denetim: (1) Host başlığı bu bilgisayar olmalı (DNS yeniden bağlama saldırısına karşı); (2) tarayıcının
+        kendiliğinden eklediği Sec-Fetch-Site başka siteden geldiğini söylüyorsa red (Origin göndermeyen <img>,
+        <script> gibi istekler de bunu taşır); (3) Origin varsa bu bilgisayar olmalı. Eğitmen aracı (Python) bu
+        başlıkları göndermez; yalnız Host'u gönderir."""
+        if not self._host_yerel_mi():
+            return False
+        site = (self.headers.get("Sec-Fetch-Site") or "").lower()
+        if site and site not in ("same-origin", "none"):
+            return False
         koken = self.headers.get("Origin")
         if not koken:
             return True
         h = urllib.parse.urlparse(koken).hostname or ""
-        return h in ("localhost", "127.0.0.1")
+        return h in self.YEREL
 
     def _canli(self, govde=b""):
         u = urllib.parse.urlparse(self.path)
@@ -648,7 +661,14 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             return self._json(500, {"hata": "%s: %s" % (type(e).__name__, e)})
 
+    def _host_yerel_mi(self):
+        host = self.headers.get("Host") or ""
+        return not host or (urllib.parse.urlsplit("//" + host).hostname or "") in self.YEREL
+
     def do_GET(self):
+        # DNS yeniden bağlama: başka bir alan adı bu sunucuya yönlendirilip ders dosyaları okunamasın.
+        if not self._host_yerel_mi():
+            return self.send_error(403, "Yalnızca bu bilgisayardan")
         if self.path.startswith("/api/duyu/"):
             return self._api()
         if self.path.startswith("/api/canli/"):

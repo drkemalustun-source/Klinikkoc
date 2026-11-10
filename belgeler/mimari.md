@@ -95,7 +95,7 @@ Bir bölüm içindeki komutlar birikir; yeni bölüm tahtayı temizler. Bölüm 
 | `zoom` / `unzoom` | `region` | görsel |
 | `table` | `headers[]`, `rows[][]`, `title?`, `caption?` | görsel |
 | `flow` | `nodes[]`, `direction?`: `row` · `column`, `title?` | görsel |
-| `compare` | `columns[]` = `{title, items[], color?}`, `title?` | görsel |
+| `compare` | `columns[]` = `{title, items?[], asset?, caption?, color?}`, `title?`; `asset` verilen sütunda fotoğraf gösterilir (yan yana karşılaştırma) | görsel |
 | `draw` | `shapes[]`, `viewBox?` (vars. `0 0 160 90`), `title?` | görsel |
 | `clear` | | hepsi |
 

@@ -19,6 +19,17 @@ import shutil
 import tempfile
 import time
 
+
+def _json_oku(yol):
+    with open(yol, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _ikili_oku(yol):
+    with open(yol, "rb") as f:
+        return f.read()
+
+
 YEDEK_SAYISI = 5
 KAYIT_DEFTERI = "ogrenciler.json"
 TASIMA_DOSYASI = ".tasima.json"
@@ -186,7 +197,7 @@ class Depo:
                 if not os.path.exists(hedef):
                     shutil.copy2(kaynak, hedef)
                     kopyalanan.append(goreli)
-                elif open(kaynak, "rb").read() != open(hedef, "rb").read():
+                elif _ikili_oku(kaynak) != _ikili_oku(hedef):
                     govde, uzanti = os.path.splitext(hedef)
                     alt = "%s.eski-yerden-%s%s" % (govde, zaman_damgasi(), uzanti)
                     if uzanti == ".json":  # ders kaydı gibi okunmasın, yedek sırasında da silinmesin

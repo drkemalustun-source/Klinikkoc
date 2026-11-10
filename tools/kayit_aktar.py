@@ -160,7 +160,7 @@ def _tarihler(k):
     return [x for x in t if isinstance(x, str) and len(x) >= 10]
 
 
-def anonim_ders(k, baslangic):
+def anonim_ders(k, baslangic, ham_yanitlar=False):
     g = lambda t: _gun(baslangic, t)  # noqa: E731
     hedefler = {}
     for hid, v in (k.get("hedefler") or {}).items():
@@ -174,8 +174,8 @@ def anonim_ders(k, baslangic):
         x = _sec(t, ("tur", "form", "puan", "dogru", "toplam", "emin_ama_yanlis", "secilen_yanilgilar", "yarim_kaldi",
                      "cevapsiz"))
         x["gun"] = g(t.get("tarih"))
-        x["yanitlar"] = [_sec(y, ("no", "hedef", "puan", "guven", "yanilgi", "emin_ama_yanlis"))
-                         for y in t.get("yanitlar") or []]
+        alanlar = ("no", "hedef", "puan", "guven", "yanilgi", "emin_ama_yanlis") + (("ham_yanit",) if ham_yanitlar else ())
+        x["yanitlar"] = [_sec(y, alanlar) for y in t.get("yanitlar") or []]
         testler.append(x)
     return {
         "ders": k.get("ders"), "mod": k.get("mod"), "oturum_sayisi": len(k.get("oturumlar") or []),
@@ -191,8 +191,11 @@ def anonim_ders(k, baslangic):
     }
 
 
-def anonim(depo=None, ogrenciler=None, dosyalar=None, deneme_dahil=False, cikti=None):
-    """Seçilen öğrencilerin (ya da hepsinin) kayıtlarını kimliksiz tek dosyada toplar."""
+def anonim(depo=None, ogrenciler=None, dosyalar=None, deneme_dahil=False, cikti=None, ham_yanitlar=False):
+    """Seçilen öğrencilerin (ya da hepsinin) kayıtlarını kimliksiz tek dosyada toplar.
+
+    ham_yanitlar=True: ölçme testlerinin kısa yazılı cevapları ham metin olarak eklenir (puanlayıcı uyumu, ör.
+    Cohen kappa, için). Bu serbest metindir; dosya paylaşılmadan önce öğretmen okumalıdır."""
     kaynaklar = []  # (deneme, {ders: kayıt})
     if dosyalar:
         for y in dosyalar:
@@ -224,15 +227,18 @@ def anonim(depo=None, ogrenciler=None, dosyalar=None, deneme_dahil=False, cikti=
         while not kod or kod in kodlar:
             kod = "K-" + secrets.token_hex(3).upper()
         kodlar.add(kod)
-        x = {"kod": kod, "dersler": [anonim_ders(k, baslangic) for _, k in sorted(dersler.items())]}
+        x = {"kod": kod, "dersler": [anonim_ders(k, baslangic, ham_yanitlar) for _, k in sorted(dersler.items())]}
         if deneme:
             x["deneme"] = True
         kayitlar.append(x)
     secrets.SystemRandom().shuffle(kayitlar)
     out = {"tur": ANONIM_TUR, "surum": SURUM,
-           "aciklama": "Kimliksiz araştırma verisi: ad, kimlik, ayırt edici ve serbest metin yok; kodlar rastgeledir ve "
-                       "geri çevrilemez; günler öğrencinin ilk kaydından bu yana geçen gündür.",
+           "aciklama": ("Kimliksiz araştırma verisi: ad, kimlik ve ayırt edici yok; ölçme testlerinin kısa yazılı "
+                        "cevapları ham metin olarak VAR (paylaşmadan önce okuyun); " if ham_yanitlar else
+                        "Kimliksiz araştırma verisi: ad, kimlik, ayırt edici ve serbest metin yok; ") +
+                       "kodlar rastgeledir ve geri çevrilemez; günler öğrencinin ilk kaydından bu yana geçen gündür.",
            "ogrenci_sayisi": len(kayitlar), "haric_tutulan_deneme": haric, "deneme_dahil": bool(deneme_dahil),
+           "ham_yanitlar": bool(ham_yanitlar),
            "kayitlar": kayitlar}
     if cikti:
         if os.path.isdir(cikti):
@@ -258,6 +264,8 @@ def main(argv=None):
     g.add_argument("--ogrenci", nargs="+")
     g.add_argument("--dosya", nargs="+")
     a.add_argument("--deneme-dahil", action="store_true")
+    a.add_argument("--ham-yanitlar", action="store_true",
+                   help="ölçme testlerinin kısa yazılı cevaplarını ham metin olarak ekle (paylaşmadan önce okuyun)")
     a.add_argument("--cikti")
     ar = ap.parse_args(argv)
     depo = varsayilan_depo()
@@ -280,7 +288,8 @@ def main(argv=None):
             print("Kayıt klasörü:", r["kayit_klasoru"])
         else:
             cikti = ar.cikti or veri_yeri.masaustu()
-            r = anonim(None if ar.dosya else depo, ar.ogrenci, ar.dosya, ar.deneme_dahil, cikti)
+            r = anonim(None if ar.dosya else depo, ar.ogrenci, ar.dosya, ar.deneme_dahil, cikti,
+                       ham_yanitlar=ar.ham_yanitlar)
             print("Yazıldı: %s (%d öğrenci, %d deneme kaydı dışarıda)" % (r["dosya"], r["ogrenci_sayisi"],
                                                                         r["haric_tutulan_deneme"]))
     except (kd.KayitHatasi, OSError, ValueError) as e:
