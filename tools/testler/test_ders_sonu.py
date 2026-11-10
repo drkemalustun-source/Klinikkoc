@@ -239,6 +239,7 @@ class DersSonuTest(unittest.TestCase):
         self.assertIn("Vaka (Akut periodontal lezyonlar)", oz["metin"])
         self.assertIn("ek1: Hayır", oz["metin"])
 
+    @unittest.skipUnless(makale_sekil.cizici_var(), "pypdfium2 yok")
     def test_makaleden_sekil(self):
         klasor = os.path.join(self.kok, "lessons", DERS)
         r = makale_sekil.tanimla(DERS, "sekil1", "herrera", 1, [0.1, 0.1, 0.9, 0.5], "Şekil 1", "Defekt sınıfları")
