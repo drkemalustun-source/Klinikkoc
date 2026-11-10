@@ -47,6 +47,7 @@ import pocket_ses  # noqa: E402  (tools/pocket_ses.py)
 import terim_sozlugu  # noqa: E402
 import ders_paketi  # noqa: E402
 import ders_sonu  # noqa: E402
+import degerlendirme  # noqa: E402
 import makale_bulucu  # noqa: E402
 import sihirbaz  # noqa: E402
 import veri_yeri  # noqa: E402
@@ -739,6 +740,8 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
                 return self._json(200, makale_bulucu.ozet(q.get("ders", "")))
             if yol == "depolama":
                 return self._json(200, ders_sonu.depolama())
+            if yol == "degerlendirme":
+                return self._json(200, degerlendirme.form(q.get("ders", ""), q.get("ogrenci") or None))
             if self.command != "POST":
                 return self._json(405, {"hata": "POST gerekli"})
             if yol == "hazirla":
@@ -783,6 +786,18 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
                 if not g or not g.get("dosya_var"):
                     raise ValueError("Bu dersin arşiv dosyası bulunamadı; zip'i buraya sürükleyip bırakın.")
                 return self._json(200, ders_sonu.geri_yukle(g["dosya"]))
+            if yol == "degerlendirme_kaydet":
+                veri = json.loads(govde.decode("utf-8")) if govde else {}
+                r = degerlendirme.kaydet(str(veri.get("ders", "")), veri.get("cevaplar") or {},
+                                         veri.get("ogrenci") or None, veri.get("tespitler") or [],
+                                         bool(veri.get("ozet_ekle", True)))
+                r.pop("form", None)
+                return self._json(200, r)
+            if yol == "degerlendirme_klasoru_ac":
+                k = degerlendirme.klasor()
+                os.makedirs(k, exist_ok=True)
+                klasoru_ac(k)
+                return self._json(200, {"acildi": k})
             if yol == "arsiv_klasoru_ac":
                 k = ders_sonu.arsiv_kok()
                 os.makedirs(k, exist_ok=True)

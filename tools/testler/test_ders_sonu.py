@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bilgi_bankasi  # noqa: E402
 import ders_paketi  # noqa: E402
 import ders_sonu as ds  # noqa: E402
+import degerlendirme as dg  # noqa: E402
 import makale_bulucu as mb  # noqa: E402
 from test_makale import makale_pdf  # noqa: E402
 
@@ -182,6 +183,60 @@ class DersSonuTest(unittest.TestCase):
         # Rapor yeniden yazılınca kartın tekrar düzeni korunur
         ds.tamamlama_raporu(kimlik, DERS)
         self.assertTrue(next(x for x in ds.kartlari_oku(kimlik)["kartlar"][DERS] if x["id"] == kid)["ogrenildi"])
+
+    def test_degerlendirme_formu(self):
+        kimlik = self.kayit_ac()
+        k, _ = ds.depo().yukle(kimlik, DERS)
+        k["sorular"].append({"soru": "Lazer kullanılır mı?", "kaynakta_yok": True})
+        ds.depo().yaz(kimlik, DERS, k)
+        dg.claude_notu(kimlik, DERS, [{"tur": "soru", "ayrinti": "S2'nin örnek cevabı yok", "yer": "S2"},
+                                      {"tur": "soru", "ayrinti": "S2'nin örnek cevabı yok", "yer": "S2"},  # tekrar
+                                      {"tur": "uydurma", "ayrinti": "x"}])
+        dg.otomatik_not(kimlik, DERS, {"tur": "teknik", "ayrinti": "tahta aracı hata verdi"})
+        f = dg.form(DERS, kimlik)
+        self.assertEqual(f["baslik"], "Akut periodontal lezyonlar")
+        turler = [(t["tur"], t.get("kaynak")) for t in f["tespitler"]]
+        self.assertEqual(turler[:2], [("soru", "claude"), ("diger", "claude")])
+        self.assertIn(("teknik", "otomatik"), turler)
+        self.assertTrue(any("Lazer" in t["ayrinti"] for t in f["tespitler"]))
+        self.assertEqual(f["ozet"]["oturum"], 2)
+        self.assertEqual(f["ozet"]["dakika"], 75)
+        with self.assertRaises(ValueError):
+            dg.kaydet(DERS, {}, kimlik)  # boş form
+        r = dg.kaydet(DERS, {"anlatim": 4, "vaka_katki": 0, "hedef_acik": 9, "sure": "Uzun", "zorluk": "yok",
+                             "begendim": "Vaka", "bilinmeyen": "x"}, kimlik, f["tespitler"][:1])
+        form = r["form"]
+        self.assertEqual(form["cevaplar"], {"anlatim": 4, "vaka_katki": 0, "sure": "Uzun", "begendim": "Vaka"})
+        self.assertIsNone(r["mailto"])  # derste öğretmen adresi yok
+        # Kimliksiz: ad, kimlik, ayırt edici yok
+        ham = json.dumps(form, ensure_ascii=False)
+        for gizli in ("Ayşe", kimlik, "123"):
+            self.assertNotIn(gizli, ham)
+        self.assertTrue(os.path.dirname(r["dosya"]).endswith("KlinikKoç Değerlendirmeler"))
+        self.assertIn("KLINIKKOC-FORM", r["metin"])
+        self.assertTrue(dg.form(DERS, kimlik)["gonderildi"])
+        # Öğretmen adresi tanımlıysa e-posta bağlantısı hazırlanır
+        yol = os.path.join(self.kok, "lessons", DERS, "egitmen.json")
+        with open(yol, encoding="utf-8") as fh:
+            eg = json.load(fh)
+        eg["geriBildirim"] = {"eposta": "hoca@ornek.edu.tr", "sorular": ["Vaka fotoğrafları yeterli miydi?"]}
+        with open(yol, "w", encoding="utf-8") as fh:
+            json.dump(eg, fh, ensure_ascii=False)
+        self.assertEqual(dg.form(DERS)["sorular"][-1]["metin"], "Vaka fotoğrafları yeterli miydi?")
+        r2 = dg.kaydet(DERS, {"anlatim": 2, "ek1": "Hayır", "degistir": "Daha kısa"}, kimlik, [], ozet_ekle=False)
+        self.assertTrue(r2["mailto"].startswith("mailto:hoca@ornek.edu.tr?subject="))
+        self.assertNotIn("calisma_ozeti", r2["form"])
+        # Öğretmen: e-postadan kaydedilmiş metin de okunur; aynı form iki kez sayılmaz
+        posta = os.path.join(self.tmp.name, "posta.eml")
+        with open(posta, "w", encoding="utf-8") as fh:
+            fh.write("From: ogrenci\n\n" + r2["metin"])
+        oz = dg.topla([r["klasor"], posta])
+        self.assertEqual(oz["form_sayisi"], 2)
+        self.assertIn("| Anlatım anlaşılırdı. | 2 | 3.0 | 0 | 1 | 0 | 1 | 0 |", oz["metin"])
+        self.assertIn("Dersin uzunluğu: Kısa 0, Uygun 0, Uzun 1", oz["metin"])
+        self.assertIn("S2'nin örnek cevabı yok", oz["metin"])
+        self.assertIn("Vaka (Akut periodontal lezyonlar)", oz["metin"])
+        self.assertIn("ek1: Hayır", oz["metin"])
 
     def test_en_cok_on_kart(self):
         dp = ds.depo()

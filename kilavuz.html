@@ -41,6 +41,7 @@
         <li><a href="#bitirmek">Ders bitince</a>
           <ol>
             <li><a href="#tamamlama">Tamamlama raporu</a></li>
+            <li><a href="#degerlendirme">Değerlendirme formu</a></li>
             <li><a href="#tekrar">Tekrar kartları</a></li>
             <li><a href="#depolama">Depolama ve arşiv</a></li>
             <li><a href="#kayitlar">Kayıtlarınız nerede?</a></li>
@@ -51,6 +52,7 @@
             <li><a href="#sihirbaz-adimlar">Altı adım</a></li>
             <li><a href="#kademeler">Paylaşım kademeleri</a></li>
             <li><a href="#dagitmak">Paketi öğrencilere vermek</a></li>
+            <li><a href="#geri-bildirim">Öğrencilerden gelen değerlendirmeler</a></li>
           </ol></li>
         <li><a href="#sorunlar">Sorun giderme</a></li>
       </ol>
@@ -259,6 +261,21 @@
           Ders yerinde kalır; istediğiniz zaman yeniden açabilirsiniz.</p>
         <p class="kl-soyle"><b>Claude'a:</b> "Bu dersi bitirdim."</p>
 
+        <h3 id="degerlendirme">Değerlendirme formu</h3>
+        <p>Rapordan sonra tarayıcıda 2–3 dakikalık bir <b>değerlendirme formu</b> açılır. Doldurmak isteğe bağlıdır ve
+          formda adınız ya da numaranız yoktur. İki bölümü vardır:</p>
+        <ul>
+          <li><b>Sizin görüşünüz:</b> 1–5 arası puanlanan cümleler, dersin uzunluğu ve zorluğu, ses ve mikrofon,
+            dört kısa açık uçlu soru. Öğretmeniniz derse özel soru eklemiş olabilir.</li>
+          <li><b>Eğitmenin (Claude) tespitleri:</b> Claude'un ders sırasında fark ettiği sorunlar (yanlış ya da eksik
+            bilgi, belirsiz soru, dikte hatası…) ve programın kendiliğinden kaydettikleri (araç hataları, kaynakta cevabı
+            olmayan sorular, inmeyen makaleler). İstemediğinizi <b>Çıkar</b> ile çıkarın, eklemek istediğinizi yazın.</li>
+        </ul>
+        <p><b>Kaydet</b> deyince form <code>Belgeler\KlinikKoç Değerlendirmeler</code> klasörüne yazılır; hiçbir yere
+          kendiliğinden gitmez. Öğretmeniniz adresini derse eklediyse <b>E-postayla gönder</b> e-posta programınızı açar,
+          siz gönderirsiniz. Ad, numara ya da hasta bilgisi yazmayın.</p>
+        <p class="kl-soyle"><b>Claude'a:</b> "Bu dersin değerlendirme formunu aç."</p>
+
         <h3 id="tekrar">Tekrar kartları</h3>
         <p>Dersi bitirince zorlandığınız sorulardan en çok 10 <b>tekrar kartı</b> çıkar. Kartlar 3, 7, 21 ve 60 gün sonra
           yeniden sorulur; bildikçe aralık uzar, yanılırsanız ertesi güne döner. Kartlar çok küçüktür (yalnız yazı) ve
@@ -410,6 +427,12 @@
           <li>Paketlerde abonelikli makalelerin PDF'i hiçbir zaman yoktur; öğrenci makaleleri kendi bilgisayarına indirir.</li>
           <li>Dersi güncellediğinizde yeniden paketleyip yeni zip'i verin; öğrenci <b>Güncelle</b> dediğinde ilerlemesi korunur.</li>
         </ul>
+        <h3 id="geri-bildirim">Öğrencilerden gelen değerlendirmeler</h3>
+        <p>Ders kartındaki <b>Değerlendirme formlarının gönderileceği e-posta</b> alanına adresinizi yazarsanız öğrencinin
+          formunda <b>E-postayla gönder</b> düğmesi çıkar. Adres pakete yazılır, öğrenci görür. Gelen e-postaları ya da
+          ekteki dosyaları bir klasöre kaydedin; Claude hepsini tek özette toplar: puan ortalamaları, seçmeli soruların
+          dağılımı, açık uçlu cevaplar, Claude'un tespitleri ve hedeflerin durumu. Deneme kayıtları sayılmaz.</p>
+        <p class="kl-soyle"><b>Claude'a:</b> "Belgeler'deki Değerlendirmeler klasöründeki formları özetle."</p>
       </section>
 
       <section id="sorunlar">

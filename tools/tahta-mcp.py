@@ -31,6 +31,7 @@ import sys
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import webbrowser
 
@@ -39,6 +40,7 @@ sys.path.insert(0, os.path.join(KOK, "tools"))
 import bilgi_bankasi  # noqa: E402
 import ders_paketi  # noqa: E402
 import ders_sonu  # noqa: E402
+import degerlendirme  # noqa: E402
 import karne as karne_  # noqa: E402
 import kayit_aktar  # noqa: E402
 import kayit_deposu as kd  # noqa: E402
@@ -125,6 +127,9 @@ görünüyorsa ya da cümle anlamsızsa öğrenciye ne demek istediğini kısaca
 - Claude Code'da kanal açıksa (tahta-mcp.py --kanal) sen dinlemezken söylenenler sohbete <channel
   source="klinik-koc"> iletisi olarak düşer; ona da tahtada cevap ver.
 - "dur", "bekle", "ara verelim" gibi isteklerde dinlemeyi de bırak.
+- Ders sırasında dersin kendisinde bir sorun görürsen (yanlış ya da çelişkili bilgi, kaynakta olmayan ama çok
+  sorulan konu, belirsiz cevap anahtarı, anlaşılmayan adım, araç hatası, dikte hatası) degerlendirme_notu ile hemen
+  not al; öğrenciye söylemen gerekmez. ders_bitir ders sonu değerlendirme formunu açar; formda bu notlar görünür.
 Duraklat: Kullanıcı tahtadaki ⏸ tuşuyla (ya da P / Boşluk) anlatımı duraklatabilir. Bu iptal değildir.
 - tahta, soru_sor ya da tahta_durumu 'duraklatildi' dönerse hata sayma, yeni komut gönderme, sohbete de
   yazma; aynı no ile tahta_durumu çağırarak beklemeyi sürdür. Devam edince anlatım kaldığı yerden sürer
@@ -301,8 +306,38 @@ ARACLAR = [
                        "Ders yerinde kalır; arşivlenmez. Önce öğrenciye derse dair bir notu olup olmadığını sor.",
         "inputSchema": {"type": "object", "properties": {
             "ogrenci": {"type": "string"}, "ders": {"type": "string"},
-            "ogrenci_notu": {"type": "string", "description": "öğrencinin kendi notu (isteğe bağlı, kelimesi kelimesine)"}},
+            "ogrenci_notu": {"type": "string", "description": "öğrencinin kendi notu (isteğe bağlı, kelimesi kelimesine)"},
+            "claude_tespitleri": {"type": "array", "description": "değerlendirme formuna senin tespitlerin (henüz "
+                                  "degerlendirme_notu ile yazmadıkların): [{tur, ayrinti, yer}]",
+                                  "items": {"type": "object"}},
+            "form": {"type": "boolean", "description": "değerlendirme formunu tarayıcıda aç (varsayılan true)"}},
             "required": ["ogrenci", "ders"]},
+    },
+    {
+        "name": "degerlendirme_notu",
+        "description": "Ders sırasında DERSİN KENDİSİNDE bir sorun fark edince HEMEN çağır; ders sonu değerlendirme "
+                       "formuna 'Eğitmenin (Claude) tespitleri' olarak girer, öğrenci göndermeden önce görür ve "
+                       "çıkarabilir. tur: yanlis_bilgi (derste yanlış/çelişkili bilgi), eksik_kaynak (kaynakta olmayan "
+                       "ya da çok sorulan ama derste olmayan konu), anlatim (anlaşılmayan, çok uzun/kısa ya da yeniden "
+                       "anlatmak zorunda kaldığın adım), soru (cevap anahtarı belirsiz/yanlış soru), teknik (araç "
+                       "hatası, gecikme, açılmayan görsel, ses), dikte (tanıyıcının bozduğu terim: ham → doğru), diger. "
+                       "ayrinti: kısa ve somut; yer: kanıt (bölüm/adım/soru kimliği). Öğrencinin başarısını, adını ya "
+                       "da kişisel bilgisini yazma.",
+        "inputSchema": {"type": "object", "properties": {
+            "ogrenci": {"type": "string"}, "ders": {"type": "string"},
+            "tur": {"type": "string", "enum": ["yanlis_bilgi", "eksik_kaynak", "anlatim", "soru", "teknik", "dikte", "diger"]},
+            "ayrinti": {"type": "string"}, "yer": {"type": "string"}},
+            "required": ["ogrenci", "ders", "tur", "ayrinti"]},
+    },
+    {
+        "name": "degerlendirme_ozeti",
+        "description": "Öğretmen için: öğrencilerin gönderdiği değerlendirme formlarını (bir klasördeki .json/.txt/.eml "
+                       "dosyaları ya da e-postadan kaydedilmiş metinler) toplar; ölçekli soru ortalamaları, seçmeli "
+                       "dağılımlar, açık uçlu cevaplar, Claude tespitleri ve hedef durumlarını tek özet yapar. "
+                       "Klasör verilmezse Belgeler/KlinikKoç Değerlendirmeler.",
+        "inputSchema": {"type": "object", "properties": {
+            "klasor": {"type": "string"}, "kaydet": {"type": "boolean", "description": "özeti klasöre .md olarak yaz"},
+            "deneme_dahil": {"type": "boolean"}}},
     },
     {
         "name": "tekrar_karti_yaz",
@@ -2017,16 +2052,44 @@ def ar_ders_bitir(a):
     ders_yolu(ders)
     kimlik = ogrenci_kimligi(a.get("ogrenci"))
     r = ders_sonu.tamamlama_raporu(kimlik, ders, a.get("ogrenci_notu"))
+    tespit = degerlendirme.claude_notu(kimlik, ders, a.get("claude_tespitleri") or [])
     out = {"durum": "tamamlandı", "rapor": r["dosya"], "tekrar_karti": r["kart_sayisi"],
            "genel_basari": karne_.yuzde(r["genel_basari"]), "gelistirilecek": r["gelistirilecek"],
-           "yoklanmayan": r["yoklanmayan"],
+           "yoklanmayan": r["yoklanmayan"], "claude_tespiti": len(tespit),
            "not": "Öğrenciye raporun yerini ve 3–4 cümlelik özetini söyle (en güçlü hedef, zorlandığı konu, tekrar kartı "
                   "sayısı). Ders yerinde kalır. Tekrar kartları zamanı gelince tekrar_listesi'nde çıkar."}
+    if a.get("form", True):
+        sayfayi_ac("degerlendirme.html?ders=%s&ogrenci=%s" % (urllib.parse.quote(ders), urllib.parse.quote(kimlik)))
+        out["form"] = "Değerlendirme formu tarayıcıda açıldı."
+        out["not"] += (" Sonra kısaca söyle: tarayıcıda 2–3 dakikalık bir değerlendirme formu açıldı; isteğe bağlı ve "
+                       "adsız. Kendi tespitlerin formun ikinci bölümünde; göndermeden önce görüp çıkarabilir. Göndermek "
+                       "öğrenciye kalmış.")
     d = ders_sonu.depolama()
     if d["asildi"]:
         out["depolama"] = depolama_ozeti()
         out["depolama"]["not"] = DEPOLAMA_NOTU
     return metin(out)
+
+
+def ar_degerlendirme_notu(a):
+    ders = a.get("ders")
+    ders_yolu(ders)
+    kimlik = ogrenci_kimligi(a.get("ogrenci"))
+    t = degerlendirme.claude_notu(kimlik, ders, [{"tur": a.get("tur"), "ayrinti": a.get("ayrinti"), "yer": a.get("yer")}])
+    return metin({"durum": "not alındı", "tespit_sayisi": len(t),
+                  "not": "Öğrenciye bundan söz etmen gerekmez; ders sonunda formda görecek."})
+
+
+def ar_degerlendirme_ozeti(a):
+    k = a.get("klasor") or degerlendirme.klasor()
+    if not os.path.isdir(k):
+        return metin({"durum": "klasör yok", "klasor": k,
+                      "not": "Öğrencilerden gelen form dosyalarını (.json ya da .txt) bir klasöre koyup yolunu ver."})
+    cikis = os.path.join(k, "ozet-%s.md" % time.strftime("%Y-%m-%d")) if a.get("kaydet") else None
+    r = degerlendirme.topla([k], cikis, bool(a.get("deneme_dahil")))
+    return metin({"form_sayisi": r["form_sayisi"], "ozet": r["metin"], "dosya": r["dosya"],
+                  "not": "Öğretmene en çok öne çıkan 3–5 bulguyu söyle: düşük puanlı sorular, sık geçen tespitler, "
+                         "açık uçlu cevaplardaki ortak istekler."})
 
 
 def ar_tekrar_karti_yaz(a):
@@ -2081,7 +2144,8 @@ ISLEYICILER = {"egitmen_hazirla": ar_egitmen_hazirla, "kayit_oku": ar_kayit_oku,
                "kayit_anonim_aktar": ar_kayit_anonim_aktar, "makaleler": ar_makaleler,
                "makale_bul": ar_makale_bul, "makale_ekle": ar_makale_ekle,
                "sihirbaz_oku": ar_sihirbaz_oku, "sihirbaz_oner": ar_sihirbaz_oner,
-               "ders_bitir": ar_ders_bitir, "tekrar_karti_yaz": ar_tekrar_karti_yaz, "depolama": ar_depolama,
+               "ders_bitir": ar_ders_bitir, "degerlendirme_notu": ar_degerlendirme_notu,
+               "degerlendirme_ozeti": ar_degerlendirme_ozeti, "tekrar_karti_yaz": ar_tekrar_karti_yaz, "depolama": ar_depolama,
                "ders_arsivle": ar_ders_arsivle, "ders_paketi_ekle": ar_ders_paketi_ekle,
                "ses_yeniden_baslat": ar_ses_yeniden_baslat, "arsivden_geri_yukle": ar_arsivden_geri_yukle}
 
@@ -2158,13 +2222,30 @@ def isle(m):
         f = ISLEYICILER.get(p.get("name"))
         if not f:
             raise LookupError("Bilinmeyen araç: %s" % p.get("name"))
+        arg = p.get("arguments") or {}
+        if arg.get("ogrenci") and arg.get("ders"):
+            _AKTIF.update(ogrenci=arg["ogrenci"], ders=arg["ders"])
         try:
-            return f(p.get("arguments") or {})
+            return f(arg)
         except Exception as e:
+            _hatayi_forma_yaz(p.get("name"), e)
             return metin("Hata: %s" % e, hata=True)
     if yontem in ("resources/list", "prompts/list"):
         return {yontem.split("/")[0]: []}
     raise NotImplementedError(yontem)
+
+
+_AKTIF = {}  # son çalışılan öğrenci + ders: araç hataları o dersin değerlendirme formuna kendiliğinden yazılır
+
+
+def _hatayi_forma_yaz(arac, hata):
+    if not _AKTIF.get("ders") or arac in ("degerlendirme_notu", "degerlendirme_ozeti"):
+        return
+    try:
+        degerlendirme.otomatik_not(ogrenci_kimligi(_AKTIF["ogrenci"]), _AKTIF["ders"],
+                                   {"tur": "teknik", "ayrinti": "%s aracı hata verdi: %s" % (arac, str(hata)[:300])})
+    except Exception:
+        pass
 
 
 def calis():

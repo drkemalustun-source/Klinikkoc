@@ -72,6 +72,8 @@ Kaldırma: `python tools/tahta-mcp.py --kaldir` (gerekirse `--ayar "<yol>"` ile)
 | `videolar` | Dersin videolarını listeler (klasördeki dosyalar ve YouTube bağlantıları) |
 | `anlatima_devam` | Siz söz alınca duraklayan anlatımı, Claude cevap verdikten sonra kaldığı cümleden sürdürür |
 | `durdur` | Anlatımı hemen keser |
+| `degerlendirme_notu` | Ders sırasında dersin kendisinde fark edilen sorunu ders sonu değerlendirme formuna not eder |
+| `degerlendirme_ozeti` | Öğretmen: öğrencilerden gelen değerlendirme formlarını tek özette toplar |
 | `ses_yeniden_baslat` | Pocket sesi açılamadıysa ya da durduysa beklemeden yeniden başlatır (kendiliğinden de bir dakikada bir dener) |
 
 Tahta komutları: başlık, madde, terim, not, tablo, akış, karşılaştırma, ders görseli,

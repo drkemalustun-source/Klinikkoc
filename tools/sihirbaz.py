@@ -156,7 +156,8 @@ def liste():
 
 
 # ---------- Ders kartı ve listeler ----------
-ALANLAR = {"baslik": str, "duzey": str, "egitmen": str, "sure_dk": int, "aciklama_ogrenci": str}
+ALANLAR = {"baslik": str, "duzey": str, "egitmen": str, "sure_dk": int, "aciklama_ogrenci": str,
+           "geri_bildirim_eposta": str}
 
 
 def kart_guncelle(ders, alanlar):
@@ -168,6 +169,10 @@ def kart_guncelle(ders, alanlar):
             raise ValueError("Düzey Lisans ya da Uzmanlık olmalı.")
         if k == "egitmen" and v not in EGITMENLER:
             raise ValueError("Eğitmen inci ya da mercan olmalı.")
+        if k == "geri_bildirim_eposta" and v and not re.fullmatch(r"[^@\s<>\"]+@[^@\s<>\"]+\.[^@\s<>\"]+", str(v).strip()):
+            raise ValueError("Geri bildirim adresi bir e-posta adresi olmalı.")
+        if k == "geri_bildirim_eposta" and v:
+            v = str(v).strip()
         t[k] = ALANLAR[k](v) if v is not None else None
     return taslak_yaz(ders, t)
 
@@ -877,6 +882,8 @@ def _ders_klasoru_yaz(t, hedef, kademeler, ders_adi):
     }
     if t.get("aciklama_ogrenci"):
         eg["aciklama"] = t["aciklama_ogrenci"]
+    if t.get("geri_bildirim_eposta"):
+        eg["geriBildirim"] = {"eposta": t["geri_bildirim_eposta"]}
     _json_yaz(os.path.join(hedef, "egitmen.json"), eg)
     kaynaklar = []
     for k in t["kaynaklar"]:

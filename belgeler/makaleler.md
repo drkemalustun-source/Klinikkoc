@@ -52,6 +52,18 @@ silinse ya da arşivlense de PDF'ler burada kalır; ders yeniden kurulunca Klini
 hedefler, zorlanılan konular, vakalar, çalışma süresi ve öğrencinin notu. Rapor öğrencinin kayıt klasöründe
 (`<kimlik>/raporlar/<ders>_tamamlama.md`) durur, hiçbir yere gönderilmez. Ders yerinde kalır.
 
+**Değerlendirme formu (isteğe bağlı).** `ders_bitir` raporu yazınca `degerlendirme.html` açılır
+(`tools/degerlendirme.py`). Öğrenci 8 ölçekli (1–5), 3 seçmeli ve 4 açık uçlu soruyu (+ öğretmenin
+`egitmen.json` → `geriBildirim.sorular` ile eklediği en çok 10 soru) cevaplar. İkinci bölüm eğitmenin
+tespitleridir: Claude ders sırasında `degerlendirme_notu` ile yazar (yanlış bilgi, eksik kaynak, anlatım,
+soru, teknik, dikte), program da kendiliğinden ekler (araç hataları, `kaynakta_yok` sorular, inmeyen
+makaleler). Taslak `<kimlik>/degerlendirme/<ders>.json`'da durur. Öğrenci kaydedince form **kimliksiz**
+olarak (ad, kimlik, numara yok; tarih yalnız ay) `Belgeler/KlinikKoç Değerlendirmeler/<ders>_<tarih>_<kod>.json`
+ve `.txt` olarak yazılır; hiçbir yere kendiliğinden gönderilmez. `geriBildirim.eposta` tanımlıysa (sihirbazda
+ders kartı) e-posta bağlantısı hazırlanır. Öğretmen formları `degerlendirme_ozeti` aracıyla ya da
+`python tools/degerlendirme.py --topla <klasör> --cikis ozet.md` ile toplar; .json, .txt ve e-postadan
+kaydedilmiş metinler okunur (`KLINIKKOC-FORM` satırından sonraki JSON), aynı form iki kez sayılmaz.
+
 **Tekrar kartları.** Öğrencinin zorlandığı sorular (ders başına en çok 10) yalnız metin olarak
 `<kimlik>/tekrar/kartlar.json` dosyasına yazılır. Kartlar arşivin dışındadır: ders arşivde olsa bile zamanı
 gelince (3, 7, 21, 60 gün aralıklarla) `tekrar_listesi`nde çıkar; sonuç `tekrar_karti_yaz` ile işlenir.
