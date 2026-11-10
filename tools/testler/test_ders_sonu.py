@@ -277,6 +277,30 @@ class DersSonuTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             ders_paketi.paket_olustur(os.path.join(self.tmp.name, "cikti"))
 
+    def test_kendi_makalelerim(self):
+        """Hiç ders seçili değilken eklenen PDF, derse bağlı olmayan kişisel kitaplığa girer."""
+        self.assertEqual(mb.makaleli_dersler()[-1]["ders"], mb.KENDI)
+        self.assertEqual(mb.makaleli_dersler()[-1]["makale"], 0)
+        r = mb.elle_ekle("", makale_pdf("10.9999/kendi.1", "kendi makalem"), "Benim makalem.pdf")
+        self.assertTrue(r["ogrenci"])
+        k = os.path.join(self.kok, "lessons", mb.KENDI)
+        self.assertTrue(os.path.isfile(os.path.join(k, "egitmen.json")))
+        self.assertTrue(os.path.isfile(r["pdf"]))
+        self.assertIn("Kendi makalelerim", r["pdf"])
+        self.assertEqual(mb.makaleli_dersler()[-1]["makale"], 1)
+        self.assertEqual([d["ders"] for d in mb.makaleli_dersler()].count(mb.KENDI), 1)
+        o = mb.ozet(mb.KENDI)
+        self.assertEqual(o["baslik"], "Kendi makalelerim")
+        self.assertEqual(len(o["makaleler"]), 1)
+        # Ders listesinde (ana sayfa) görünmez
+        with open(os.path.join(self.kok, "lessons", "katalog.json"), encoding="utf-8") as f:
+            self.assertNotIn(mb.KENDI, [g["id"] for g in json.load(f)["lessons"]])
+        if PYPDF:
+            self.assertEqual(r["durum"], "hazir")
+            self.assertTrue(bilgi_bankasi.ara("surgical therapy", ders=mb.KENDI, yol=bilgi_bankasi.DIZIN))
+        with self.assertRaises(ValueError):
+            mb.elle_ekle("olmayan-ders", makale_pdf("10.9999/x", "x"), "x.pdf")
+
     def test_gecersiz_arsiv(self):
         y = os.path.join(self.tmp.name, "x.zip")
         with zipfile.ZipFile(y, "w") as z:

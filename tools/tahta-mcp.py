@@ -260,9 +260,11 @@ ARACLAR = [
     {
         "name": "makale_ekle",
         "description": "Öğrencinin bu bilgisayardaki bir PDF'ini derse ekler. kaynak verilirse o makalenin yerine geçer; "
-                       "verilmezse PDF'teki DOI'den listedeki makale bulunur, bulunamazsa 'öğrencinin eklediği' ayrı kaynak olur.",
+                       "verilmezse PDF'teki DOI'den listedeki makale bulunur, bulunamazsa 'öğrencinin eklediği' ayrı kaynak olur. "
+                       "Makale hiçbir derse bağlı değilse (ya da hiç ders yoksa) ders='kendi-makalelerim' kullan: öğrencinin "
+                       "kişisel kitaplığıdır; sonra egitmen_hazirla(ders='kendi-makalelerim') ile o makalelerle çalışılır.",
         "inputSchema": {"type": "object", "properties": {
-            "ders": {"type": "string"},
+            "ders": {"type": "string", "description": "ders kimliği ya da 'kendi-makalelerim'"},
             "dosya": {"type": "string", "description": "PDF'in bu bilgisayardaki tam yolu"},
             "kaynak": {"type": "string", "description": "makaleler listesindeki id (isteğe bağlı)"}},
             "required": ["ders", "dosya"]},
@@ -609,6 +611,8 @@ def ders_yolu(ders, *parca):
 
 
 def egitmen_json(ders):
+    if ders == makale_bulucu.KENDI and os.path.abspath(makale_bulucu.KOK) == os.path.abspath(KOK):
+        makale_bulucu.kendi_kitaplik_hazirla()  # kişisel kitaplık ilk istendiğinde kurulur
     yol = ders_yolu(ders, "egitmen.json")
     return _json_oku(yol) if os.path.exists(yol) else None
 
@@ -650,7 +654,8 @@ def ar_dersler(_):
     if not out:
         return metin({"dersler": [], "not": "Bu bilgisayarda hiç ders yok: program derssiz gelir. Öğrenciye öğretmeninin verdiği "
                                             "ders paketini (.zip) sor; yolunu verirse ders_paketi_ekle ile kur, vermezse "
-                                            "ders_paketi_ekle'yi yolsuz çağırıp paket sayfasını aç."})
+                                            "ders_paketi_ekle'yi yolsuz çağırıp paket sayfasını aç. Öğrenci derssiz, kendi "
+                                            "makalesiyle çalışmak isterse makale_ekle(ders='kendi-makalelerim') kullan."})
     return metin(out)
 
 
@@ -955,7 +960,16 @@ def ar_egitmen_hazirla(a):
         depo()._tasima_soylendi = True
         out["kayit_tasima"] = {"not": "Eski kayıtlar kalıcı kayıt klasörüne kopyalandı; eski dosyalar silinmedi.",
                                "kaynak": r["kaynak"], "yeni_yer": depo().kok, "kopyalanan": r["kopyalanan"]}
-    if makale_bulucu.kaynaklar(ders):
+    if ders == makale_bulucu.KENDI:
+        mo = makale_bulucu.ozet(ders)
+        out["makaleler"] = {"hazir": [m["kisa"] for m in mo["makaleler"] if m["durum"] == "hazir"],
+                            "not": "Öğrencinin kendi eklediği makaleler. Hangisiyle çalışmak istediğini sor; bilgiyi "
+                                   "bilgi_ara(ders='kendi-makalelerim') ile bu makalelerden al."}
+        if not out["makaleler"]["hazir"]:
+            out["makaleler"]["not"] = ("Kitaplıkta henüz okunmuş makale yok. Öğrenciden PDF'in yolunu iste ve "
+                                       "makale_ekle(ders='kendi-makalelerim') ile ekle, ya da makaleler(ac: true) ile "
+                                       "sayfayı açıp PDF'i 'Kendi makalelerim' seçiliyken bırakmasını söyle.")
+    elif makale_bulucu.kaynaklar(ders):
         mo = makale_bulucu.ozet(ders)
         out["makaleler"] = {"sayilar": mo["sayilar"],
                             "eksik": [m["kisa"] for m in mo["makaleler"] if m["durum"] != "hazir"]}
@@ -1855,7 +1869,7 @@ def ar_makale_bul(a):
 
 
 def ar_makale_ekle(a):
-    ders = a.get("ders")
+    ders = a.get("ders") or makale_bulucu.KENDI
     ders_yolu(ders)
     yol = os.path.expanduser(a.get("dosya") or "")
     if not os.path.isfile(yol):

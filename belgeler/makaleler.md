@@ -31,6 +31,15 @@ Makaleler şu sırayla aranır:
 KlinikKoç hiçbir kullanıcı adı ya da şifre kullanmaz. Bazı yayıncılar otomatik indirmeye izin vermez; o zaman
 makale "eksik" görünür ve yukarıdaki gibi elle eklenir.
 
+### Kendi makalelerim (derse bağlı olmayan PDF'ler)
+
+Öğrenci hiç ders yüklemeden de kendi PDF'leriyle çalışabilir. Makaleler sayfasında **Kendi makalelerim** seçiliyken
+(hiç ders yoksa zaten seçilidir) bırakılan PDF bu kişisel kitaplığa girer: `lessons/kendi-makalelerim/` klasörü ilk
+eklemede kendiliğinden kurulur, PDF `Belgeler\KlinikKoç Makaleler\Kendi makalelerim\` klasörüne kopyalanır, metni
+okunup aramaya eklenir. Ana sayfadaki ders listesinde görünmez. Eğitmen `egitmen_hazirla(ders="kendi-makalelerim")`
+ile bu makalelerle serbest çalışır (varsayılan Mercan, İnci de seçilebilir); yalnız bu makalelerdeki bilgiyle konuşur.
+Claude'dan eklemek için: `makale_ekle(ders="kendi-makalelerim", dosya=...)`.
+
 ### Makale klasörü
 
 İnen bütün PDF'ler `Belgeler\KlinikKoç Makaleler\<ders adı>\` klasöründe durur (Mac'te

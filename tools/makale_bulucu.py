@@ -113,6 +113,38 @@ def ders_klasoru(ders):
     return os.path.join(KOK, "lessons", ders_gecerli(ders))
 
 
+# ---------- Kendi makalelerim: hiçbir derse bağlı olmayan kişisel kitaplık ----------
+# Öğrenci ders yüklemeden de kendi PDF'lerini ekleyip eğitmenle çalışabilsin diye derse benzer bir klasördür
+# (lessons/kendi-makalelerim/). Ders listesinde (katalog) görünmez; makaleler sayfasında ve eğitmende görünür.
+KENDI = "kendi-makalelerim"
+KENDI_BASLIK = "Kendi makalelerim"
+KENDI_EGITMEN = {
+    "surum": 1, "baslik": KENDI_BASLIK, "duzey": "Serbest çalışma", "egitmen": "mercan",
+    "izinliEgitmenler": ["mercan", "inci"], "kendi_kitaplik": True,
+    "kaynak": {"baslik": "Öğrencinin eklediği makaleler"},
+    "hedefler": [
+        {"id": "K1", "baslik": "Seçtiği makalenin sorusunu, yöntemini ve ana bulgusunu kendi cümleleriyle anlatır",
+         "bloom": "anla"},
+        {"id": "K2", "baslik": "Makalenin kanıt düzeyini ve sınırlılıklarını değerlendirir", "bloom": "degerlendir"}],
+    "ogretmenNotlari": [
+        {"id": "K-N1", "metin": "Bu bir ders değil: öğrencinin kendi eklediği makalelerle serbest çalışmadır; öğretmen "
+                                "onaylı içerik yoktur."},
+        {"id": "K-N2", "metin": "Yalnız bu makalelerde bulunan bilgiyle konuş (bilgi_ara, ders='kendi-makalelerim'); "
+                                "makalede olmayanı makaleye dayanıyormuş gibi söyleme. Hangi makaleyle çalışmak "
+                                "istediğini öğrenciye sor."}],
+}
+
+
+def kendi_kitaplik_hazirla():
+    """lessons/kendi-makalelerim/ klasörünü (yoksa) kurar. Klasör yolunu döndürür."""
+    k = os.path.join(KOK, "lessons", KENDI)
+    if not os.path.isfile(os.path.join(k, "egitmen.json")):
+        _json_yaz(os.path.join(k, "egitmen.json"), KENDI_EGITMEN)
+    if not os.path.isfile(os.path.join(k, "kaynaklar", "kaynaklar.json")):
+        _json_yaz(os.path.join(k, "kaynaklar", "kaynaklar.json"), {"kaynaklar": []})
+    return k
+
+
 def kaynaklar_yolu(ders):
     return os.path.join(ders_klasoru(ders), "kaynaklar", "kaynaklar.json")
 
@@ -128,6 +160,8 @@ def kaynaklar(ders):
 
 
 def ders_basligi(ders):
+    if ders == KENDI:
+        return KENDI_BASLIK
     for ad in ("ders.json", "egitmen.json"):
         d = _json_oku(os.path.join(ders_klasoru(ders), ad), {}) or {}
         b = d.get("title") or d.get("baslik")
@@ -476,6 +510,11 @@ def elle_ekle(ders, veri, ad="makale.pdf", kaynak_id=None, dizinle=True):
     eşleşmezse "öğrencinin eklediği" ayrı bir kaynak olur."""
     if not pdf_mi(veri):
         raise ValueError("Bu dosya PDF değil.")
+    if not ders or ders == KENDI:
+        ders = KENDI
+        kendi_kitaplik_hazirla()
+    elif not os.path.isdir(ders_klasoru(ders)):
+        raise ValueError("Bu ders bu bilgisayarda kurulu değil: %s" % ders)
     if len(veri) > EN_BUYUK_PDF:
         raise ValueError("PDF çok büyük (en çok 80 MB).")
     liste = {str(k["id"]): k for k in kaynaklar(ders)}
@@ -565,6 +604,7 @@ def ozet(ders):
 
 
 def makaleli_dersler():
+    """Makaleler sayfasının listesi: makale listesi olan dersler, en sonda her zaman "Kendi makalelerim"."""
     out = []
     for yol in sorted(glob.glob(os.path.join(KOK, "lessons", "*", "kaynaklar", "kaynaklar.json"))):
         ders = os.path.basename(os.path.dirname(os.path.dirname(yol)))
@@ -572,7 +612,10 @@ def makaleli_dersler():
             ders_gecerli(ders)
         except ValueError:
             continue
+        if ders == KENDI:
+            continue
         out.append({"ders": ders, "baslik": ders_basligi(ders), "makale": len(kaynaklar(ders))})
+    out.append({"ders": KENDI, "baslik": KENDI_BASLIK, "makale": len(durum_oku(KENDI)["ekler"]), "kendi": True})
     return out
 
 

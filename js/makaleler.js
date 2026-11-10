@@ -7,6 +7,7 @@
     paket: 'ders paketiyle geldi', klasor: 'makale klasöründe vardı', 'acik-erisim': 'açık erişimden indi',
     universite: 'yayıncıdan indi', elle: 'siz eklediniz', ders: 'dersin kendi metni',
   };
+  const KENDI = 'kendi-makalelerim';  // hiçbir derse bağlı olmayan kişisel kitaplık
   let ders = new URLSearchParams(location.search).get('ders') || '';
   let izleme = null;
   if (location.protocol === 'file:') {
@@ -68,6 +69,11 @@
     for (const [k, n] of Object.entries(o.sayilar)) oz.appendChild(etiket(k, `${DURUM[k] || k}: ${n}`));
     $('#klasorYolu').textContent = 'Makale klasörü: ' + o.klasor;
     $('#bulDugme').disabled = !!o.calisiyor;
+    $('#bulDugme').hidden = ders === KENDI;
+    if (ders === KENDI && !o.makaleler.length) {
+      oz.appendChild(Object.assign(document.createElement('span'), { className: 'mk-ince',
+        textContent: 'Herhangi bir derse bağlı olmadan kendi PDF\'lerinizi buraya ekleyebilirsiniz. Aşağıdaki alana bırakın; sonra Claude\'a "kendi makalelerimden çalışalım" deyin.' }));
+    }
     listeyiCiz(o.makaleler);
     clearTimeout(izleme);
     if (o.calisiyor) izleme = setTimeout(durumYukle, 2500);
@@ -114,7 +120,7 @@
       }
       if (m.ogrenci) {
         const b = document.createElement('button');
-        b.className = 'btn small ghost'; b.textContent = 'Dersten çıkar';
+        b.className = 'btn small ghost'; b.textContent = ders === KENDI ? 'Listeden çıkar' : 'Dersten çıkar';
         b.addEventListener('click', async () => {
           try { await api('kaldir', { method: 'POST', body: JSON.stringify({ ders, id: m.id }) }); } catch (e) { alertYerine(e.message); }
           durumYukle();
@@ -136,12 +142,13 @@
       if (kaynak) q.set('kaynak', kaynak);
       const v = await api('ekle?' + q, { method: 'POST', body: dosya });
       if (v.durum === 'hazir') {
-        yaziyla(mesaj, `${dosya.name}: ${v.ogrenci ? 'listede yoktu, sizin eklediğiniz makale olarak' : '“' + v.kisa + '” olarak'} eklendi (${v.sayfa} sayfa).`, 'iyi');
+        const nasil = ders === KENDI ? 'kendi makalelerinize' : (v.ogrenci ? 'listede yoktu, sizin eklediğiniz makale olarak' : '“' + v.kisa + '” olarak');
+        yaziyla(mesaj, `${dosya.name}: ${nasil} eklendi (${v.sayfa} sayfa).`, 'iyi');
       } else {
         yaziyla(mesaj, `${dosya.name}: ${v.neden || 'okunamadı'}`, 'kotu');
       }
     } catch (e) { yaziyla(mesaj, `${dosya.name}: ${e.message}`, 'kotu'); }
-    durumYukle();
+    dersleriYukle();  // listedeki makale sayıları da güncellensin
   }
 
   async function paketGonder(dosya, uzerine) {
