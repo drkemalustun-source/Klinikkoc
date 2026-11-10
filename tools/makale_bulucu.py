@@ -515,6 +515,21 @@ def aramaya_ekle(ders):
 
 
 # ---------- Öğrencinin elle eklediği PDF ----------
+def _sozcukler(metin):
+    return set(re.findall(r"[a-zçğıöşü0-9]{4,}", (metin or "").lower().replace("ı", "i").replace("İ", "i")))
+
+
+def baslikla_esle(ilk_sayfa, adaylar, esik=0.8):
+    """İlk sayfa metninde başlığının sözcüklerinin en az %80'i geçen tek makale (yoksa None)."""
+    sayfa = _sozcukler(ilk_sayfa)
+    uyan = []
+    for aday in adaylar:
+        b = _sozcukler(aday.get("baslik"))
+        if len(b) >= 3 and len(b & sayfa) / len(b) >= esik:
+            uyan.append(aday)
+    return uyan[0] if len(uyan) == 1 else None
+
+
 def elle_ekle(ders, veri, ad="makale.pdf", kaynak_id=None, dizinle=True):
     """Öğrencinin elindeki PDF. kaynak_id verilmezse PDF'teki DOI listedeki bir makaleyle eşleştirilir;
     eşleşmezse "öğrencinin eklediği" ayrı bir kaynak olur."""
@@ -546,6 +561,8 @@ def elle_ekle(ders, veri, ad="makale.pdf", kaynak_id=None, dizinle=True):
             if doi_temizle(aday.get("doi")) and doi_temizle(aday.get("doi")) in bulunan:
                 k = aday
                 break
+        if not k:  # DOI'si olmayan (ör. eski) makale: başlığın sözcükleri ilk sayfada geçiyorsa o makaledir
+            k = baslikla_esle(metin, liste.values())
     ogrenci = False
     if not k:
         ogrenci = True

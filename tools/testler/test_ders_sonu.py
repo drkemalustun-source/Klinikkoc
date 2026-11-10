@@ -273,6 +273,13 @@ class DersSonuTest(unittest.TestCase):
         mb.durum_yaz(DERS, d)
         self.assertEqual(makale_sekil.cikar(DERS), {"sekil1": "makale-yok"})
 
+    def test_baslikla_esle(self):
+        adaylar = [{"id": "su", "baslik": "Considerations of implant abutment and crown contour: critical contour and subcritical contour"},
+                   {"id": "x", "baslik": "Peri-implantitis surgical therapy"}]
+        sayfa = "INT J PERIODONTICS RESTORATIVE DENT 2010\nConsiderations of Implant Abutment and Crown Contour: Critical Contour and Subcritical Contour\nHomer Su ..."
+        self.assertEqual(mb.baslikla_esle(sayfa, adaylar)["id"], "su")
+        self.assertIsNone(mb.baslikla_esle("Başka bir makale", adaylar))
+
     def test_png_yaz(self):
         yol = os.path.join(self.tmp.name, "k.png")
         makale_sekil.png_yaz(yol, 3, 2, [b"\x00" * 9, b"\xff" * 9])
