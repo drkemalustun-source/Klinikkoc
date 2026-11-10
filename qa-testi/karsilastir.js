@@ -202,6 +202,7 @@
     try {
       const cat = await AT.loadCatalog();
       const entry = cat.lessons.find((l) => l.id === 'peri-implantitis-cerrahi') || cat.lessons[0];
+      if (!entry) throw new Error('kurulu ders yok; önce peri-implantitis ders paketini kurun');
       lesson = await AT.loadLesson(entry);
       retriever = AT.createRetriever(lesson);
       $('#status').textContent = 'Ders: ' + lesson.title;

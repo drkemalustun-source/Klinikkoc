@@ -16,6 +16,12 @@ import os
 import re
 import sys
 
+
+def _json_oku(yol):
+    with open(yol, encoding="utf-8") as f:
+        return json.load(f)
+
+
 KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BLOOM = ("hatirla", "anla", "uygula", "cozumle", "degerlendir", "olustur")
 DUGUM_TURLERI = ("karar", "acik", "veri", "bilgi", "son")
@@ -34,14 +40,23 @@ IZLER = [
 ]
 
 
+def ders_klasoru(ders):
+    """Kurulu ders (lessons/) ya da depodaki örnek ders (ornek-dersler/)."""
+    for ust in ("lessons", "ornek-dersler"):
+        k = os.path.join(KOK, ust, ders)
+        if os.path.isdir(k):
+            return k
+    return os.path.join(KOK, "lessons", ders)
+
+
 def ders_bilgisi(ders):
-    klasor = os.path.join(KOK, "lessons", ders)
+    klasor = ders_klasoru(ders)
     hedefler, bolumler, yanilgilar = set(), set(), set()
     for ad in ("ders.json", "egitmen.json"):
         yol = os.path.join(klasor, ad)
         if not os.path.exists(yol):
             continue
-        d = json.load(open(yol, encoding="utf-8"))
+        d = _json_oku(yol)
         for g in d.get("goals") or []:
             hedefler.add(g.get("id"))
             hedefler.update(s.get("id") for s in g.get("subgoals") or [])
@@ -140,7 +155,7 @@ def denetle(yol):
         if not (b.get("metin") or "").strip():
             H.append("Bulgu %s: metin boş" % bid)
         if b.get("gorsel"):
-            g = os.path.join(KOK, "lessons", v["ders"], b["gorsel"])
+            g = os.path.join(ders_klasoru(v["ders"]), b["gorsel"])
             if not os.path.exists(g):
                 H.append("Bulgu %s: görsel dosyası yok: %s" % (bid, b["gorsel"]))
             if not b.get("gorsel_aciklama"):
@@ -269,7 +284,8 @@ def denetle(yol):
 
 
 def tum_kartlar():
-    return sorted(glob.glob(os.path.join(KOK, "lessons", "*", "vakalar", "*.json")))
+    return sorted(glob.glob(os.path.join(KOK, "lessons", "*", "vakalar", "*.json")) +
+                  glob.glob(os.path.join(KOK, "ornek-dersler", "*", "vakalar", "*.json")))
 
 
 def main(argv):

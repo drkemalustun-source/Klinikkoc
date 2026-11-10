@@ -19,17 +19,33 @@ Claude masaüstü  →  tools/tahta-mcp.py  →  tools/sunucu.py (localhost:8810
 
 ## Kurulum (bir kez)
 
-1. Bu klasörde bir komut istemi açın (klasörün adres çubuğuna `cmd` yazıp Enter).
-2. `python tools/tahta-mcp.py --kur` yazın. Claude'un ayar dosyasına "klinik-koc" eklenir
-   (eski ayar `.yedek` olarak saklanır).
-3. Claude masaüstü uygulamasını **tamamen** kapatın: saatin yanındaki Claude simgesine sağ tık → Çık (Quit).
-   Yeniden açın.
+1. Klasördeki **KUR-Windows** dosyasına çift tıklayın (Mac'te **KUR-Mac**). Windows dosya uzantılarını
+   gizleyebilir; dosyanın adı yalnız "KUR-Windows" görünebilir. Kurulum üç adımdır:
+   1. Piper ses paketleri ve yedek ses dosyası (~63 MB).
+   2. Claude'un ayar dosyasına "klinik-koc" eklenir (eski ayar `.yedek` olarak saklanır). Kurulum,
+      Claude'un **gerçekten okuduğu** dosyayı bulur: Microsoft Store sürümünde
+      `%LOCALAPPDATA%\Claude-Data\claude_<paket>\claude_desktop_config.json`, .exe sürümünde
+      `%APPDATA%\Claude\`, Mac'te `~/Library/Application Support/Claude/`. Claude'un artık okumadığı eski
+      yerler "atlandı" diye yazılır.
+   3. İsteğe bağlı doğal Türkçe kadın sesi (Pocket, ~1 GB indirme). Kurulum sorar (E/H). Pocket,
+      Python 3.10–3.13 ister; kurulum uygun sürümü kendi arar (bilgisayardaki Python 3.14 ise başka bir sürüm
+      ya da `uv` aranır). Bulamazsa "python.org'dan 3.12 kurun" der; o zamana kadar yedek ses kullanılır.
+      Kurulumun sonunda Pocket kısa bir cümle söyler; sesi duyuyorsanız hazırdır.
+2. Claude masaüstü uygulamasını **tamamen** kapatın: saatin yanındaki **^** → Claude simgesi → sağ tık → **Çık**
+   (Mac'te Cmd+Q). Yeniden açın.
+3. **Denetim:** Claude'da **Ayarlar › Geliştirici** ekranında "klinik-koc" **Çalışıyor** görünmeli.
 4. Yeni bir sohbette yazın: **"Tahtayı aç ve bana Şekil 2'yi anlat."**
    Claude araçları ilk kullanırken izin ister; "Her zaman izin ver" demeniz işinizi kolaylaştırır.
 5. Tarayıcıda canlı tahta açılır. Bir kez **"Tam ekran başlat"**a dokunun (tarayıcı, sesin çalması için bunu ister).
 
-Denetim: `python tools/tahta-mcp.py --dene` dersleri ve araçları listeler.
-Kaldırma: `python tools/tahta-mcp.py --kaldir`.
+Komutla kurulum (aynı adımlar): `python tools/ses-uret.py --kur`, `python tools/tahta-mcp.py --kur`,
+`python tools/ses-uret.py --kur-pocket`. Pocket kurulu mu: `--pocket-durum`; sesi dene: `--dene-pocket`.
+
+Denetim: `python tools/tahta-mcp.py --dene` dersleri, araçları ve bulduğu her Claude ayar dosyasını
+("asıl" / "eski") listeler; Claude'un okuduğu dosyada "klinik-koc" yoksa açıkça uyarır.
+Ayar dosyası bulunamazsa: Claude'da **Ayarlar › Geliştirici › "Yapılandırmayı düzenle"**ye basın, açılan dosyanın
+yolunu kopyalayıp `python tools/tahta-mcp.py --kur --ayar "<yol>"` yazın.
+Kaldırma: `python tools/tahta-mcp.py --kaldir` (gerekirse `--ayar "<yol>"` ile).
 
 ## Claude'un araçları
 
@@ -44,8 +60,9 @@ Kaldırma: `python tools/tahta-mcp.py --kaldir`.
 | `kayit_disa_aktar` / `kayit_ice_aktar` | Öğrencinin bütün kaydını tek dosyaya yazar / başka bilgisayarda içe alır |
 | `kayit_anonim_aktar` | Yalnız öğretmen: seçilen öğrencilerin kimliksiz araştırma dosyası (deneme kayıtları hariç) |
 | `olcme_testi` / `olcme_kaydet` | Öğretmenin onayladığı pilot testi (ön / son / gecikmeli) seçenekleri karıştırarak verir; yanıtları puanlayıp kayda yazar |
-| `tahtayi_ac` | Yerel sunucu kapalıysa açar, tahta sayfasını açar ve bağlanmasını bekler |
+| `tahtayi_ac` | Yerel sunucu kapalıysa açar, tahta sayfasını açar ve bağlanmasını bekler; açık sunucu başka bir KlinikKoç klasöründense onu kapatıp bu klasörden açar |
 | `dersler` | Bilgisayardaki dersleri, bölümlerini ve görsellerini listeler |
+| `ders_paketi_ekle` | Öğretmenin verdiği ders paketini (.zip) kurar ve makalelerini aramaya başlar; yol verilmezse paket sayfasını açar |
 | `ders_oku` | Ders planını ya da bir bölümün anlatımını, tahta komutlarını ve sorularını okur |
 | `gorsel_bak` | Ders görselini Claude'a gösterir (işaretleyeceği yeri seçmek için) |
 | `tahta` | Adım adım: önce tahtaya yazar/çizer, sonra o adımı sesli anlatır |
@@ -55,6 +72,10 @@ Kaldırma: `python tools/tahta-mcp.py --kaldir`.
 | `videolar` | Dersin videolarını listeler (klasördeki dosyalar ve YouTube bağlantıları) |
 | `anlatima_devam` | Siz söz alınca duraklayan anlatımı, Claude cevap verdikten sonra kaldığı cümleden sürdürür |
 | `durdur` | Anlatımı hemen keser |
+| `makale_sayfasi_bak` / `makale_sekli_ekle` | Öğretmen: makalenin sayfasına bakar / derse şeklin yerini yazar; şekil her öğrencinin kendi PDF'inden çizilir |
+| `degerlendirme_notu` | Ders sırasında dersin kendisinde fark edilen sorunu ders sonu değerlendirme formuna not eder |
+| `degerlendirme_ozeti` | Öğretmen: öğrencilerden gelen değerlendirme formlarını tek özette toplar |
+| `ses_yeniden_baslat` | Pocket sesi açılamadıysa ya da durduysa beklemeden yeniden başlatır (kendiliğinden de bir dakikada bir dener) |
 
 Tahta komutları: başlık, madde, terim, not, tablo, akış, karşılaştırma, ders görseli,
 görselde işaretleme ve yakınlaştırma, serbest çizim (çizgi, ok, kutu, elips, yazı).
@@ -72,7 +93,9 @@ dosyalarındadır. Ortak kurallar: kaynağın dışına çıkmamak, öğretmen n
 soru seçmek, açık uçlu yanıtı SOLO'ya göre değerlendirmek, yalnız olgu sorularında "ne kadar eminsin?" diye
 sormak, cevabı erken vermemek, ısrara boyun eğmemek, mola/devam ve rapor.
 
-Başlamak için Claude'a yazın: **"Tahtayı aç, peri-implantitis dersine başlayalım. Adım Ayşe."**
+Program derssiz gelir; önce öğretmenin verdiği ders paketini ekleyin (Claude'a **"İndirilenler'deki ders paketini kur"**
+deyin ya da paketi **Ders paketleri ve makaleler** sayfasına bırakın). Sonra Claude'a yazın:
+**"Tahtayı aç, akut periodontal lezyonlar dersine başlayalım. Adım Ayşe."**
 Vaka çalışmak için: **"Bu dersin vakasını çözelim."** Karne için: **"Karnemi göster."**
 Claude önce eğitmeni yükler, kaydınızda tekrar zamanı gelen konu varsa kısa bir tekrarla başlar.
 
@@ -189,14 +212,24 @@ bilgisayarında kalır. Herkesle paylaşılacak bir video için YouTube bağlant
   bekler. Duraklatılmışken mikrofona basarsanız söz alırsınız; kare düğme ya da Esc anlatımı keser.
 - Tahtadaki **kare** düğme ya da **Esc** anlatımı keser. **F** tam ekran. Hız düğmesi 1,0 / 1,2 / 1,4.
 - Sesi bu bilgisayardaki Pocket TTS Türkçe kadın 3 sesi üretir (ayar: `ses/ses-ayari.json`). Sunucu
-  açılırken ~10–30 sn yüklenir; o sırada ya da hata olursa Piper dfki, o da yoksa tarayıcının Türkçe sesi.
+  açılırken ~10–60 sn yüklenir; o sırada ya da Pocket kurulu değilse Piper dfki (yedek), o da yoksa
+  tarayıcının Türkçe sesi. **Hangi sesin çaldığı tahtanın üst çubuğunda yazar** ("Ses: Pocket",
+  "Ses: Piper (yedek)", "Ses: tarayıcı sesi (yedek)"; yedekte sarı). Claude da `tahtayi_ac` sonucunda görür.
+- Tarayıcı sesi kendiliğinden çalmaya izin vermezse anlatım o cümlede bekler ve ekranda büyük
+  **"🔊 Sesi açmak için dokunun"** düğmesi çıkar; dokununca aynı cümleden sürer.
+- Tahtayı ikinci bir sekmede açarsanız eski sekme "Bu tahta başka bir sekmede açık" der ve bağlantıyı bırakır.
 - Bu mod öğretim üyesi içindir. Öğrenci sürümü (index.html) değişmedi; öğrenciye maliyet yine sıfırdır.
 
 ## Sorun giderme
 
 | Belirti | Çözüm |
 |---|---|
-| Claude'da "klinik-koc" araçları görünmüyor | Claude'u sistem tepsisinden tamamen kapatıp açın; `--kur` komutunu yeniden çalıştırın |
+| Claude'da "klinik-koc" araçları görünmüyor | Claude'u tepsiden tamamen kapatıp açın (^ → Claude → sağ tık → Çık). **Ayarlar › Geliştirici**'de listede mi? Değilse `python tools/tahta-mcp.py --dene` ne diyor bakın; "Yapılandırmayı düzenle" ile açılan dosyanın yolunu `--kur --ayar "<yol>"` ile verin |
+| Listede "klinik-koc" var ama hata veriyor | `--dene` çıktısında "dosyası yok" yazıyorsa program klasörü taşınmıştır: KUR'u yeni klasörden yeniden çalıştırın |
+| Üst çubukta "Ses: tarayıcı sesi (yedek)" | Doğal ses kurulu değil ya da açılamadı. KUR'u yeniden çalıştırıp Pocket'e "E" deyin; Python 3.14 ise python.org'dan 3.12 kurun |
+| Ekranda "Sesi açmak için dokunun" | Tarayıcı sesi engelledi; düğmeye dokunun, anlatım kaldığı cümleden sürer |
+| Videonun üstünde büyük ▶ | Tarayıcı videonun kendiliğinden başlamasını engelledi; ▶'e dokunun |
+| "Bu tahta başka bir sekmede açık" | Aynı tahta iki sekmede açılmış; eski sekmeyi kapatın |
 | "Tahta sayfası açık değil" | Claude'a "tahtayı aç" deyin ya da tarayıcıda `http://localhost:8810/canli.html` açın |
 | Yazılar geliyor, ses yok | Tahtada "başlat" düğmesine dokunun; bilgisayarın sesini denetleyin |
 | Sol üstteki nokta kırmızı | Sunucu penceresi kapanmış; Claude'a "tahtayı aç" deyin |

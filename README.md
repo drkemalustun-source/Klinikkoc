@@ -6,9 +6,14 @@ vermeye çalıştırır. Öğrenci bir vakada takılırsa koç, dersin ilgili b�
 vakaya geri döner. Sorular not için değildir; karne yalnız öğrencinin kendi cihazında durur.
 
 > **Durum:** 1. aşama (temel) yapım aşamasındadır. Aşağıdaki "Yol haritası"na bakın.
-> Bu depo bilerek **boş** gelir: içinde yalnız genel sistem, bir tanıtım dersi ve CC BY 4.0
-> lisanslı bir örnek ders (peri-implantitis) vardır. Her öğretmen kendi notunu ve vakalarını
-> kendi bilgisayarında ekler; bunlar depoya girmez.
+> Program **derssiz** gelir. Her ders, öğretmenin hazırlayıp öğrenciye verdiği bir **ders paketidir**
+> (.zip); öğrenci paketi ekleyince ders listede belirir. Depoda yalnız genel sistem ve CC BY 4.0 lisanslı
+> bir örnek ders (peri-implantitis, `ornek-dersler/`; ayrı paket olarak dağıtılır) vardır. Her öğretmen
+> kendi notunu ve vakalarını kendi bilgisayarında ekler; bunlar depoya girmez.
+>
+> **Kullanım kılavuzu:** programın içinde, ana sayfanın altındaki **Kullanım kılavuzu** bağlantısında
+> ([kilavuz.html](kilavuz.html)): kurulum, ders paketi ekleme, makaleler, çalışma, ders sonu ve arşiv,
+> öğretmen sihirbazı ve sorun giderme, ekran görüntüleriyle.
 
 ## Ne yapar?
 
@@ -28,7 +33,7 @@ vakaya geri döner. Sorular not için değildir; karne yalnız öğrencinin kend
 
 | | Oynatıcı | Canlı eğitmen |
 |---|---|---|
-| Nasıl açılır | `index.html` (tarayıcıda) | Claude masaüstü uygulaması + `KUR.bat` (Windows) ya da `KUR.command` (Mac) |
+| Nasıl açılır | `index.html` (tarayıcıda) | Claude masaüstü uygulaması + `KUR-Windows.bat` ya da `KUR-Mac.command` |
 | Maliyet | Ücretsiz, internetsiz çalışır | Öğrencinin kendi Claude aboneliği; ek ücret yok, API anahtarı gerekmez |
 | Ne yapar | Hazır anlatım, sorular, açık uçlu soru + öz değerlendirme, karne | Yukarıdakilere ek olarak: sohbet, sesli konuşma, dallanan vaka, rubrikle puanlama, kaynakta arama |
 | Ayrıntı | [belgeler/oynatici.md](belgeler/oynatici.md) | [belgeler/canli-tahta.md](belgeler/canli-tahta.md) |
@@ -37,15 +42,27 @@ vakaya geri döner. Sorular not için değildir; karne yalnız öğrencinin kend
 
 **Öğrenci (Windows ya da Mac):** Depoyu indirin (yeşil "Code" düğmesi → "Download ZIP"), açın.
 
-- Yalnız oynatıcı: `index.html` dosyasına çift tıklayın.
+- KlinikKoç'u açmak: `BASLAT-Windows` (Mac'te `BASLAT-Mac`) dosyasına çift tıklayın. Ana sayfa tarayıcıda açılır.
+- Ders eklemek: öğretmeninizin verdiği ders paketini (.zip) **Ders paketleri ve makaleler** sayfasına bırakın
+  (ya da Claude'a "şu ders paketini kur" deyin).
+- Yalnız oynatıcı: `index.html` dosyasına çift tıklamak da yeter, ama ders paketi BASLAT ya da Claude ile eklenir.
 - Canlı eğitmen: [Python](https://www.python.org/downloads/) ve Claude masaüstü uygulaması kurulu olmalı.
-  `KUR.bat` dosyasına çift tıklayın, Claude uygulamasını tamamen kapatıp açın, sonra yazın:
-  **"Tahtayı aç, peri-implantitis dersine başlayalım. Adım Ayşe, numaramın son üç hanesi 123."**
-- Mac'te `KUR.bat` yerine `KUR.command` dosyasına çift tıklayın. macOS ilk açılışta "geliştiricisi doğrulanamadı"
+  `KUR-Windows` dosyasına çift tıklayın, Claude uygulamasını tamamen kapatıp açın, sonra yazın:
+  **"Tahtayı aç, akut periodontal lezyonlar dersine başlayalım. Adım Ayşe, numaramın son üç hanesi 123."**
+  Windows dosya uzantılarını gizleyebilir; adı yalnız **KUR-Windows** görünen dosyaya çift tıklayın.
+  Başarıyı denetlemek için: Claude'da **Ayarlar › Geliştirici** ekranında "klinik-koc" **Çalışıyor** görünmeli.
+- Ses: KUR, doğal Türkçe kadın sesini (~1 GB) isteğe bağlı kurar; kurulmazsa daha basit bir yedek ses kullanılır.
+  Hangi sesin çaldığı tahtanın üst çubuğunda yazar.
+- Mac'te `KUR-Windows` yerine `KUR-Mac` dosyasına çift tıklayın. macOS ilk açılışta "geliştiricisi doğrulanamadı"
   derse dosyaya sağ tıklayıp **Aç → Aç** deyin. Python 3 yoksa kurulum bunu söyler
   ([python.org](https://www.python.org/downloads/macos/)). Claude'u kapatmak için Cmd+Q.
 
-**Öğretmen:** Kendi dersinizi ve vakalarınızı eklemek için [belgeler/ogretmen-kilavuzu.md](belgeler/ogretmen-kilavuzu.md).
+**Öğretmen:** Dersi ekrandan adım adım hazırlamak için ders hazırlama sihirbazı: [belgeler/sihirbaz.md](belgeler/sihirbaz.md).
+Dosyaları elle yazmak isterseniz [belgeler/ogretmen-kilavuzu.md](belgeler/ogretmen-kilavuzu.md).
+
+**Makaleler ve ders paketleri:** Ders paketinde makalelerin yalnız listesi (künye ve DOI) vardır; KlinikKoç
+makaleleri öğrencinin bilgisayarına kendisi indirir, inmeyenleri öğrenci sürükleyip bırakır. Ayrıntı:
+[belgeler/makaleler.md](belgeler/makaleler.md).
 
 ## Öğrenci kayıtları nerede, nasıl silinir?
 
@@ -109,7 +126,7 @@ kod. Nasıl katkı verileceği: [KATKI.md](KATKI.md).
 
 - **Kod:** MIT lisansı ([LICENSE](LICENSE)).
 - **İçerik** (ders metinleri, sorular, vaka kartları, belgeler): CC BY 4.0 ([LISANS-ICERIK.md](LISANS-ICERIK.md)).
-- Örnek dersin kaynağı Ramanauskaite ve ark., *Periodontology 2000*, 2026, CC BY 4.0 lisanslıdır;
+- Örnek dersin (`ornek-dersler/peri-implantitis-cerrahi`) kaynağı Ramanauskaite ve ark., *Periodontology 2000*, 2026, CC BY 4.0 lisanslıdır;
   Türkçe anlatım yazarların onayı anlamına gelmez. Üçüncü taraf kitaplıklar: [vendor/LISANSLAR.md](vendor/LISANSLAR.md).
 
 KlinikKoç bir eğitim aracıdır; tanı ya da tedavi kararı için kullanılmaz.

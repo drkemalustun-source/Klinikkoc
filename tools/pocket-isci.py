@@ -26,6 +26,26 @@ _kanal = sys.stdout
 sys.stdout = sys.stderr
 
 
+def _sentencepiece_yamasi():
+    """Windows'ta sentencepiece, Türkçe harf içeren yoldaki (ör. 'koç deneme') tokenizer.model dosyasını
+    kendisi açamayabilir: yol bozulur ('koÃ§') ve NOT_FOUND verir. Böyle bir yolda dosyayı Python okur,
+    içeriği çözücüye verir. (İşçi -X utf8 ile başlar; bu ikinci savunmadır.)"""
+    try:
+        import sentencepiece
+    except Exception:
+        return
+    asil = sentencepiece.SentencePieceProcessor.LoadFromFile
+
+    def dosyadan_yukle(self, filename):
+        yol = os.fsdecode(os.fspath(filename))
+        if yol.isascii():
+            return asil(self, filename)
+        with open(yol, "rb") as f:
+            return self.LoadFromSerializedProto(f.read())
+
+    sentencepiece.SentencePieceProcessor.LoadFromFile = dosyadan_yukle
+
+
 def yanit(veri):
     _kanal.write("@@" + json.dumps(veri, ensure_ascii=False) + "\n")
     _kanal.flush()
@@ -46,6 +66,7 @@ def wav_bayt(ses, oran):
 def main():
     t0 = time.time()
     try:
+        _sentencepiece_yamasi()
         from pocket_tts_turkish import TurkishTTS
         tts = TurkishTTS.from_pretrained(device="cpu")
         tts.generate("Merhaba.", voice=tts.voices[0], seed=1)  # ısınma: ilk cümle yavaş olmasın

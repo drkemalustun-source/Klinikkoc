@@ -5,3 +5,5 @@
 *.png binary
 *.pdf binary
 *.mp3 binary
+# Örnek dersler programla dağıtılmaz (git archive / indirilen zip dışında kalır); ayrı ders paketi olarak verilir.
+ornek-dersler/ export-ignore

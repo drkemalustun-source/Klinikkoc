@@ -7,13 +7,29 @@
  *   IndexRetriever  : ders klasöründeki kaynak-dizini.json (tools/dizin-uret.py üretir).
  *                     Kurulum gerektirmez; arama tarayıcıda yapılır. İleride bir vektör
  *                     veritabanı aynı arayüzle (search) bu dosyanın yerine geçebilir.
- * Arama BM25 ile yapılır; Türkçe ekler için sözcüklerin ilk 6 harfi karşılaştırılır. */
+ * Arama BM25 ile yapılır; Türkçe ekler için sözcüğün sonundaki yaygın ek atılır, sonra ilk 6 harf karşılaştırılır. */
 (function (AT) {
   'use strict';
 
   const STOP = new Set(('ve veya ile da de bu şu o bir için gibi daha en çok ne mi mı mu mü ise ki ama ancak hem ya '
     + 'olan olarak olur olup oldu ol var yok nasıl neden niçin hangi hangisi kadar sonra önce göre her tüm bazı '
     + 'the of and or in on to a an is are for with by').split(' '));
+
+  // Hafif kök bulucu (tools/bilgi_bankasi.py → kok ile aynı kurallar): yaygın çekim ekini bir kez atar,
+  // böylece "apsede" ile "apse", "dişlerin" ile "diş" aynı sözcük sayılır.
+  const EKLER = ('lar ler ları leri ların lerin larda lerde lardan lerden lara lere nın nin nun nün ın in un ün '
+    + 'da de ta te dan den tan ten nda nde ndan nden ya ye yı yi yu yü sı si su sü yla yle la le '
+    + 'dır dir dur dür tır tir tur tür ı i u ü a e').split(' ').sort((a, b) => b.length - a.length);
+  // Ünlü düşmesi: ekli biçimin kökü yalın biçime çevrilir ("kaybı" → "kayb" → "kayıp").
+  const UNLU_DUSMESI = { ağz: 'ağız', burn: 'burun', kayb: 'kayıp', boyn: 'boyun', karn: 'karın', aln: 'alın', oğl: 'oğul' };
+
+  function kok(w) {
+    if (w.length < 5 || /^\d/.test(w)) return w;
+    for (const ek of EKLER) {
+      if (w.endsWith(ek) && w.length - ek.length >= 3) { w = w.slice(0, -ek.length); break; }
+    }
+    return UNLU_DUSMESI[w] || w;
+  }
 
   function tokens(text) {
     return String(text || '')
@@ -22,7 +38,7 @@
       .split(/[^\p{L}\p{N}.]+/u)
       .map((t) => t.replace(/^\.+|\.+$/g, ''))
       .filter((t) => t.length > 1 && !STOP.has(t))
-      .map((t) => (/^\d/.test(t) ? t : t.slice(0, 6)));
+      .map((t) => (/^\d/.test(t) ? t : kok(t).slice(0, 6)));
   }
 
   // Basit BM25 dizini.

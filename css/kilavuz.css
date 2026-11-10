@@ -1,0 +1,54 @@
+/* Kullanım kılavuzu: makaleler.css'in kutularını kullanır; burada yalnız okuma düzeni var. */
+.kl { max-width: 1180px; display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 0 2em; align-items: start; }
+.kl .mk-head { grid-column: 1 / -1; }
+.kl-icindekiler { position: sticky; top: 1em; max-height: calc(100vh - 2em); overflow: auto; font-size: .85em;
+  background: var(--board-2); border: 1px solid var(--board-line); border-radius: var(--radius); padding: .8em 1em; }
+.kl-icindekiler h2 { font-size: .95em; margin: 0 0 .4em; color: var(--chalk-dim); }
+.kl-icindekiler ol { margin: 0; padding-left: 1.2em; }
+.kl-icindekiler ol ol { padding-left: 1em; margin: .2em 0 .4em; }
+.kl-icindekiler li { margin: .25em 0; }
+.kl-icindekiler a { color: var(--chalk); text-decoration: none; }
+.kl-icindekiler a:hover { color: var(--accent); }
+.kl-metin { min-width: 0; line-height: 1.6; }
+.kl-metin section { scroll-margin-top: 1em; }
+.kl-metin > section > h2 { font-size: 1.4em; color: var(--accent); margin: 1.6em 0 .4em; padding-top: .6em;
+  border-top: 1px solid var(--board-line); }
+.kl-metin > section:first-child > h2 { margin-top: 0; border-top: 0; padding-top: 0; }
+.kl-metin h3 { font-size: 1.1em; margin: 1.4em 0 .3em; scroll-margin-top: 1em; }
+.kl-metin p, .kl-metin li { max-width: 72ch; }
+.kl-metin ol.kl-adim { padding-left: 1.4em; }
+.kl-metin ol.kl-adim > li { margin: .4em 0; }
+.kl-metin code, .kl-metin kbd { font-family: ui-monospace, Consolas, monospace; font-size: .88em; background: var(--board);
+  border: 1px solid var(--board-line); border-radius: 6px; padding: .05em .35em; overflow-wrap: anywhere; }
+.kl-metin a { color: var(--info); }
+.kl-sekil { margin: 1em 0 1.4em; }
+.kl-sekil img { display: block; max-width: 100%; height: auto; border: 1px solid var(--board-line); border-radius: 10px; }
+.kl-sekil figcaption { color: var(--chalk-dim); font-size: .85em; margin-top: .4em; max-width: 72ch; }
+.kl-soyle { background: var(--board-2); border-left: 4px solid var(--accent); border-radius: 0 10px 10px 0;
+  padding: .5em .9em; margin: .6em 0; max-width: 72ch; }
+.kl-soyle b { color: var(--accent); font-weight: 600; }
+.kl-not { background: color-mix(in srgb, var(--info) 10%, var(--board-2)); border: 1px solid color-mix(in srgb, var(--info) 35%, transparent);
+  border-radius: 10px; padding: .6em .9em; margin: .8em 0; max-width: 72ch; }
+.kl-dikkat { background: color-mix(in srgb, var(--warn) 10%, var(--board-2)); border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
+  border-radius: 10px; padding: .6em .9em; margin: .8em 0; max-width: 72ch; }
+.kl-tablo { overflow-x: auto; margin: .8em 0; }
+.kl-tablo table { border-collapse: collapse; font-size: .9em; min-width: 100%; }
+.kl-tablo th, .kl-tablo td { border: 1px solid var(--board-line); padding: .45em .7em; text-align: left; vertical-align: top; }
+.kl-tablo th { background: var(--board-2); color: var(--chalk-dim); font-weight: 600; }
+.kl-iki { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 1em; }
+.kl-iki > div { background: var(--board-2); border: 1px solid var(--board-line); border-radius: var(--radius); padding: .4em 1em .8em; }
+.kl-iki h3 { margin-top: .6em; }
+details.kl-sorun { border-top: 1px solid var(--board-line); padding: .6em 0; max-width: 76ch; }
+details.kl-sorun summary { cursor: pointer; font-weight: 600; }
+details.kl-sorun p, details.kl-sorun ul { margin: .4em 0 0; }
+
+@media (max-width: 820px) {
+  .kl { grid-template-columns: minmax(0, 1fr); }
+  .kl-icindekiler { position: static; max-height: none; margin-bottom: 1em; }
+}
+@media print {
+  :root { --board: #fff; --board-2: #fff; --board-line: #ccc; --chalk: #111; --chalk-dim: #444; --accent: #8a5a00; --info: #0b4f8a; }
+  .kl { display: block; }
+  .kl-icindekiler, .mk-geri { display: none; }
+  .kl-sekil { break-inside: avoid; }
+}

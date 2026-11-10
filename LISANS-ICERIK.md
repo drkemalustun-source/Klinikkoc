@@ -12,7 +12,7 @@ Atıf örneği: *"KlinikKoç katkıcıları, KlinikKoç (2026), CC BY 4.0, https
 
 ## Üçüncü taraf içerik
 
-- `lessons/peri-implantitis-cerrahi/`: kaynak makale Ramanauskaite A, Zhou W, Cafferata EA, Schwarz F.
+- `ornek-dersler/peri-implantitis-cerrahi/` (ayrı ders paketi olarak dağıtılır): kaynak makale Ramanauskaite A, Zhou W, Cafferata EA, Schwarz F.
   *Factors influencing the effectiveness of surgical therapy of peri-implantitis.* Periodontol 2000. 2026.
   doi:10.1111/prd.70052, CC BY 4.0. Şekiller makaleden kırpılmıştır. Türkçe anlatım ve sorular bu derse
   aittir; yazarların onayı anlamına gelmez.

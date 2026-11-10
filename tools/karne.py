@@ -11,6 +11,12 @@ yalnız öğrencinin bilgisayarında durur. Hesaplanan ölçüler:
 import json
 import os
 
+
+def _json_oku(yol):
+    with open(yol, encoding="utf-8") as f:
+        return json.load(f)
+
+
 BLOOM = ["hatirla", "anla", "uygula", "cozumle", "degerlendir", "olustur"]
 BLOOM_AD = dict(zip(BLOOM, ["Hatırla", "Anla", "Uygula", "Çözümle", "Değerlendir", "Oluştur"]))
 TUR_AD = {"secmeli": "seçmeli", "acik": "açık uçlu", "vaka_karar": "vaka kararı", "vaka_acik": "vaka, açık uçlu",
@@ -38,12 +44,12 @@ def ders_hedefleri(ders_klasoru):
     """[{id, baslik, bloom}] — önce egitmen.json, yoksa ders.json alt hedefleri."""
     eg = os.path.join(ders_klasoru, "egitmen.json")
     if os.path.exists(eg):
-        h = json.load(open(eg, encoding="utf-8")).get("hedefler") or []
+        h = _json_oku(eg).get("hedefler") or []
         if h:
             return [{"id": x["id"], "baslik": x.get("baslik"), "bloom": x.get("bloom")} for x in h]
     d = os.path.join(ders_klasoru, "ders.json")
     if os.path.exists(d):
-        dj = json.load(open(d, encoding="utf-8"))
+        dj = _json_oku(d)
         return [{"id": s["id"], "baslik": s.get("text"), "bloom": s.get("bloom")}
                 for g in dj.get("goals") or [] for s in g.get("subgoals") or []]
     return []

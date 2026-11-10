@@ -14,7 +14,8 @@ Kullanım:
 
 Ses motoru ve ses ses/ses-ayari.json'dan gelir (varsayılan: Pocket TTS Türkçe, female_3,
 wite-tech/pocket-tts-turkish, CC-BY-4.0). Pocket ayrı bir Python ortamında çalışır; bir kez:
-  python tools/ses-uret.py --kur-pocket [Python 3.10–3.13 yolu]
+  python tools/ses-uret.py --kur-pocket [Python 3.10–3.13 yolu]   (yol verilmezse uygun Python aranır)
+  python tools/ses-uret.py --pocket-durum   /   --dene-pocket
 Eski Piper sesi için: --motor piper (ya da --ses tr_TR-dfki-medium).
 
 Yaptıkları:
@@ -40,6 +41,17 @@ import subprocess
 import sys
 import time
 import urllib.request
+
+
+def _metin_yaz(yol, metin, **ek):
+    with open(yol, "w", encoding="utf-8", **ek) as f:
+        f.write(metin)
+
+
+def _json_oku(yol):
+    with open(yol, encoding="utf-8") as f:
+        return json.load(f)
+
 
 KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SES_KLASORU = os.path.join(KOK, "tools", ".sesler")
@@ -109,7 +121,7 @@ def load_dictionary():
     path = os.path.join(KOK, "ses", "telaffuz.json")
     if not os.path.exists(path):
         return []
-    data = json.load(open(path, encoding="utf-8"))
+    data = _json_oku(path)
     entries = data.get("entries", []) if isinstance(data, dict) else data
     entries = [e for e in entries if e.get("yazim") and e.get("okunus") is not None]
     return sorted(entries, key=lambda e: -len(e["yazim"]))
@@ -157,6 +169,9 @@ def main():
                     help="pocket: female_1..3 / male_1..3; piper: tr_TR-<ad>-<kalite> (vars. ayar dosyasından)")
     ap.add_argument("--kur-pocket", nargs="?", const="", metavar="PYTHON",
                     help="Pocket ses ortamını (.ses-ortami) kur ve çık; isteğe bağlı Python 3.10–3.13 yolu")
+    ap.add_argument("--pocket-durum", action="store_true",
+                    help="Pocket ses ortamı kurulu mu? (çıkış kodu 0: kurulu) ve çık")
+    ap.add_argument("--dene-pocket", action="store_true", help="Pocket ile kısa bir cümle seslendir, çal ve çık")
     ap.add_argument("--hiz", type=float, default=1.2, help="oynatıcının başlangıç hızı (vars. 1.2)")
     ap.add_argument("--kalite", type=float, default=0.6,
                     help="MP3 sıkıştırma 0 (en iyi) – 1 (en küçük); vars. 0.6")
@@ -166,9 +181,26 @@ def main():
     a = ap.parse_args()
 
     if a.kur:
-        sys.exit(subprocess.call([sys.executable, "-m", "pip", "install", "--upgrade"] + PAKETLER))
+        kod = subprocess.call([sys.executable, "-m", "pip", "install", "--upgrade"] + PAKETLER)
+        if kod:
+            print("Piper paketleri kurulamadı; tahta tarayıcının Türkçe sesiyle konuşacak.")
+            sys.exit(kod)
+        # Yedek Piper sesinin modeli de şimdi iner (~63 MB); ilk anlatım indirmeyi beklemesin.
+        yedek = ayar.get("yedek") or "tr_TR-dfki-medium"
+        try:
+            voice_files(yedek)
+            print("Yedek ses modeli hazır: " + yedek)
+        except BaseException as e:
+            print("Yedek ses modeli indirilemedi (%s); ilk anlatımda yeniden denenecek." % e)
+        sys.exit(0)
     if a.kur_pocket is not None:
         sys.exit(pocket_ses.kur(a.kur_pocket or None))
+    if a.pocket_durum:
+        kurulu = pocket_ses.ortam_kurulu()
+        print("Pocket ses ortamı " + ("kurulu." if kurulu else "kurulu değil."))
+        sys.exit(0 if kurulu else 1)
+    if a.dene_pocket:
+        sys.exit(pocket_ses.sesi_dene())
     if a.deneme and not a.cikti:
         ap.error("--deneme ile --cikti klasörü de verin (dersin kendi ses klasörü bozulmasın)")
     if a.motor is None:
@@ -190,7 +222,7 @@ def main():
         sys.exit("soundfile MP3 yazamıyor; python tools/ses-uret.py --kur ile güncelleyin.")
 
     lesson_dir = os.path.join(KOK, "lessons", a.ders)
-    lesson = json.load(open(os.path.join(lesson_dir, "ders.json"), encoding="utf-8"))
+    lesson = _json_oku(os.path.join(lesson_dir, "ders.json"))
     out_dir = os.path.abspath(a.cikti) if a.cikti else os.path.join(lesson_dir, "audio")
     os.makedirs(out_dir, exist_ok=True)
     dictionary = load_dictionary()
@@ -230,7 +262,7 @@ def main():
     old_path = os.path.join(out_dir, "manifest.json")
     if os.path.exists(old_path):
         try:
-            for entries in json.load(open(old_path, encoding="utf-8")).get("steps", {}).values():
+            for entries in _json_oku(old_path).get("steps", {}).values():
                 for e in entries:
                     if isinstance(e, dict):
                         old[e["src"]] = e
@@ -283,8 +315,8 @@ def main():
         if f.endswith(".mp3") and f not in keep:
             os.remove(os.path.join(out_dir, f))
     body = json.dumps(manifest, ensure_ascii=False, indent=1)
-    open(os.path.join(out_dir, "manifest.json"), "w", encoding="utf-8").write(body + "\n")
-    open(os.path.join(out_dir, "manifest.js"), "w", encoding="utf-8").write(
+    _metin_yaz(os.path.join(out_dir, "manifest.json"), body + "\n")
+    _metin_yaz(os.path.join(out_dir, "manifest.js"), 
         "/* tools/ses-uret.py üretti; elle düzenlemeyin. */\nAT.registerAudioManifest(%s, %s);\n"
         % (json.dumps(a.ders), body))
 

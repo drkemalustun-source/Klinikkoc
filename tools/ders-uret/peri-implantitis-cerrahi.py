@@ -1,11 +1,11 @@
-# Peri-implantitis pilot dersini üretir: lessons/peri-implantitis-cerrahi/ders.json
+# Peri-implantitis pilot dersini üretir: ornek-dersler/peri-implantitis-cerrahi/ders.json (paketle.mjs --ornek ile denetlenir)
 # Kaynak: Ramanauskaite A, Zhou W, Cafferata EA, Schwarz F. Periodontol 2000. 2026. doi:10.1111/prd.70052 (CC BY 4.0)
 # Alt hedefler: ALT_HEDEFLER.json (v3.0, donmuş) — kimlikler ve etiketler aynen.
 import json, sys
 
 import os
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(HERE, '..', '..', 'lessons', 'peri-implantitis-cerrahi', 'ders.json')
+OUT = os.path.join(HERE, '..', '..', 'ornek-dersler', 'peri-implantitis-cerrahi', 'ders.json')
 ALT = os.path.join(HERE, 'ALT_HEDEFLER.json')
 
 CREDIT = 'Ramanauskaite ve ark., Periodontol 2000, 2026 · CC BY 4.0 · makaleden kırpılmıştır'
