@@ -46,6 +46,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pocket_ses  # noqa: E402  (tools/pocket_ses.py)
 import terim_sozlugu  # noqa: E402
 import ders_paketi  # noqa: E402
+import ders_sonu  # noqa: E402
 import makale_bulucu  # noqa: E402
 import sihirbaz  # noqa: E402
 import veri_yeri  # noqa: E402
@@ -727,6 +728,8 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
                                         "klasor": veri_yeri.makale_kok(), "pdf_okuyucu": makale_bulucu.pypdf_var()})
             if yol == "durum":
                 return self._json(200, makale_bulucu.ozet(q.get("ders", "")))
+            if yol == "depolama":
+                return self._json(200, ders_sonu.depolama())
             if self.command != "POST":
                 return self._json(405, {"hata": "POST gerekli"})
             if yol == "hazirla":
@@ -750,6 +753,32 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
                 if r["makale"]:
                     makale_bulucu.arka_planda_hazirla(r["ders"])
                 return self._json(200, r)
+            if yol == "sinir":
+                veri = json.loads(govde.decode("utf-8")) if govde else {}
+                return self._json(200, {"sinir_gb": ders_sonu.sinir_ayarla(veri.get("gb"))})
+            if yol == "arsivle":
+                veri = json.loads(govde.decode("utf-8")) if govde else {}
+                return self._json(200, ders_sonu.arsivle(str(veri.get("ders", ""))))
+            if yol == "geri_yukle":
+                veri = None
+                if govde[:2] == b"PK":  # zip gövdesi: bırakılan arşiv dosyası
+                    fd, gecici = tempfile.mkstemp(suffix=".zip")
+                    with os.fdopen(fd, "wb") as f:
+                        f.write(govde)
+                    try:
+                        return self._json(200, ders_sonu.geri_yukle(gecici))
+                    finally:
+                        os.remove(gecici)
+                veri = json.loads(govde.decode("utf-8")) if govde else {}
+                g = next((x for x in ders_sonu.arsiv_listesi() if x["ders"] == veri.get("ders")), None)
+                if not g or not g.get("dosya_var"):
+                    raise ValueError("Bu dersin arşiv dosyası bulunamadı; zip'i buraya sürükleyip bırakın.")
+                return self._json(200, ders_sonu.geri_yukle(g["dosya"]))
+            if yol == "arsiv_klasoru_ac":
+                k = ders_sonu.arsiv_kok()
+                os.makedirs(k, exist_ok=True)
+                klasoru_ac(k)
+                return self._json(200, {"acildi": k})
             if yol == "klasor_ac":
                 veri = json.loads(govde.decode("utf-8")) if govde else {}
                 ders = str(veri.get("ders", ""))
@@ -760,7 +789,9 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
             return self._json(404, {"hata": "Bilinmeyen istek"})
         except FileExistsError as e:
             return self._json(409, {"hata": str(e)})
-        except (ValueError, KeyError, zipfile.BadZipFile) as e:
+        except FileNotFoundError as e:
+            return self._json(404, {"hata": str(e)})
+        except (ValueError, KeyError, zipfile.BadZipFile, RuntimeError) as e:
             return self._json(400, {"hata": str(e)})
         except Exception as e:
             return self._json(500, {"hata": "%s: %s" % (type(e).__name__, e)})

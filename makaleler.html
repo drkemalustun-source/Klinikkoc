@@ -18,6 +18,8 @@
         okur ve eğitmenin aramasına ekler. İnemeyenleri siz ekleyebilirsiniz.</p>
     </header>
 
+    <div class="dp-uyari" id="dpUstUyari" hidden></div>
+
     <section class="mk-kutu" id="paketKutu">
       <h2>Ders paketi ekle</h2>
       <p class="mk-ince">Öğretmeninizin verdiği ders paketini (.zip) buraya sürükleyin ya da seçin.</p>
@@ -55,6 +57,34 @@
         <span>PDF'leri buraya bırakın</span>
       </label>
       <div class="mk-mesaj" id="pdfMesaj" aria-live="polite"></div>
+    </section>
+
+    <section class="mk-kutu" id="depolama">
+      <h2>Depolama ve arşiv</h2>
+      <p class="mk-ince">Bitirdiğiniz dersleri arşive kaldırıp yer açabilirsiniz. Arşivde dersin raporu, ilerlemeniz ve
+        makale listesi durur; makale PDF'leri makale klasöründe kalır, tekrar kartlarınız da silinmez. Arşivlenen ders
+        istendiği an geri yüklenir.</p>
+      <div class="dp-uyari" id="dpUyari" hidden></div>
+      <div class="dp-sayac">
+        <meter id="dpMetre" min="0" max="1" value="0"></meter>
+        <span id="dpSayi"></span>
+      </div>
+      <div class="mk-satir dp-sinir">
+        <label for="dpSinir">Sınır (GB)</label>
+        <input id="dpSinir" type="number" min="0.1" max="2000" step="0.5" inputmode="decimal">
+        <button class="btn small" id="dpSinirDugme">Kaydet</button>
+      </div>
+      <h3 class="dp-baslik">Bu bilgisayardaki dersler</h3>
+      <ol class="mk-liste dp-liste" id="dpDersler"></ol>
+      <div class="mk-dugmeler"><button class="btn primary" id="dpArsivDugme" disabled>Seçilenleri arşive kaldır</button>
+        <button class="btn" id="dpKlasorDugme">Arşiv klasörünü aç</button></div>
+      <div class="mk-mesaj" id="dpMesaj" aria-live="polite"></div>
+      <h3 class="dp-baslik">Arşivdeki dersler</h3>
+      <ol class="mk-liste dp-liste" id="dpArsiv"></ol>
+      <label class="mk-birak" id="arsivBirak">
+        <input type="file" accept=".zip,application/zip" id="arsivSec" hidden>
+        <span>Arşiv zip'ini geri yüklemek için buraya bırakın</span>
+      </label>
     </section>
 
     <footer class="mk-alt">

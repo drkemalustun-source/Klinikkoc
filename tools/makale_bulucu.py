@@ -465,7 +465,7 @@ def aramaya_ekle(ders):
     """Bilgi bankasını (sözcük araması) günceller. Anlam araması kuruluysa eğitmen ilk aramada onu da ekler."""
     try:
         import bilgi_bankasi
-        return bilgi_bankasi.dizinle([ders], sessiz=True)
+        return bilgi_bankasi.dizinle([ders], sessiz=True, yol=bilgi_bankasi.DIZIN)
     except Exception as e:
         return [{"ders": ders, "durum": "dizinlenemedi", "hata": str(e)}]
 

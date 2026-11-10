@@ -37,6 +37,35 @@ makale "eksik" görünür ve yukarıdaki gibi elle eklenir.
 `Belgeler/KlinikKoç Makaleler`). Bu klasör sizindir: istediğiniz yere yedekleyebilirsiniz. Bir ders
 silinse ya da arşivlense de PDF'ler burada kalır; ders yeniden kurulunca KlinikKoç önce buraya bakar.
 
+## Ders bitince: rapor, tekrar kartları ve arşiv
+
+**Tamamlama raporu (her zaman).** Öğrenci dersi bitirince eğitmen `ders_bitir` aracıyla raporu yazar:
+hedefler, zorlanılan konular, vakalar, çalışma süresi ve öğrencinin notu. Rapor öğrencinin kayıt klasöründe
+(`<kimlik>/raporlar/<ders>_tamamlama.md`) durur, hiçbir yere gönderilmez. Ders yerinde kalır.
+
+**Tekrar kartları.** Öğrencinin zorlandığı sorular (ders başına en çok 10) yalnız metin olarak
+`<kimlik>/tekrar/kartlar.json` dosyasına yazılır. Kartlar arşivin dışındadır: ders arşivde olsa bile zamanı
+gelince (3, 7, 21, 60 gün aralıklarla) `tekrar_listesi`nde çıkar; sonuç `tekrar_karti_yaz` ile işlenir.
+
+**Depolama sınırı.** Varsayılan 2 GB; "Makaleler ve ders paketleri" sayfasının **Depolama ve arşiv** bölümünden
+değiştirilir. Sayılan: ders klasörleri, arama dizini ve derslerin makale PDF'leri. Sınır aşılınca sayfa ve eğitmen
+"Hangi dersleri arşive kaldıralım?" diye sorar. **Arşivleme otomatik değildir**; öğrenci seçer. Programla gelen
+dersler arşivlenmez.
+
+**Arşivleme.** Sıra şöyledir; bir adım başarısız olursa hiçbir şey silinmez:
+
+1. Her öğrenci için tamamlama raporu (yoksa ya da eskiyse) ve tekrar kartları yazılır.
+2. `Belgeler\KlinikKoç Arşiv\<ders>_<tarih>.zip` hazırlanır: ders dosyaları (ses ve video hariç), ilerleme
+   kayıtları, raporlar, karneler, makale listesi ve durumu. PDF yoktur; PDF'ler `Belgeler\KlinikKoç Makaleler\<ders>`
+   klasöründe kalır.
+3. Zip açılıp denetlenir (bozuk mu, ders dosyaları eksiksiz mi).
+4. Ancak sonra dersin klasörü (makale metinleri, sesler dahil) ve arama dizinindeki parçaları silinir.
+   Öğrenci kayıtları ve tekrar kartları silinmez.
+
+**Geri yükleme.** Arşiv listesindeki **Geri yükle** düğmesi ya da zip'i sayfaya bırakmak. Ders kurulur; ilerleme
+kayıtları geri yazılır (bu bilgisayarda daha yeni bir kayıt varsa o korunur); PDF'ler önce makale klasöründe aranır,
+olmayanlar yeniden indirilmeye çalışılır; ders yeniden dizinlenir.
+
 ## Öğretmen için: makale listesi
 
 Makale listesi `lessons/<ders>/kaynaklar/kaynaklar.json` dosyasındadır:
@@ -65,6 +94,15 @@ Ders paketi, içinde tek bir ders klasörü olan bir zip'tir (`<ders>/egitmen.js
 Komut satırından da kurulabilir: `python tools/ders_paketi.py --yukle paket.zip`.
 
 ## Komut satırı
+
+```
+python tools/ders_sonu.py --depolama
+python tools/ders_sonu.py --sinir 5
+python tools/ders_sonu.py --rapor <öğrenci kimliği> <ders>
+python tools/ders_sonu.py --arsivle <ders>
+python tools/ders_sonu.py --geri-yukle "<arşiv.zip>"
+```
+
 
 ```sh
 python tools/makale_bulucu.py --hazirla <ders>        # bul, indir, oku, aramaya ekle

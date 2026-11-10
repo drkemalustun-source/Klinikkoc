@@ -37,6 +37,7 @@ import webbrowser
 KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(KOK, "tools"))
 import bilgi_bankasi  # noqa: E402
+import ders_sonu  # noqa: E402
 import karne as karne_  # noqa: E402
 import kayit_aktar  # noqa: E402
 import kayit_deposu as kd  # noqa: E402
@@ -197,7 +198,8 @@ ARACLAR = [
                        "tur (secmeli|acik|sozlu|vaka_karar|vaka_acik|vaka_veri), puan, en_yuksek (rubrik toplamı; seçmelide 1), "
                        "ilk_deneme (true/false), ipucu (kullanılan ipucu sayısı), vaka, dugum, tehlikeli (true/false), "
                        "karsilanan_olcutler [ölçüt metni, kısa], eksik_olcutler [ölçüt metni, kısa]}]. "
-                       "mod: once_anlat|once_yanitla. mola: bekleyen nokta metni ya da null. oturum: {egitmen, ozet}. "
+                       "mod: once_anlat|once_yanitla. mola: bekleyen nokta metni ya da null. oturum: {egitmen, ozet, sure_dk "
+                       "(oturumun yaklaşık süresi, dakika)}. "
                        "Aralıklı tekrar tarihleri otomatik hesaplanır.",
         "inputSchema": {"type": "object", "properties": {
             "ogrenci": {"type": "string"}, "ders": {"type": "string"},
@@ -277,6 +279,48 @@ ARACLAR = [
             "required": ["ders"]},
     },
     {
+        "name": "ders_bitir",
+        "description": "Öğrenci dersi bitirince (bütün hedefler ele alındı ya da öğrenci 'bitirdim' dedi) çağır. Tamamlama "
+                       "raporunu öğrencinin bilgisayarına yazar (hedefler, zorlandığı konular, vakalar, çalışma süresi, "
+                       "notu), zorlandığı sorulardan en çok 10 tekrar kartı çıkarır ve kaydı 'tamamlandı' diye işaretler. "
+                       "Ders yerinde kalır; arşivlenmez. Önce öğrenciye derse dair bir notu olup olmadığını sor.",
+        "inputSchema": {"type": "object", "properties": {
+            "ogrenci": {"type": "string"}, "ders": {"type": "string"},
+            "ogrenci_notu": {"type": "string", "description": "öğrencinin kendi notu (isteğe bağlı, kelimesi kelimesine)"}},
+            "required": ["ogrenci", "ders"]},
+    },
+    {
+        "name": "tekrar_karti_yaz",
+        "description": "tekrar_listesi'ndeki bir tekrar kartının sonucunu işler (ders arşivde olsa bile). dogru: öğrenci "
+                       "yardımsız doğru cevapladı mı. Doğru → kart daha seyrek gelir; yanlış → ertesi gün yeniden.",
+        "inputSchema": {"type": "object", "properties": {
+            "ogrenci": {"type": "string"}, "ders": {"type": "string"},
+            "kart": {"type": "string", "description": "kartın id'si"}, "dogru": {"type": "boolean"}},
+            "required": ["ogrenci", "ders", "kart", "dogru"]},
+    },
+    {
+        "name": "depolama",
+        "description": "Derslerin bu bilgisayarda kapladığı yeri, sınırı (varsayılan 2 GB) ve arşivdeki dersleri gösterir. "
+                       "Sınır aşıldıysa öğrenciye 'Hangi dersleri arşive kaldıralım?' diye sor; dersleri boyutları ve son "
+                       "açılma tarihleriyle say. Arşivleme otomatik değildir. ac true ise depolama sayfası tarayıcıda açılır.",
+        "inputSchema": {"type": "object", "properties": {"ac": {"type": "boolean"}}},
+    },
+    {
+        "name": "ders_arsivle",
+        "description": "Bir dersi arşive kaldırır. YALNIZ öğrenci o dersi açıkça seçip onaylayınca çağır. Arşiv zip'i "
+                       "(Belgeler/KlinikKoç Arşiv) tamamlama raporlarını, ilerlemeyi ve makale listesini taşır; PDF'ler "
+                       "makale klasöründe kalır. Zip denetlendikten sonra dersin işlenmiş parçaları silinir. Tekrar kartları kalır.",
+        "inputSchema": {"type": "object", "properties": {"ders": {"type": "string"}}, "required": ["ders"]},
+    },
+    {
+        "name": "arsivden_geri_yukle",
+        "description": "Arşive kaldırılmış bir dersi geri getirir: ders kurulur, ilerleme kaldığı yerden sürer, PDF'ler önce "
+                       "makale klasöründe aranır, olmayanlar yeniden indirilmeye çalışılır.",
+        "inputSchema": {"type": "object", "properties": {
+            "ders": {"type": "string", "description": "arşiv listesindeki ders (depolama aracı listeler)"},
+            "dosya": {"type": "string", "description": "ya da arşiv zip'inin tam yolu"}}},
+    },
+    {
         "name": "vakalar",
         "description": "Bir dersin vaka kartlarını listeler (başlık, hedefler, süre, onay durumu). Tanıyı ele vermez.",
         "inputSchema": {"type": "object", "properties": {"ders": {"type": "string"}}, "required": ["ders"]},
@@ -304,6 +348,7 @@ ARACLAR = [
         "name": "tekrar_listesi",
         "description": "Öğrencinin bütün derslerinden tekrar zamanı gelen, başarısı düşük kalan hedefleri ve açık yanılgıları "
                        "tek listede, en gecikmiş olandan başlayarak verir; tekrar oturumunun kurallarını da verir. "
+                       "Zamanı gelen tekrar kartlarını da verir (zorlanılan sorular; ders arşivde olsa bile). "
                        "Öğrenci 'tekrar yapalım', 'zayıf konularım' derse ya da oturumun başında ders seçilmemişse çağır.",
         "inputSchema": {"type": "object", "properties": {"ogrenci": {"type": "string"}}, "required": ["ogrenci"]},
     },
@@ -902,6 +947,11 @@ def ar_egitmen_hazirla(a):
         if out["makaleler"]["eksik"]:
             out["makaleler"]["not"] = ("Bu dersin bazı makaleleri bu bilgisayarda yok ya da hiç denenmedi. Derse başlamadan "
                                        "öğrenciye söyle ve makale_bul ile indirmeyi öner; inmeyenler için makaleler (ac: true).")
+    try:
+        if ders_sonu.depolama()["asildi"]:
+            out["depolama"] = {**depolama_ozeti(), "not": DEPOLAMA_NOTU}
+    except Exception:  # depolama ölçülemese de ders açılır
+        pass
     return metin(out)
 
 
@@ -1293,9 +1343,22 @@ def ar_tekrar_listesi(a):
             if v.get("durum") == "acik":
                 liste.append({"ders": ders, "yanilgi": y, "neden": "açık yanılgı", "basari": None, "gecikme_gun": 0})
     liste.sort(key=lambda x: (-x["gecikme_gun"], x["basari"] if x["basari"] is not None else 1))
-    if not liste:
+    kartlar = [{k: v for k, v in x.items() if k not in ("sonuclar", "eklenme")}
+               for x in ders_sonu.zamani_gelen_kartlar(ogrenci_kimligi(a.get("ogrenci")))]
+    if not liste and not kartlar:
         return metin({"ogrenci": a.get("ogrenci"), "liste": [], "not": "Bugün tekrar zamanı gelen ya da zayıf kalan hedef yok."})
-    return metin({"talimat": TEKRAR_TALIMAT, "ogrenci": a.get("ogrenci"), "liste": liste[:20], "toplam": len(liste)})
+    out = {"talimat": TEKRAR_TALIMAT, "ogrenci": a.get("ogrenci"), "liste": liste[:20], "toplam": len(liste)}
+    if kartlar:
+        out["kartlar"] = kartlar[:10]
+        out["kart_talimati"] = KART_TALIMAT
+    return metin(out)
+
+
+KART_TALIMAT = """Tekrar kartları: öğrencinin bitirdiği derslerde zorlandığı sorular (ders arşivde olabilir).
+- Kartın sorusunu olduğu gibi sor (seçenek varsa soru_sor ile; vaka sorusunda önce vaka_ozeti'ni bir cümleyle söyle).
+- Cevaptan sonra kısa düzelt: ornek_cevap ya da doğru seçenek. Ders arşivdeyse ders_oku/bilgi_ara kullanılamaz;
+  karttaki bilgiyle yetin, fazlasını uydurma.
+- Her kartın sonucunu tekrar_karti_yaz ile işle (dogru: yardımsız doğru mu). Hedefli tekrardan önce kartları sor."""
 
 
 # ---------- Ölçme (pilot) ----------
@@ -1789,6 +1852,91 @@ def ar_sihirbaz_oner(a):
     return metin(out)
 
 
+# ---------- Ders sonu: tamamlama raporu, tekrar kartları, depolama, arşiv ----------
+def sayfayi_ac(adres):
+    if not sunucu_acik():
+        sunucuyu_baslat()
+        for _ in range(30):
+            time.sleep(0.5)
+            if sunucu_acik():
+                break
+    webbrowser.open("http://localhost:%d/%s" % (PORT, adres))
+
+
+def depolama_ozeti():
+    d = ders_sonu.depolama()
+    return {"kullanilan": ders_sonu.okunur_boyut(d["toplam_bayt"]), "sinir_gb": d["sinir_gb"], "asildi": d["asildi"],
+            "dersler": [{"ders": x["ders"], "baslik": x["baslik"], "boyut": ders_sonu.okunur_boyut(x["toplam"]),
+                         "son_acilma": x["son_acilma"], "tamamlandi": x["tamamlandi"],
+                         **({"programla_gelir": True} if x["yerlesik"] else {})} for x in d["dersler"]],
+            "arsiv_onerisi": d["arsiv_adaylari"][:5],
+            "arsivdekiler": [{"ders": a["ders"], "baslik": a.get("baslik"), "tarih": a.get("tarih"), "dosya": a.get("dosya")}
+                             for a in d["arsiv"]]}
+
+
+DEPOLAMA_NOTU = ("Ders verisi sınırı aşıldı. Öğrenciye kısaca söyle ve 'Hangi dersleri arşive kaldıralım?' diye sor; "
+                 "dersleri boyutları ve son açılma tarihleriyle say (öneri: en uzun süredir açılmayanlar). Arşivleme "
+                 "otomatik değildir: yalnız öğrencinin seçtiği dersi ders_arsivle ile kaldır. PDF'ler ve tekrar kartları "
+                 "kalır; ders istenince geri yüklenir. İsterse sınırı depolama sayfasından büyütebilir (depolama, ac: true).")
+
+
+def ar_ders_bitir(a):
+    ders = a.get("ders")
+    ders_yolu(ders)
+    kimlik = ogrenci_kimligi(a.get("ogrenci"))
+    r = ders_sonu.tamamlama_raporu(kimlik, ders, a.get("ogrenci_notu"))
+    out = {"durum": "tamamlandı", "rapor": r["dosya"], "tekrar_karti": r["kart_sayisi"],
+           "genel_basari": karne_.yuzde(r["genel_basari"]), "gelistirilecek": r["gelistirilecek"],
+           "yoklanmayan": r["yoklanmayan"],
+           "not": "Öğrenciye raporun yerini ve 3–4 cümlelik özetini söyle (en güçlü hedef, zorlandığı konu, tekrar kartı "
+                  "sayısı). Ders yerinde kalır. Tekrar kartları zamanı gelince tekrar_listesi'nde çıkar."}
+    d = ders_sonu.depolama()
+    if d["asildi"]:
+        out["depolama"] = depolama_ozeti()
+        out["depolama"]["not"] = DEPOLAMA_NOTU
+    return metin(out)
+
+
+def ar_tekrar_karti_yaz(a):
+    kimlik = ogrenci_kimligi(a.get("ogrenci"))
+    k = ders_sonu.kart_sonucu(kimlik, a.get("ders"), a.get("kart"), bool(a.get("dogru")))
+    return metin({"durum": "kaydedildi", "kutu": k["kutu"], "sonraki_tekrar": k["sonraki_tekrar"],
+                  "ogrenildi": bool(k.get("ogrenildi"))})
+
+
+def ar_depolama(a):
+    out = depolama_ozeti()
+    if out["asildi"]:
+        out["not"] = DEPOLAMA_NOTU
+    if a.get("ac"):
+        sayfayi_ac("makaleler.html#depolama")
+        out["sayfa"] = "Depolama sayfası tarayıcıda açıldı."
+    return metin(out)
+
+
+def ar_ders_arsivle(a):
+    r = ders_sonu.arsivle(a.get("ders") or "")
+    r["acilan_yer"] = ders_sonu.okunur_boyut(r["acilan_yer"])
+    r["boyut"] = ders_sonu.okunur_boyut(r["boyut"])
+    r["not"] = ("Öğrenciye söyle: ders arşive kaldırıldı, arşiv zip'i ve PDF'lerin yeri burada; ilerlemesi ve tekrar "
+                "kartları duruyor; isterse dersi depolama sayfasından ya da arsivden_geri_yukle ile geri getirebilir.")
+    return metin(r)
+
+
+def ar_arsivden_geri_yukle(a):
+    dosya = os.path.expanduser(a.get("dosya") or "")
+    if not dosya and a.get("ders"):
+        g = next((x for x in ders_sonu.arsiv_listesi() if x["ders"] == a["ders"]), None)
+        if not g:
+            raise ValueError("Arşiv listesinde böyle bir ders yok: %s" % a["ders"])
+        dosya = g["dosya"]
+    if not os.path.isfile(dosya):
+        raise ValueError("Arşiv dosyası bulunamadı: %s. Öğrenciden zip'in yerini iste." % (dosya or "-"))
+    r = ders_sonu.geri_yukle(dosya)
+    r["not"] = "Ders geri geldi; makaleler arka planda hazırlanıyor (makaleler aracıyla izle). İlerleme kaldığı yerden sürer."
+    return metin(r)
+
+
 ISLEYICILER = {"egitmen_hazirla": ar_egitmen_hazirla, "kayit_oku": ar_kayit_oku, "kayit_yaz": ar_kayit_yaz,
                "rapor_yaz": ar_rapor_yaz, "olcme_testi": ar_olcme_testi, "olcme_kaydet": ar_olcme_kaydet,
                "tahtayi_ac": ar_tahtayi_ac, "dersler": ar_dersler, "ders_oku": ar_ders_oku,
@@ -1800,7 +1948,9 @@ ISLEYICILER = {"egitmen_hazirla": ar_egitmen_hazirla, "kayit_oku": ar_kayit_oku,
                "kayit_disa_aktar": ar_kayit_disa_aktar, "kayit_ice_aktar": ar_kayit_ice_aktar,
                "kayit_anonim_aktar": ar_kayit_anonim_aktar, "makaleler": ar_makaleler,
                "makale_bul": ar_makale_bul, "makale_ekle": ar_makale_ekle,
-               "sihirbaz_oku": ar_sihirbaz_oku, "sihirbaz_oner": ar_sihirbaz_oner}
+               "sihirbaz_oku": ar_sihirbaz_oku, "sihirbaz_oner": ar_sihirbaz_oner,
+               "ders_bitir": ar_ders_bitir, "tekrar_karti_yaz": ar_tekrar_karti_yaz, "depolama": ar_depolama,
+               "ders_arsivle": ar_ders_arsivle, "arsivden_geri_yukle": ar_arsivden_geri_yukle}
 
 
 def metin(veri, hata=False):

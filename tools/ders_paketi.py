@@ -94,6 +94,24 @@ def katalog_guncelle(ders, klasor):
     return giris
 
 
+def _katalog_yaz(kat):
+    with open(os.path.join(KOK, "lessons", "katalog.json"), "w", encoding="utf-8") as f:
+        f.write(json.dumps(kat, ensure_ascii=False, indent=2) + "\n")
+    with open(os.path.join(KOK, "lessons", "katalog.js"), "w", encoding="utf-8") as f:
+        f.write("/* Otomatik üretildi: tools/paketle.mjs */\nAT.registerCatalog(%s);\n" % json.dumps(kat, ensure_ascii=False))
+
+
+def katalog_kaldir(ders):
+    """Arşive kaldırılan dersi ders listesinden çıkarır."""
+    yol = os.path.join(KOK, "lessons", "katalog.json")
+    kat = _json_oku(yol)
+    if not kat or not any(g.get("id") == ders for g in kat.get("lessons", [])):
+        return False
+    kat["lessons"] = [g for g in kat["lessons"] if g.get("id") != ders]
+    _katalog_yaz(kat)
+    return True
+
+
 def yukle(zip_yolu, uzerine=False):
     """Paketi lessons/<ders>/ klasörüne kurar. Önce geçici klasöre açılır; yarıda kalırsa eski ders bozulmaz."""
     with zipfile.ZipFile(zip_yolu) as z:
