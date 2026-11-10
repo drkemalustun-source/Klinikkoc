@@ -208,6 +208,22 @@ class SihirbazTest(unittest.TestCase):
         self.assertIn("Bulgu | Anlamı", b[2]["metin"])
         self.assertEqual(b[2]["duzey"], 2)
 
+    def test_yayimlanmis_makale_notu(self):
+        d = self.taslak()
+        makale = ("Int J Periodontics Restorative Dent 2010. doi:10.11607/prd.0001\n"
+                  "Copyright 2010 by Quintessence Publishing Co Inc. No part of this article may be reproduced "
+                  "without written permission. Received March 2009; accepted June 2009.\n" + "Kritik kontur metni. " * 20)
+        n = sh.not_ekle(d, makale.encode(), "su-2010.txt", "fakulte")
+        self.assertIn("yayınevi adı", n["yayin_izi"])
+        self.assertTrue(any("yayımlanmış bir makaleye" in h for h in sh.denetle(d)["hatalar"]))
+        sh.oge_kaydet(d, "notlar", {"id": n["id"], "kademe": "paylasilmaz"})
+        self.assertFalse(any("yayımlanmış bir makaleye" in h for h in sh.denetle(d)["hatalar"]))
+        sh.oge_kaydet(d, "notlar", {"id": n["id"], "kademe": "fakulte", "izinli": True})
+        self.assertFalse(any("yayımlanmış bir makaleye" in h for h in sh.denetle(d)["hatalar"]))
+        # kendi notu (kaynakçada bir DOI olsa da) işaretlenmez
+        k = sh.not_ekle(d, docx_yap(NOT_DOCX), "kendi notum.docx", "fakulte")
+        self.assertNotIn("yayin_izi", k)
+
     def test_not_reddi(self):
         d = self.taslak()
         with self.assertRaises(ValueError):

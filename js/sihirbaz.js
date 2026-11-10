@@ -118,8 +118,18 @@
     for (const n of T.notlar) {
       const bol = el('details', { class: 'sh-bolumler mk-not' }, el('summary', {}, `${n.bolum_sayisi} bölüm, ${n.sozcuk} sözcük`),
         el('ol', {}, n.basliklar.map((b) => el('li', {}, b))));
-      ol.append(el('li', {}, el('div', { class: 'mk-ad' }, n.ad), kademeSecimi('notlar', n), bol,
-        el('div', { class: 'mk-islem' }, el('button', { class: 'btn small ghost', onclick: () => sil('notlar', n.id) }, 'Çıkar'))));
+      const li = el('li', {}, el('div', { class: 'mk-ad' }, n.ad), kademeSecimi('notlar', n), bol,
+        el('div', { class: 'mk-islem' }, el('button', { class: 'btn small ghost', onclick: () => sil('notlar', n.id) }, 'Çıkar')));
+      if (n.yayin_izi) {
+        // Yayımlanmış makaleye benzeyen not: metni pakete girmeden önce öğretmen paylaşma hakkını onaylar.
+        const kutu = el('input', { type: 'checkbox' });
+        kutu.checked = !!n.izinli;
+        kutu.addEventListener('change', () => degistir('oge', { ders, liste: 'notlar', oge: { id: n.id, izinli: kutu.checked } }));
+        li.append(el('div', { class: 'mk-not sh-hata' }, 'Yayımlanmış bir makaleye benziyor (' + n.yayin_izi.join(', ') +
+          '). Abonelikli makalenin metni pakete giremez; makaleyi DOI ile Kaynaklar\'a ekleyin.'),
+          el('label', { class: 'mk-ince' }, kutu, ' Paylaşma hakkım var (metin benim, açık lisanslı ya da yayıncı izni var)'));
+      }
+      ol.append(li);
     }
     if (!T.notlar.length) ol.append(el('li', { class: 'mk-ince' }, 'Henüz not yok.'));
   }

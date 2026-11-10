@@ -495,6 +495,24 @@ def notu_donustur(yol):
     raise ValueError("Desteklenen not biçimleri: .docx, .pdf, .txt, .md")
 
 
+YAYIN_IZLERI = (
+    (r"\b10\.\d{4,9}/\S+", "DOI numarası"),
+    (r"©|\(c\)\s*\d{4}|copyright", "telif notu"),
+    (r"all rights reserved|tüm hakları saklıdır|no part of this (article|publication)", "\"tüm hakları saklıdır\" notu"),
+    (r"for personal use only|not for (re)?distribution|without (the )?written permission", "\"yalnız kişisel kullanım\" notu"),
+    (r"\b(received|submitted)\b[^.]{0,40}\baccepted\b", "dergi geliş/kabul tarihleri"),
+    (r"quintessence|elsevier|wiley|springer|taylor & francis|wolters kluwer|thieme|karger|sage publications",
+     "yayınevi adı"),
+)
+
+
+def yayin_izi(bolumler, ilk=6000):
+    """Not yayımlanmış bir dergi makalesine benziyorsa nedenlerini döner (boş liste: benzemiyor).
+    Makalenin kendisi pakete giremez; öğretmene sorulur."""
+    metin = " ".join("%s %s" % (b.get("baslik", ""), b.get("metin", "")) for b in bolumler)[:ilk].lower()
+    return [ad for desen, ad in YAYIN_IZLERI if re.search(desen, metin)]
+
+
 def not_ekle(ders, veri, ad, kademe="fakulte"):
     if kademe not in KADEMELER:
         raise ValueError("Kademe fakulte, acik ya da paylasilmaz olmalı.")
@@ -518,9 +536,12 @@ def not_ekle(ders, veri, ad, kademe="fakulte"):
         shutil.rmtree(klasor, ignore_errors=True)
         raise ValueError("Bu dosyadan metin çıkmadı (taranmış PDF ya da boş belge olabilir).")
     _json_yaz(os.path.join(klasor, "bolumler.json"), bolumler)
+    izler = yayin_izi(bolumler)
     t["notlar"].append({"id": nid, "ad": ad, "kademe": kademe, "bolum_sayisi": len(bolumler),
                         "basliklar": [b["baslik"] for b in bolumler],
                         "sozcuk": sum(len(b["metin"].split()) for b in bolumler)})
+    if len(izler) >= 2:  # tek iz (ör. kaynakçadaki bir DOI) kendi notunda da olur
+        t["notlar"][-1]["yayin_izi"] = izler
     taslak_yaz(ders, t)
     return t["notlar"][-1]
 
@@ -775,6 +796,13 @@ def denetle(ders):
             hatalar.append("Hedef %s için Bloom düzeyi seçilmemiş." % h.get("id"))
     if not t.get("notlar") and not t.get("kaynaklar"):
         hatalar.append("Ne ders notu ne makale var: eğitmenin dayanacağı bir kaynak yok.")
+    for n in t.get("notlar", []):
+        if n.get("yayin_izi") and n.get("kademe") != "paylasilmaz" and not n.get("izinli"):
+            hatalar.append(
+                "Not \"%s\" yayımlanmış bir makaleye benziyor (%s). Abonelikli makalenin metni ve şekilleri pakete "
+                "giremez: notu 'Hiç paylaşılmaz' yapın ve makaleyi DOI ile Kaynaklar'a ekleyin; her öğrenci kendi "
+                "erişimiyle indirir. Metin sizinse, açık lisanslıysa (CC BY) ya da yayıncı izni varsa notun yanındaki "
+                "'Paylaşma hakkım var' kutusunu işaretleyin." % (n["ad"], ", ".join(n["yayin_izi"])))
     for k in t.get("kaynaklar", []):
         if k.get("uyari"):
             uyarilar.append("%s: %s" % (k.get("kisa") or k.get("doi"), k["uyari"]))
