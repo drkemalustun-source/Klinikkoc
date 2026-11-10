@@ -214,6 +214,21 @@ def ders_parcalari(ders):
             out.append({"ders": ders, "tur": "kaynak", "baslik": "%s, s. %d" % (kaynak_ad, no),
                         "metin": p, "sayfa": no, "kaynak": "s. %d" % no, "sira": i})
 
+    # 1b. Makale bulucunun indirip metne çevirdiği makaleler (makale-metin/<kaynak>/sayfa-NN.txt).
+    #     Bu metinler yalnız öğrencinin bilgisayarında üretilir; depoya ve ders paketine girmez.
+    for mk in sorted(glob.glob(os.path.join(klasor, "makale-metin", "*"))):
+        bilgi = _oku(os.path.join(mk, "bilgi.json")) or {}
+        ad = bilgi.get("kisa") or os.path.basename(mk)
+        kid = bilgi.get("id") or os.path.basename(mk)
+        for yol in sorted(glob.glob(os.path.join(mk, "sayfa-*.txt"))):
+            m = re.search(r"sayfa-(\d+)\.txt$", yol)
+            if not m:
+                continue
+            no = int(m.group(1))
+            for i, p in enumerate(parcala(_metin(yol))):
+                out.append({"ders": ders, "tur": "kaynak", "baslik": "%s, s. %d" % (ad, no), "metin": p,
+                            "sayfa": no, "kaynak": "%s, s. %d" % (ad, no), "makale": kid, "sira": i})
+
     # 2. Hazır anlatım (ders.json adımları) ve soruları
     for s in d.get("sections", []):
         hedef = ",".join(s.get("goals") or [])
@@ -239,7 +254,8 @@ def ders_parcalari(ders):
                         "hedef": ",".join(n.get("hedefler") or []), "kaynak": "öğretmen notu"})
 
     # 4. Vaka kartları
-    for yol in sorted(glob.glob(os.path.join(klasor, "vakalar", "*.json"))):
+    for yol in sorted(glob.glob(os.path.join(klasor, "vakalar", "*.json")) +
+                      glob.glob(os.path.join(klasor, "makale-metin", "*", "*.txt"))):
         v = _oku(yol)
         if not v:
             continue

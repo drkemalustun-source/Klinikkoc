@@ -10,6 +10,8 @@ Ne yapar:
   3. Canlı tahta (/api/canli/...): Claude masaüstü uygulaması, tools/tahta-mcp.py
      üzerinden tahtaya komut gönderir; canli.html sayfası komutları çizer ve
      ses/ses-ayari.json'daki sesle (Pocket TTS kadın 3; yedek Piper dfki) anlatır. Yalnızca bu bilgisayarın içinden erişilir.
+  4. Makaleler (/api/makale/...): ders paketindeki makaleleri bulup indirir, öğrencinin sürükleyip bıraktığı
+     PDF'leri ve ders paketlerini kurar (makaleler.html). Yalnızca bu bilgisayarın içinden erişilir.
 
 Kullanım:
   python3 tools/sunucu.py              # sunucuyu açar, tarayıcıda ses testini açar
@@ -31,15 +33,19 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import urllib.parse
 import wave
 import webbrowser
+import zipfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pocket_ses  # noqa: E402  (tools/pocket_ses.py)
 import terim_sozlugu  # noqa: E402
+import ders_paketi  # noqa: E402
+import makale_bulucu  # noqa: E402
 import veri_yeri  # noqa: E402
 
 KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -706,6 +712,57 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             return self._json(500, {"hata": "%s: %s" % (type(e).__name__, e)})
 
+    def _makale(self, govde=b""):
+        """Makaleler sayfası: durum, makale bulma, elle PDF ekleme, ders paketi kurma."""
+        u = urllib.parse.urlparse(self.path)
+        q = dict(urllib.parse.parse_qsl(u.query))
+        yol = u.path[len("/api/makale/"):]
+        if not self._yerel_mi():
+            return self._json(403, {"hata": "Yalnızca bu bilgisayardan"})
+        try:
+            if yol == "dersler":
+                return self._json(200, {"dersler": makale_bulucu.makaleli_dersler(),
+                                        "klasor": veri_yeri.makale_kok(), "pdf_okuyucu": makale_bulucu.pypdf_var()})
+            if yol == "durum":
+                return self._json(200, makale_bulucu.ozet(q.get("ders", "")))
+            if self.command != "POST":
+                return self._json(405, {"hata": "POST gerekli"})
+            if yol == "hazirla":
+                veri = json.loads(govde.decode("utf-8")) if govde else {}
+                return self._json(200, makale_bulucu.arka_planda_hazirla(str(veri.get("ders", "")),
+                                                                         not veri.get("agsiz")))
+            if yol == "ekle":
+                return self._json(200, makale_bulucu.elle_ekle(q.get("ders", ""), govde, q.get("ad") or "makale.pdf",
+                                                               q.get("kaynak") or None))
+            if yol == "kaldir":
+                veri = json.loads(govde.decode("utf-8")) if govde else {}
+                return self._json(200, makale_bulucu.eki_kaldir(str(veri.get("ders", "")), str(veri.get("id", ""))))
+            if yol == "paket":
+                fd, gecici = tempfile.mkstemp(suffix=".zip")
+                with os.fdopen(fd, "wb") as f:
+                    f.write(govde)
+                try:
+                    r = ders_paketi.yukle(gecici, q.get("uzerine") == "1")
+                finally:
+                    os.remove(gecici)
+                if r["makale"]:
+                    makale_bulucu.arka_planda_hazirla(r["ders"])
+                return self._json(200, r)
+            if yol == "klasor_ac":
+                veri = json.loads(govde.decode("utf-8")) if govde else {}
+                ders = str(veri.get("ders", ""))
+                k = makale_bulucu.makale_klasoru(ders) if ders else veri_yeri.makale_kok()
+                os.makedirs(k, exist_ok=True)
+                klasoru_ac(k)
+                return self._json(200, {"acildi": k})
+            return self._json(404, {"hata": "Bilinmeyen istek"})
+        except FileExistsError as e:
+            return self._json(409, {"hata": str(e)})
+        except (ValueError, KeyError, zipfile.BadZipFile) as e:
+            return self._json(400, {"hata": str(e)})
+        except Exception as e:
+            return self._json(500, {"hata": "%s: %s" % (type(e).__name__, e)})
+
     def _host_yerel_mi(self):
         host = self.headers.get("Host") or ""
         return not host or (urllib.parse.urlsplit("//" + host).hostname or "") in self.YEREL
@@ -718,6 +775,8 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
             return self._api()
         if self.path.startswith("/api/canli/"):
             return self._canli()
+        if self.path.startswith("/api/makale/"):
+            return self._makale()
         if urllib.parse.urlparse(self.path).path.lower().endswith(self.VIDEO):
             return self._video()
         return super().do_GET()
@@ -783,7 +842,13 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
 
     def do_POST(self):
         n = int(self.headers.get("Content-Length") or 0)
+        if n > 600 * 1024 * 1024:
+            return self._json(413, {"hata": "Dosya çok büyük"})
+        if self.path.startswith("/api/makale/") and not self._yerel_mi():
+            return self._json(403, {"hata": "Yalnızca bu bilgisayardan"})
         govde = self.rfile.read(n) if n else b""
+        if self.path.startswith("/api/makale/"):
+            return self._makale(govde)
         if self.path.startswith("/api/canli/"):
             return self._canli(govde)
         if self.path.startswith("/api/ses-testi/kaydet"):
@@ -791,6 +856,16 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
         if not self.path.startswith("/api/duyu/"):
             return self._json(404, {"hata": "Bilinmeyen istek"})
         return self._api(govde)
+
+
+def klasoru_ac(yol):
+    """Klasörü bilgisayarın dosya gezgininde açar."""
+    if os.name == "nt":
+        os.startfile(yol)  # noqa: S606
+    elif sys.platform == "darwin":
+        subprocess.Popen(["open", yol])
+    else:
+        subprocess.Popen(["xdg-open", yol])
 
 
 def olcum_kaydet(veri, klasor=None):

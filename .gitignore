@@ -29,3 +29,9 @@ lessons/*/videolar/
 *.webm
 *.ogv
 *.mov
+
+# Makale bulucunun öğrenci bilgisayarında ürettiği makale metinleri ve yarım kalmış ders kurulumları.
+# Makaleler abonelikli olabilir: metinleri hiçbir zaman depoya ya da ders paketine girmez.
+lessons/*/makale-metin/
+lessons/.kur-*/
+lessons/*.eski/

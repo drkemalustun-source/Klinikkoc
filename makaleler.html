@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#16201c">
+  <title>KlinikKoç · Makaleler</title>
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/tahta.css">
+  <link rel="stylesheet" href="css/makaleler.css">
+</head>
+<body>
+  <main class="mk">
+    <header class="mk-head">
+      <a class="mk-geri" href="index.html">‹ Dersler</a>
+      <h1>Makaleler</h1>
+      <p>Ders paketinde makalelerin kendisi değil, yalnız listesi vardır. KlinikKoç onları bu bilgisayara indirir,
+        okur ve eğitmenin aramasına ekler. İnemeyenleri siz ekleyebilirsiniz.</p>
+    </header>
+
+    <section class="mk-kutu" id="paketKutu">
+      <h2>Ders paketi ekle</h2>
+      <p class="mk-ince">Öğretmeninizin verdiği ders paketini (.zip) buraya sürükleyin ya da seçin.</p>
+      <label class="mk-birak" id="paketBirak">
+        <input type="file" accept=".zip,application/zip" id="paketSec" hidden>
+        <span>Ders paketini buraya bırakın</span>
+      </label>
+      <div class="mk-mesaj" id="paketMesaj" aria-live="polite"></div>
+    </section>
+
+    <section class="mk-kutu">
+      <div class="mk-satir">
+        <label for="dersSec">Ders</label>
+        <select id="dersSec"></select>
+      </div>
+      <div id="ozet" class="mk-ozet" aria-live="polite"></div>
+      <div class="mk-dugmeler">
+        <button class="btn primary" id="bulDugme">Makaleleri bul ve indir</button>
+        <button class="btn" id="klasorDugme">Makale klasörünü aç</button>
+      </div>
+      <p class="mk-ince" id="klasorYolu"></p>
+    </section>
+
+    <section class="mk-kutu">
+      <h2>Makale listesi</h2>
+      <ol id="liste" class="mk-liste"></ol>
+    </section>
+
+    <section class="mk-kutu">
+      <h2>Elinizdeki bir PDF'i ekleyin</h2>
+      <p class="mk-ince">Listede eksik görünen makaleyi indirdiyseniz ya da derse kendi makalenizi eklemek istiyorsanız
+        PDF'i buraya bırakın. KlinikKoç PDF'teki DOI'den hangi makale olduğunu kendisi bulur.</p>
+      <label class="mk-birak" id="pdfBirak">
+        <input type="file" accept=".pdf,application/pdf" id="pdfSec" multiple hidden>
+        <span>PDF'leri buraya bırakın</span>
+      </label>
+      <div class="mk-mesaj" id="pdfMesaj" aria-live="polite"></div>
+    </section>
+
+    <footer class="mk-alt">
+      Abonelikli dergiler yalnız bilgisayar üniversite ağındayken (eduroam ya da VPN) iner. KlinikKoç hiçbir
+      kullanıcı adı ya da şifre kullanmaz; makaleler yalnız bu bilgisayarda kalır, hiçbir yere gönderilmez.
+    </footer>
+  </main>
+  <script src="js/makaleler.js"></script>
+</body>
+</html>

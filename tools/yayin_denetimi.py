@@ -9,6 +9,7 @@ Engellenenler:
   - fakülteye özel dersler (ders.json "distribution": "faculty" ya da egitmen.json "dagitim": "fakulte")
   - fakülteye özel ya da denetimden geçmeyen vaka kartları
   - öğrenci kayıtları (kayitlar/), özel klasör (ozel/), arama dizini ve modeller
+  - makale bulucunun öğrenci bilgisayarında ürettiği makale metinleri (lessons/<ders>/makale-metin/)
   - lisansı belirtilmemiş ders ve kaynak bilgisi olmayan ders görselleri
   - 20 MB'tan büyük dosyalar
 Git yoksa klasördeki bütün dosyalara, git varsa yalnız depoya girecek dosyalara bakılır.
@@ -105,6 +106,9 @@ def denetle():
     for d in dosyalar:
         if d.startswith(YASAK_KLASORLER):
             H.append("Depoya girmemeli: %s" % d)
+        if "/makale-metin/" in d:
+            H.append("Makale metni depoya girmemeli: %s (öğrencinin bilgisayarında indirilen makalelerden üretilir; "
+                     "abonelikli makale olabilir)" % d)
         if d.lower().endswith((".mp4", ".m4v", ".webm", ".ogv", ".mov", ".avi", ".mkv")) or "/videolar/" in d:
             H.append("Video dosyası depoya girmemeli: %s (videolar yalnız ders klasöründe kalır; açık video için "
                      "YouTube bağlantısı kullanın)" % d)

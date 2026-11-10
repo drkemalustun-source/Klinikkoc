@@ -51,6 +51,10 @@ vakaya geri döner. Sorular not için değildir; karne yalnız öğrencinin kend
 
 **Öğretmen:** Kendi dersinizi ve vakalarınızı eklemek için [belgeler/ogretmen-kilavuzu.md](belgeler/ogretmen-kilavuzu.md).
 
+**Makaleler ve ders paketleri:** Ders paketinde makalelerin yalnız listesi (künye ve DOI) vardır; KlinikKoç
+makaleleri öğrencinin bilgisayarına kendisi indirir, inmeyenleri öğrenci sürükleyip bırakır. Ayrıntı:
+[belgeler/makaleler.md](belgeler/makaleler.md).
+
 ## Öğrenci kayıtları nerede, nasıl silinir?
 
 Kayıtlarınız (ilerlemeniz, karneleriniz, raporlarınız) **yalnız bu bilgisayarda** durur. Program

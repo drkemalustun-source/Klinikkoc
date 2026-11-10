@@ -19,6 +19,7 @@ if ! python3 tools/ses-uret.py --kur; then
   echo "Hata 'SSL: CERTIFICATE_VERIFY_FAILED' ise: Uygulamalar → Python 3.x klasöründeki"
   echo "'Install Certificates.command' dosyasına çift tıklayıp bu kurulumu yeniden çalıştırın."
 fi
+python3 tools/makale_bulucu.py --kur || echo "PDF okuyucu kurulamadı; makaleler indirilir ama okunamaz."
 echo
 echo "2/3 Claude masaüstü uygulamasına KlinikKoç araçları ekleniyor..."
 python3 tools/tahta-mcp.py --kur

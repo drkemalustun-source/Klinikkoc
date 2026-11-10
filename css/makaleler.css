@@ -1,0 +1,46 @@
+/* Makaleler sayfası: tahta.css renkleriyle sade bir liste. */
+.mk { max-width: 980px; margin: 0 auto; padding: var(--gutter); font-size: clamp(15px, 1vw + 8px, 20px); }
+.mk-head h1 { color: var(--accent); margin: .2em 0 .1em; font-size: clamp(24px, 2vw + 10px, 40px); }
+.mk-head p { color: var(--chalk-dim); max-width: 62ch; margin: 0 0 1em; }
+.mk-geri { color: var(--chalk-dim); text-decoration: none; }
+.mk-geri:hover { color: var(--chalk); }
+.mk-kutu { background: var(--board-2); border: 1px solid var(--board-line); border-radius: var(--radius);
+  padding: 1em 1.2em; margin: 0 0 1em; }
+.mk-kutu h2 { font-size: 1.05em; margin: 0 0 .5em; }
+.mk-ince { color: var(--chalk-dim); font-size: .88em; margin: .3em 0; overflow-wrap: anywhere; }
+.mk-satir { display: flex; gap: .8em; align-items: center; flex-wrap: wrap; }
+.mk-satir select { font: inherit; color: var(--chalk); background: var(--board); border: 1px solid var(--board-line);
+  border-radius: 10px; padding: .4em .6em; min-height: 44px; max-width: 100%; flex: 1 1 260px; }
+.mk-ozet { margin: .8em 0; display: flex; flex-wrap: wrap; gap: .5em; }
+.mk-etiket { display: inline-block; border-radius: 999px; padding: .15em .7em; font-size: .82em;
+  border: 1px solid var(--board-line); background: var(--board); }
+.mk-etiket.hazir { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, transparent); }
+.mk-etiket.eksik, .mk-etiket.hata { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
+.mk-etiket.denenmedi { color: var(--chalk-dim); }
+.mk-etiket.calisiyor { color: var(--info); }
+.mk-dugmeler { display: flex; flex-wrap: wrap; gap: .6em; }
+.mk-dugmeler .btn { font-size: .9em; }
+.mk-liste { list-style: none; margin: 0; padding: 0; }
+.mk-liste li { border-top: 1px solid var(--board-line); padding: .8em 0; display: grid;
+  grid-template-columns: minmax(0, 1fr) auto; gap: .3em 1em; align-items: start; }
+.mk-liste li:first-child { border-top: 0; }
+.mk-ad { font-weight: 600; }
+.mk-ad .mk-rol { font-weight: 400; color: var(--accent); font-size: .8em; margin-left: .4em; }
+.mk-atif { color: var(--chalk-dim); font-size: .85em; grid-column: 1 / -1; overflow-wrap: anywhere; }
+.mk-not { font-size: .85em; grid-column: 1 / -1; }
+.mk-not a { color: var(--info); }
+.mk-islem { grid-column: 1 / -1; display: flex; gap: .5em; flex-wrap: wrap; }
+.mk-islem .btn { font-size: .78em; min-height: 40px; display: inline-flex; align-items: center;
+  text-decoration: none; color: var(--chalk); cursor: pointer; }
+.mk-birak { display: flex; align-items: center; justify-content: center; text-align: center; min-height: 96px;
+  border: 2px dashed var(--board-line); border-radius: var(--radius); color: var(--chalk-dim); cursor: pointer;
+  padding: 1em; transition: border-color .15s, color .15s; }
+.mk-birak:hover, .mk-birak.ustunde { border-color: var(--accent); color: var(--chalk); }
+.mk-mesaj { margin-top: .6em; font-size: .9em; }
+.mk-mesaj .iyi { color: var(--ok); }
+.mk-mesaj .kotu { color: var(--warn); }
+.mk-alt { color: var(--chalk-dim); font-size: .78em; margin: 1.5em 0 2em; max-width: 70ch; }
+@media (max-width: 560px) {
+  .mk-liste li { grid-template-columns: minmax(0, 1fr); }
+  .mk-liste li > .mk-etiket { justify-self: start; }
+}

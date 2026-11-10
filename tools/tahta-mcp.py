@@ -40,6 +40,7 @@ import bilgi_bankasi  # noqa: E402
 import karne as karne_  # noqa: E402
 import kayit_aktar  # noqa: E402
 import kayit_deposu as kd  # noqa: E402
+import makale_bulucu  # noqa: E402
 import veri_yeri  # noqa: E402
 
 
@@ -223,6 +224,34 @@ ARACLAR = [
                     "description": "yalnız bu türde ara (isteğe bağlı)"},
             "k": {"type": "integer", "description": "en çok kaç sonuç (varsayılan 6, en çok 15)"}},
             "required": ["sorgu"]},
+    },
+    {
+        "name": "makaleler",
+        "description": "Bir dersin makale listesini ve her makalenin durumunu gösterir: hazir (indirildi, aramada), eksik "
+                       "(bulunamadı; öğrenci yayıncı sayfasından indirip eklemeli), hata, denenmedi. Ders paketinde makalelerin "
+                       "kendisi yoktur; makale_bul onları bu bilgisayara indirir. ac true ise makaleler sayfası tarayıcıda "
+                       "açılır (öğrenci orada eksik PDF'leri sürükleyip bırakabilir). Dersi anlatmaya başlamadan önce bak: "
+                       "eksik makale varsa öğrenciye söyle; o makaleye dayanan soruda 'bu makaleyi okuyamadım' de.",
+        "inputSchema": {"type": "object", "properties": {
+            "ders": {"type": "string", "description": "verilmezse makale listesi olan dersler listelenir"},
+            "ac": {"type": "boolean", "description": "makaleler sayfasını tarayıcıda aç"}}},
+    },
+    {
+        "name": "makale_bul",
+        "description": "Dersin makalelerini arka planda bulup indirir: önce bilgisayardaki makale klasörü, sonra açık erişimli "
+                       "sürüm, sonra yayıncı (bilgisayar üniversite ağındaysa abonelikli dergiler de iner). İnenler metne "
+                       "çevrilip aramaya eklenir. Birkaç dakika sürebilir; ilerlemeyi makaleler aracıyla izle.",
+        "inputSchema": {"type": "object", "properties": {"ders": {"type": "string"}}, "required": ["ders"]},
+    },
+    {
+        "name": "makale_ekle",
+        "description": "Öğrencinin bu bilgisayardaki bir PDF'ini derse ekler. kaynak verilirse o makalenin yerine geçer; "
+                       "verilmezse PDF'teki DOI'den listedeki makale bulunur, bulunamazsa 'öğrencinin eklediği' ayrı kaynak olur.",
+        "inputSchema": {"type": "object", "properties": {
+            "ders": {"type": "string"},
+            "dosya": {"type": "string", "description": "PDF'in bu bilgisayardaki tam yolu"},
+            "kaynak": {"type": "string", "description": "makaleler listesindeki id (isteğe bağlı)"}},
+            "required": ["ders", "dosya"]},
     },
     {
         "name": "vakalar",
@@ -842,6 +871,13 @@ def ar_egitmen_hazirla(a):
         depo()._tasima_soylendi = True
         out["kayit_tasima"] = {"not": "Eski kayıtlar kalıcı kayıt klasörüne kopyalandı; eski dosyalar silinmedi.",
                                "kaynak": r["kaynak"], "yeni_yer": depo().kok, "kopyalanan": r["kopyalanan"]}
+    if makale_bulucu.kaynaklar(ders):
+        mo = makale_bulucu.ozet(ders)
+        out["makaleler"] = {"sayilar": mo["sayilar"],
+                            "eksik": [m["kisa"] for m in mo["makaleler"] if m["durum"] != "hazir"]}
+        if out["makaleler"]["eksik"]:
+            out["makaleler"]["not"] = ("Bu dersin bazı makaleleri bu bilgisayarda yok ya da hiç denenmedi. Derse başlamadan "
+                                       "öğrenciye söyle ve makale_bul ile indirmeyi öner; inmeyenler için makaleler (ac: true).")
     return metin(out)
 
 
@@ -1660,6 +1696,52 @@ def ar_durdur(_):
     return metin(gonder({"tur": "dur"}, bekle=True))
 
 
+# ---------- Makaleler (ders paketindeki makale listesi) ----------
+def ar_makaleler(a):
+    ders = a.get("ders")
+    if not ders:
+        return metin({"dersler": makale_bulucu.makaleli_dersler()})
+    ders_yolu(ders)
+    out = makale_bulucu.ozet(ders)
+    if a.get("ac"):
+        if not sunucu_acik():
+            sunucuyu_baslat()
+            for _ in range(30):
+                time.sleep(0.5)
+                if sunucu_acik():
+                    break
+        webbrowser.open("http://localhost:%d/makaleler.html?ders=%s" % (PORT, ders))
+        out["sayfa"] = "Makaleler sayfası tarayıcıda açıldı."
+    if not out["pdf_okuyucu"]:
+        out["uyari"] = "PDF okuyucu kurulu değil; inen makaleler metne çevrilemez. KUR dosyasını yeniden çalıştırın."
+    eksik = [m["kisa"] for m in out["makaleler"] if m["durum"] in ("eksik", "hata")]
+    if eksik:
+        out["not"] = ("Eksik makaleler aramada yok. Öğrenciye söyle; makaleler sayfasında yayıncı bağlantısı var, "
+                      "PDF'i indirip sayfaya sürükleyebilir.")
+    return metin(out)
+
+
+def ar_makale_bul(a):
+    ders = a.get("ders")
+    ders_yolu(ders)
+    if not makale_bulucu.kaynaklar(ders):
+        return metin({"durum": "makale yok", "not": "Bu dersin paketinde makale listesi yok."})
+    out = makale_bulucu.arka_planda_hazirla(ders)
+    out["not"] = "Makaleler arka planda indiriliyor. Birkaç dakika sonra makaleler aracıyla durumu kontrol et."
+    return metin(out)
+
+
+def ar_makale_ekle(a):
+    ders = a.get("ders")
+    ders_yolu(ders)
+    yol = os.path.expanduser(a.get("dosya") or "")
+    if not os.path.isfile(yol):
+        raise ValueError("Dosya bulunamadı: %s" % yol)
+    with open(yol, "rb") as f:
+        veri = f.read()
+    return metin(makale_bulucu.elle_ekle(ders, veri, os.path.basename(yol), a.get("kaynak") or None))
+
+
 ISLEYICILER = {"egitmen_hazirla": ar_egitmen_hazirla, "kayit_oku": ar_kayit_oku, "kayit_yaz": ar_kayit_yaz,
                "rapor_yaz": ar_rapor_yaz, "olcme_testi": ar_olcme_testi, "olcme_kaydet": ar_olcme_kaydet,
                "tahtayi_ac": ar_tahtayi_ac, "dersler": ar_dersler, "ders_oku": ar_ders_oku,
@@ -1669,7 +1751,8 @@ ISLEYICILER = {"egitmen_hazirla": ar_egitmen_hazirla, "kayit_oku": ar_kayit_oku,
                "bilgi_ara": ar_bilgi_ara, "vakalar": ar_vakalar, "vaka_oku": ar_vaka_oku, "karne": ar_karne,
                "sozlu_prova": ar_sozlu_prova, "tekrar_listesi": ar_tekrar_listesi,
                "kayit_disa_aktar": ar_kayit_disa_aktar, "kayit_ice_aktar": ar_kayit_ice_aktar,
-               "kayit_anonim_aktar": ar_kayit_anonim_aktar}
+               "kayit_anonim_aktar": ar_kayit_anonim_aktar, "makaleler": ar_makaleler,
+               "makale_bul": ar_makale_bul, "makale_ekle": ar_makale_ekle}
 
 
 def metin(veri, hata=False):
