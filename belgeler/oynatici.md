@@ -66,7 +66,9 @@ bölünür; dilim sonunda oynatıcı durur ve mola önerir.
 ## Yeni ders eklemek
 
 1. `lessons/<yeni-kimlik>/` klasörü açın. Görselleri `assets/` altına koyun.
-2. `ders.json` yazın. Örnek olarak `lessons/tanitim/ders.json`'a, komut listesi için `belgeler/mimari.md`'ye bakın.
+2. `ders.json` yazın. Örnek olarak `ornek-dersler/peri-implantitis-cerrahi/ders.json`'a ve
+   `sablonlar/ders-taslagi-bos.json`'a, komut listesi için `belgeler/mimari.md`'ye bakın.
+   Dersi ekrandan hazırlamak daha kolaydır: [sihirbaz.md](sihirbaz.md).
 3. Denetleyip paketleyin:
    ```sh
    node tools/paketle.mjs
@@ -82,8 +84,10 @@ kullanın; ardından depoya göndermeden önce `node tools/paketle.mjs` ile aç�
 Bu derslerin klasörleri `.gitignore`'da tutulur. Tahta köşesindeki kaynak etiketi `source.label`
 alanından gelir (yoksa "Makale").
 
-Peri-implantitis pilot dersi elle değil, `tools/ders-uret/peri-implantitis-cerrahi.py` betiğiyle
-üretilir (`python3 tools/ders-uret/peri-implantitis-cerrahi.py`, ardından `node tools/paketle.mjs`).
+**Örnek ders.** Program derssiz gelir. Depodaki peri-implantitis örnek dersi `ornek-dersler/` klasöründedir;
+programla dağıtılmaz, ders paketi olarak verilir. Elle değil, `tools/ders-uret/peri-implantitis-cerrahi.py`
+betiğiyle üretilir: `python3 tools/ders-uret/peri-implantitis-cerrahi.py`, ardından `node tools/paketle.mjs --ornek`
+(denetler) ve `python tools/ders_paketi.py --olustur ornek-dersler/peri-implantitis-cerrahi` (paketi yapar).
 Bu derste düzeltme yaparken `ders.json`'u değil betiği düzenleyin; yoksa betik yeniden çalışınca
 değişiklik kaybolur.
 

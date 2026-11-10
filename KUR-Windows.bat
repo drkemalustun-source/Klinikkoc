@@ -14,6 +14,7 @@ if errorlevel 1 (
 )
 echo 1/3 Piper ses paketleri denetleniyor (zaten kuruluysa hizli gecer)...
 %PY% tools\ses-uret.py --kur
+%PY% tools\makale_bulucu.py --kur
 echo.
 echo 2/3 Claude masaustu uygulamasina KlinikKoc araclari ekleniyor...
 %PY% tools\tahta-mcp.py --kur

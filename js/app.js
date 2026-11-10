@@ -1,6 +1,7 @@
 /* Arayüz: ders listesi, ders ekranı, sorular, çekmece (içindekiler / hedefler / ayarlar). */
 (function (AT) {
   'use strict';
+  { const sv = document.getElementById('surum'); if (sv && AT.config && AT.config.version) sv.textContent = 'Sürüm ' + AT.config.version; }
 
   const $ = (s, r = document) => r.querySelector(s);
   const home = $('#home');
@@ -43,6 +44,21 @@
     }
     box.replaceChildren();
     renderTodayReview();
+    if (!catalog.length) {
+      // Program derssiz gelir: dersler öğretmenin verdiği ders paketleriyle eklenir.
+      const bos = el('div', 'empty-home');
+      bos.appendChild(el('h2', null, 'Henüz ders yok'));
+      bos.appendChild(el('p', null, 'Öğretmeninizden aldığınız ders paketini (.zip) ekleyin; ders bu listede belirir ve makaleleri kendiliğinden aranır.'));
+      const dug = el('div', 'empty-actions');
+      const ekle = el('a', 'btn primary', 'Ders paketi ekle');
+      ekle.href = 'makaleler.html#paketKutu';
+      const kil = el('a', 'btn', 'Kılavuzu okuyun');
+      kil.href = 'kilavuz.html';
+      dug.append(ekle, kil);
+      bos.appendChild(dug);
+      box.appendChild(bos);
+      return;
+    }
     for (const entry of catalog) {
       const card = el('button', 'lesson-card');
       card.appendChild(el('h2', null, entry.title));

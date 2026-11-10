@@ -18,6 +18,17 @@ import bilgi_bankasi  # noqa: E402
 import karne  # noqa: E402
 import vaka_denetle  # noqa: E402
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import ornek_ders  # noqa: E402
+
+
+def setUpModule():
+    ornek_ders.kur()
+
+
+def tearDownModule():
+    ornek_ders.kaldir()
+
 
 def _metin_yaz(yol, metin, **ek):
     with open(yol, "w", encoding="utf-8", **ek) as f:
@@ -35,7 +46,7 @@ def _json_oku(yol):
         return json.load(f)
 
 
-ORNEK_VAKA = os.path.join(KOK, "lessons", "peri-implantitis-cerrahi", "vakalar", "ornek-implant-kanama.json")
+ORNEK_VAKA = os.path.join(KOK, "ornek-dersler", "peri-implantitis-cerrahi", "vakalar", "ornek-implant-kanama.json")
 
 
 class SahteModel:
@@ -923,9 +934,11 @@ class YayinDenetimi(unittest.TestCase):
         import yayin_denetimi as yd
         k = yd._gitignore_kurallari()
         for yol in ("lessons/ozel-akut/egitmen.json", "lessons/peri/vakalar/ozel-nug.json", "ozel/not.md",
-                    "kayitlar/ali/x.json", "tools/__pycache__/a.pyc", "lessons/peri/audio/a.mp3", "paket.zip"):
+                    "kayitlar/ali/x.json", "tools/__pycache__/a.pyc", "lessons/peri/audio/a.mp3", "paket.zip",
+                    "lessons/peri/egitmen.json"):  # kurulu dersler hiçbir zaman depoya girmez
             self.assertTrue(yd.yok_sayilir_mi(yol, k), yol)
-        for yol in ("lessons/peri/egitmen.json", "lessons/peri/vakalar/ornek.json", "tools/yayin_denetimi.py",
+        for yol in ("ornek-dersler/peri/egitmen.json", "ornek-dersler/peri/vakalar/ornek.json",
+                    "lessons/katalog.json", "tools/yayin_denetimi.py",
                     "belgeler/ozel-icerik.md"):
             self.assertFalse(yd.yok_sayilir_mi(yol, k), yol)
 
@@ -1079,6 +1092,112 @@ class SesBilgisi(unittest.TestCase):
         b = self.c.ses_bilgisi()
         self.assertEqual(b["motor"], "tarayici")
         self.assertIn("tarayıcı", self.c.ses_durumu())
+
+
+class PocketYenidenDeneme(unittest.TestCase):
+    """Windows test raporu: Türkçe harfli kurulum yolu, başarısız Pocket işçisinin yeniden denenmesi."""
+
+    def setUp(self):
+        import pocket_ses
+        self.p = pocket_ses
+        self.eski = (pocket_ses.ortam_python, pocket_ses.YENIDEN_DENE_SN, pocket_ses.subprocess.Popen)
+        self.acilan = []
+
+        class SahteSurec:
+            def __init__(s, komut, **k):
+                s.komut = komut
+                s.stdout = __import__("io").StringIO('@@{"hazir": true, "sure": 1}\n')
+                s.stdin = __import__("io").StringIO()
+                self.acilan.append(s)
+
+            def poll(s):
+                return None
+
+            def wait(s, _=None):
+                return 0
+        pocket_ses.subprocess.Popen = SahteSurec
+
+    def tearDown(self):
+        self.p.ortam_python, self.p.YENIDEN_DENE_SN, self.p.subprocess.Popen = self.eski
+
+    def test_komut_utf8_ile(self):
+        k = self.p.isci_komutu(os.path.join(tempfile.gettempdir(), "koç deneme", "python.exe"))
+        self.assertEqual(k[1:4], ["-I", "-X", "utf8"])
+        self.assertTrue(k[-1].endswith("pocket-isci.py"))
+
+    def _bekle(self, isci):
+        self.assertTrue(isci.hazir.wait(5))
+
+    def test_ortam_yoksa_sonra_yeniden_dener(self):
+        isci = self.p.PocketIsci()
+        self.p.ortam_python = lambda: None
+        isci.baslat()
+        self.assertIn("ortamı yok", isci.durum)
+        self.p.ortam_python = lambda: "/sahte/python"
+        isci.baslat()  # bekleme süresi dolmadı: yeniden denemez
+        self.assertEqual(self.acilan, [])
+        self.p.YENIDEN_DENE_SN = 0
+        isci.baslat()
+        self._bekle(isci)
+        self.assertEqual(isci.durum, "hazır")
+        self.assertEqual(len(self.acilan), 1)
+        isci.baslat()  # hazır ve açık: yeni süreç açılmaz
+        self.assertEqual(len(self.acilan), 1)
+
+    def test_zorla_yeniden_baslatir(self):
+        self.p.ortam_python = lambda: "/sahte/python"
+        isci = self.p.PocketIsci()
+        isci.baslat()
+        self._bekle(isci)
+        isci.baslat(zorla=True)
+        self._bekle(isci)
+        self.assertEqual(len(self.acilan), 2)
+        self.assertEqual(isci.durum, "hazır")
+
+
+class Surum(unittest.TestCase):
+    """Programın sürümü tek yerde: SURUM dosyası; config.js ve Claude aracı aynısını söyler."""
+
+    def test_surum_ayni(self):
+        with open(os.path.join(KOK, "SURUM"), encoding="utf-8") as f:
+            surum = f.read().strip()
+        self.assertRegex(surum, r"^\d+\.\d+\.\d+$")
+        with open(os.path.join(KOK, "config.js"), encoding="utf-8") as f:
+            self.assertIn("version: '%s'" % surum, f.read())
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("tahta_mcp_surum", os.path.join(KOK, "tools", "tahta-mcp.py"))
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        self.assertEqual(m.SURUM, surum)
+
+
+class IkiKurulum(unittest.TestCase):
+    """Yan yana iki kurulum: açık sunucu başka klasördense tahtayi_ac bunu fark eder."""
+
+    def setUp(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("tahta_mcp_iki", os.path.join(KOK, "tools", "tahta-mcp.py"))
+        self.m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.m)
+
+    def test_sunucu_kokunu_soyler(self):
+        import sunucu
+        self.assertTrue(os.path.samefile(sunucu.Canli().durum()["kok"], KOK))
+
+    def test_baska_kurulum(self):
+        self.assertIsNone(self.m.baska_kurulum_mu({"kok": KOK}))
+        self.assertIsNone(self.m.baska_kurulum_mu({}))  # eski sürüm: yolunu söylemez
+        baska = os.path.join(tempfile.gettempdir(), "koç deneme", "klinikkoc-v3")
+        self.assertEqual(self.m.baska_kurulum_mu({"kok": baska}), baska)
+
+    def test_uzun_sessizlikte_birak(self):
+        self.m.istek = lambda *a, **k: {"durum": "sessiz"}
+        y = json.loads(self.m.ar_dinle({"bekle": 40})["content"][0]["text"])
+        self.assertTrue(y["devam"])
+        self.m._sessizlik["bas"] -= self.m.SESSIZ_SINIR_SN
+        y = json.loads(self.m.ar_dinle({"bekle": 40})["content"][0]["text"])
+        self.assertFalse(y["devam"])
+        self.assertIsNone(self.m._sessizlik["bas"])
 
 
 if __name__ == "__main__":

@@ -21,6 +21,11 @@ ozel/
 lessons/ozel-*/
 lessons/*/vakalar/ozel-*
 
+# Program derssiz gelir: lessons/ altına yalnız ders paketleriyle kurulan dersler girer ve bunlar
+# hiçbir zaman depoya girmez. Depoda yalnız boş ders listesi (katalog) durur.
+# Örnek dersler ornek-dersler/ klasöründedir (ders paketi yapmak ve testler için).
+lessons/*/
+
 # Ders videoları (lessons/<ders>/videolar/): büyük ve çoğu zaman telifli; hiçbir zaman depoya girmez.
 # Herkese açık bir video için ders dosyasında YouTube bağlantısı kullanın.
 lessons/*/videolar/
@@ -29,3 +34,9 @@ lessons/*/videolar/
 *.webm
 *.ogv
 *.mov
+
+# Makale bulucunun öğrenci bilgisayarında ürettiği makale metinleri ve yarım kalmış ders kurulumları.
+# Makaleler abonelikli olabilir: metinleri hiçbir zaman depoya ya da ders paketine girmez.
+lessons/*/makale-metin/
+lessons/.kur-*/
+lessons/*.eski/

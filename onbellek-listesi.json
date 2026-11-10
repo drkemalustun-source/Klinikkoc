@@ -1,5 +1,5 @@
 {
-  "version": "dbd28c4ee336",
+  "version": "1aee671cbc6a",
   "files": [
     "./",
     "index.html",
@@ -24,22 +24,6 @@
     "icons/icon-192.png",
     "icons/icon-512.png",
     "lessons/katalog.json",
-    "lessons/katalog.js",
-    "lessons/peri-implantitis-cerrahi/ders.json",
-    "lessons/peri-implantitis-cerrahi/ders.js",
-    "lessons/peri-implantitis-cerrahi/assets/sekil1.jpg",
-    "lessons/peri-implantitis-cerrahi/assets/sekil2.jpg",
-    "lessons/peri-implantitis-cerrahi/assets/sekil3a.jpg",
-    "lessons/peri-implantitis-cerrahi/assets/sekil3b.jpg",
-    "lessons/peri-implantitis-cerrahi/assets/sekil4.jpg",
-    "lessons/peri-implantitis-cerrahi/assets/sekil5.jpg",
-    "lessons/peri-implantitis-cerrahi/assets/sekil6.jpg",
-    "lessons/peri-implantitis-cerrahi/kaynak-dizini.json",
-    "lessons/peri-implantitis-cerrahi/kaynak-dizini.js",
-    "lessons/peri-implantitis-cerrahi/vaka-paketi.json",
-    "lessons/peri-implantitis-cerrahi/vaka-paketi.js",
-    "lessons/tanitim/ders.json",
-    "lessons/tanitim/ders.js",
-    "lessons/tanitim/assets/ekran.svg"
+    "lessons/katalog.js"
   ]
 }

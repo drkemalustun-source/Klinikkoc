@@ -1,0 +1,21 @@
+/* Ders değerlendirme formu: makaleler.css'in kutularını kullanır. */
+.dg-soru { border-top: 1px solid var(--board-line); padding: .7em 0; }
+.dg-soru:first-of-type { border-top: 0; padding-top: 0; }
+.dg-soru > .dg-metin { font-weight: 600; margin-bottom: .4em; }
+.dg-soru .dg-ozel { color: var(--accent); font-weight: 400; font-size: .85em; margin-left: .4em; }
+.dg-secenek { display: flex; flex-wrap: wrap; gap: .4em; }
+.dg-secenek label { display: inline-flex; align-items: center; gap: .3em; background: var(--board-2);
+  border: 1px solid var(--board-line); border-radius: 999px; padding: .3em .8em; cursor: pointer; font-size: .9em; }
+.dg-secenek input { accent-color: var(--accent); }
+.dg-secenek label:has(input:checked) { border-color: var(--accent); color: var(--accent); }
+.dg-soru textarea, .dg-ekle textarea { width: 100%; min-height: 3.2em; box-sizing: border-box; font: inherit; }
+.dg-tespitler { list-style: none; margin: .4em 0; padding: 0; }
+.dg-tespitler li { display: flex; gap: .6em; align-items: flex-start; padding: .45em 0; border-top: 1px solid var(--board-line); }
+.dg-tespitler li:first-child { border-top: 0; }
+.dg-tespitler .dg-tur { color: var(--chalk-dim); font-size: .8em; white-space: nowrap; }
+.dg-tespitler .dg-ayrinti { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.dg-tespitler .dg-cikar { flex: none; }
+.dg-tespitler li.dg-cikti .dg-ayrinti { text-decoration: line-through; opacity: .5; }
+.dg-ekle { display: grid; grid-template-columns: minmax(0, 12em) minmax(0, 1fr) auto; gap: .5em; align-items: start; margin-top: .6em; }
+.dg-onay { display: block; margin-top: .8em; }
+@media (max-width: 640px) { .dg-ekle { grid-template-columns: minmax(0, 1fr); } }

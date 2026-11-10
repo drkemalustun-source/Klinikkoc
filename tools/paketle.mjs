@@ -3,6 +3,9 @@
  *
  *   node tools/paketle.mjs            açık paket (depoya giren hâli)
  *   node tools/paketle.mjs --fakulte  fakülteye özel dersleri de kataloğa ekler
+ *   node tools/paketle.mjs --ornek    ornek-dersler/ klasöründeki örnek dersleri denetler
+ *                                     (programla gelmezler: ders paketi olarak dağıtılırlar;
+ *                                      katalog ve önbellek listesi değişmez)
  *
  * Yaptıkları:
  *  1. lessons/<id>/ders.json dosyalarını şemaya ve iç tutarlılığa göre denetler
@@ -17,7 +20,8 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const LESSONS = join(ROOT, 'lessons');
+const ORNEK = process.argv.includes('--ornek');
+const LESSONS = join(ROOT, ORNEK ? 'ornek-dersler' : 'lessons');
 const errors = [];
 const warnings = [];
 const FAKULTE = process.argv.includes('--fakulte');
@@ -144,7 +148,8 @@ function lint(id, lesson, dir) {
     warn(id, `${bloomMissing} soruda ne sorunun ne alt hedefin Bloom düzeyi (bloom) var; karnede düzeye göre başarı eksik kalır`);
   }
   for (const [k, a] of Object.entries(lesson.assets || {})) {
-    if (!/^(https?:|data:)/.test(a.src) && !existsSync(join(dir, a.src))) err(id, `görsel dosyası yok: ${k} -> ${a.src}`);
+    if (!/^(https?:|data:)/.test(a.src) && !a.makaleden && !existsSync(join(dir, a.src))) err(id, `görsel dosyası yok: ${k} -> ${a.src}`);
+    if (a.makaleden && !a.makaleden.kaynak) err(id, `görsel ${k}: makaleden.kaynak yok`);
   }
 }
 
@@ -179,7 +184,7 @@ for (const id of ids) {
   });
   const catEntry = catalog[catalog.length - 1];
   cacheFiles.push(`lessons/${id}/ders.json`, `lessons/${id}/ders.js`);
-  for (const a of Object.values(lesson.assets || {})) if (!/^(https?:|data:)/.test(a.src)) cacheFiles.push(`lessons/${id}/${a.src}`);
+  for (const a of Object.values(lesson.assets || {})) if (!/^(https?:|data:)/.test(a.src) && !a.makaleden) cacheFiles.push(`lessons/${id}/${a.src}`);
 
   // Kaynak dizini (tools/dizin-uret.py): canlı soru-cevap ve model kapalıyken arama için.
   const idx = (lesson.knowledge && lesson.knowledge.index) || 'kaynak-dizini.json';
@@ -229,6 +234,13 @@ for (const id of ids) {
   }
   if (cases.length) catEntry.cases = cases.length;
   console.log(`✓ ${id}: ${lesson.sections.length} bölüm, ${nSteps} adım, ${nQ} soru` + (cases.length ? `, ${cases.length} vaka` : ''));
+}
+
+if (ORNEK) {
+  for (const w of warnings) console.warn('uyarı ' + w);
+  if (errors.length) { for (const e of errors) console.error('HATA ' + e); process.exit(1); }
+  console.log(`Örnek dersler denetlendi (${catalog.length}). Paket yapmak için: python tools/ders_paketi.py --olustur ornek-dersler/<ders>`);
+  process.exit(0);
 }
 
 const cat = { lessons: catalog };

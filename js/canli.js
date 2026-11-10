@@ -717,7 +717,7 @@
     const eg = await r.json();
     const assets = {};
     for (const [k, g] of Object.entries(eg.gorseller || {})) {
-      assets[k] = { src: g.src, caption: (g.baslik ? g.baslik + '. ' : '') + (g.aciklama || ''), alt: g.aciklama || k };
+      assets[k] = { src: g.src, caption: (g.baslik ? g.baslik + '. ' : '') + (g.aciklama || ''), alt: g.aciklama || k, makaleden: g.makaleden };
     }
     const kay = eg.kaynak || {};
     for (let i = 1; kay.sayfaGorseli && i <= (kay.sayfaSayisi || 0); i++) {
