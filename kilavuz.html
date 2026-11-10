@@ -78,7 +78,8 @@
         <h2>2. Kurulum</h2>
         <p>Kurulum bir kez yapılır. Gerekenler: <a href="https://www.python.org/downloads/">Python 3</a> (3.12 önerilir)
           ve canlı tahta için Claude masaüstü uygulaması. KlinikKoç klasörünü indirip bir yere açın
-          (ör. Belgeler). Klasörün yerini sonra değiştirmeyin; değiştirirseniz kurulumu yeniden çalıştırın.</p>
+          (ör. Belgeler). Zip açılınca içinde tek bir KlinikKoç klasörü (ör. <code>klinikkoc-v3</code>) çıkar; KUR ve BASLAT dosyaları
+          onun içindedir. Klasörün yerini sonra değiştirmeyin; değiştirirseniz kurulumu yeniden çalıştırın.</p>
 
         <div class="kl-iki">
           <div id="kurulum-windows">
@@ -444,8 +445,21 @@
           <ul>
             <li>Canlı tahtada bir kez <b>Tam ekran başlat</b>'a dokundunuz mu? "Sesi açmak için dokunun" düğmesi görünüyorsa ona basın.</li>
             <li>Üst çubukta "tarayıcı sesi (yedek)" yazıyorsa doğal ses kurulmamıştır; KUR'u yeniden çalıştırıp "E" deyin.</li>
+            <li>Üst çubukta "Piper (yedek)" yazıyorsa Pocket sesi açılamamıştır; bir dakika sonra kendiliğinden yeniden denenir.
+              Beklemek istemezseniz Claude'a "sesi yeniden başlat" deyin.</li>
             <li>Oynatıcıda "Türkçe ses bulunamadı" uyarısı çıkarsa anlatım altyazıyla sürer.</li>
           </ul>
+        </details>
+        <details class="kl-sorun">
+          <summary>Ara verip döndüğümde Claude beni duymuyor</summary>
+          <p>Claude sessizlikte yaklaşık 10 dakika dinlemeyi sürdürür, sonra bırakır. Daha uzun bir aradan sonra
+            sohbete <kbd>tahtaya bak</kbd> yazın; tahtada söyledikleriniz kaybolmaz, Claude onları okur ve devam eder.</p>
+        </details>
+        <details class="kl-sorun">
+          <summary>Bilgisayarda iki KlinikKoç klasörü var</summary>
+          <p>Claude yalnız KUR'u en son çalıştırdığınız klasörü kullanır. Tahta açılırken öbür klasörün penceresi açıksa
+            onu kapatıp doğru klasörden açar. Kapatamazsa siyah BASLAT penceresini kendiniz kapatın. Eski klasörü
+            kullanmayacaksanız silebilirsiniz.</p>
         </details>
         <details class="kl-sorun">
           <summary>Mikrofonla söylediklerim yanlış yazılıyor</summary>

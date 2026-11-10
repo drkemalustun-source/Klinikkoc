@@ -1094,5 +1094,95 @@ class SesBilgisi(unittest.TestCase):
         self.assertIn("tarayıcı", self.c.ses_durumu())
 
 
+class PocketYenidenDeneme(unittest.TestCase):
+    """Windows test raporu: Türkçe harfli kurulum yolu, başarısız Pocket işçisinin yeniden denenmesi."""
+
+    def setUp(self):
+        import pocket_ses
+        self.p = pocket_ses
+        self.eski = (pocket_ses.ortam_python, pocket_ses.YENIDEN_DENE_SN, pocket_ses.subprocess.Popen)
+        self.acilan = []
+
+        class SahteSurec:
+            def __init__(s, komut, **k):
+                s.komut = komut
+                s.stdout = __import__("io").StringIO('@@{"hazir": true, "sure": 1}\n')
+                s.stdin = __import__("io").StringIO()
+                self.acilan.append(s)
+
+            def poll(s):
+                return None
+
+            def wait(s, _=None):
+                return 0
+        pocket_ses.subprocess.Popen = SahteSurec
+
+    def tearDown(self):
+        self.p.ortam_python, self.p.YENIDEN_DENE_SN, self.p.subprocess.Popen = self.eski
+
+    def test_komut_utf8_ile(self):
+        k = self.p.isci_komutu(os.path.join(tempfile.gettempdir(), "koç deneme", "python.exe"))
+        self.assertEqual(k[1:4], ["-I", "-X", "utf8"])
+        self.assertTrue(k[-1].endswith("pocket-isci.py"))
+
+    def _bekle(self, isci):
+        self.assertTrue(isci.hazir.wait(5))
+
+    def test_ortam_yoksa_sonra_yeniden_dener(self):
+        isci = self.p.PocketIsci()
+        self.p.ortam_python = lambda: None
+        isci.baslat()
+        self.assertIn("ortamı yok", isci.durum)
+        self.p.ortam_python = lambda: "/sahte/python"
+        isci.baslat()  # bekleme süresi dolmadı: yeniden denemez
+        self.assertEqual(self.acilan, [])
+        self.p.YENIDEN_DENE_SN = 0
+        isci.baslat()
+        self._bekle(isci)
+        self.assertEqual(isci.durum, "hazır")
+        self.assertEqual(len(self.acilan), 1)
+        isci.baslat()  # hazır ve açık: yeni süreç açılmaz
+        self.assertEqual(len(self.acilan), 1)
+
+    def test_zorla_yeniden_baslatir(self):
+        self.p.ortam_python = lambda: "/sahte/python"
+        isci = self.p.PocketIsci()
+        isci.baslat()
+        self._bekle(isci)
+        isci.baslat(zorla=True)
+        self._bekle(isci)
+        self.assertEqual(len(self.acilan), 2)
+        self.assertEqual(isci.durum, "hazır")
+
+
+class IkiKurulum(unittest.TestCase):
+    """Yan yana iki kurulum: açık sunucu başka klasördense tahtayi_ac bunu fark eder."""
+
+    def setUp(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("tahta_mcp_iki", os.path.join(KOK, "tools", "tahta-mcp.py"))
+        self.m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.m)
+
+    def test_sunucu_kokunu_soyler(self):
+        import sunucu
+        self.assertTrue(os.path.samefile(sunucu.Canli().durum()["kok"], KOK))
+
+    def test_baska_kurulum(self):
+        self.assertIsNone(self.m.baska_kurulum_mu({"kok": KOK}))
+        self.assertIsNone(self.m.baska_kurulum_mu({}))  # eski sürüm: yolunu söylemez
+        baska = os.path.join(tempfile.gettempdir(), "koç deneme", "klinikkoc-v3")
+        self.assertEqual(self.m.baska_kurulum_mu({"kok": baska}), baska)
+
+    def test_uzun_sessizlikte_birak(self):
+        self.m.istek = lambda *a, **k: {"durum": "sessiz"}
+        y = json.loads(self.m.ar_dinle({"bekle": 40})["content"][0]["text"])
+        self.assertTrue(y["devam"])
+        self.m._sessizlik["bas"] -= self.m.SESSIZ_SINIR_SN
+        y = json.loads(self.m.ar_dinle({"bekle": 40})["content"][0]["text"])
+        self.assertFalse(y["devam"])
+        self.assertIsNone(self.m._sessizlik["bas"])
+
+
 if __name__ == "__main__":
     unittest.main()

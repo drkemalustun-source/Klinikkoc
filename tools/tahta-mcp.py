@@ -112,8 +112,10 @@ görünüyorsa ya da cümle anlamsızsa öğrenciye ne demek istediğini kısaca
 - Soru kartı açıkken konuşursa kart kapanır; gerekirse soruyu yeniden sor.
 - tahta ya da soru_sor 'gonderilmedi: true' ile dönerse kullanıcının cevaplanmamış sözü vardır; önce ona cevap ver.
 - Ders ya da sohbet sırasında bir bölümü/cevabı bitirince dinle aracını çağır; gelen metne tahtada sesli
-  cevap ver (gerekirse çizerek), sonra yeniden dinle. "sessiz" dönerse bir-iki kez daha dinle; uzun
-  sessizlikte döngüyü bırak ve sohbete kısa bir not yaz.
+  cevap ver (gerekirse çizerek), sonra yeniden dinle. "sessiz" dönerse sonuçtaki 'devam' alanına bak:
+  devam=true ise hemen yeniden dinle (kullanıcı kısa bir ara vermiş olabilir; ~10 dakika dinlemeyi sürdür);
+  devam=false gelince döngüyü bırak ve sohbete "Tahtaya dönünce mikrofona basıp konuşun ya da buraya
+  'tahtaya bak' yazın" diye kısa bir not yaz.
 - Bir oturumda cevabını bitirmeden önce son iş olarak dinle çağır; kullanıcı sesli sohbetteyse dinleme
   döngüsünü sürdür. Sen dinlemezken söylenenler bekler; tahta sayfası kullanıcıya sohbete "tahtaya bak"
   yazmasını söyler. Kullanıcı "tahtaya bak" yazarsa tahta_durumu'nu (no'suz) çağır: bekleyen sözü döndürür.
@@ -463,7 +465,9 @@ ARACLAR = [
     },
     {
         "name": "dersler",
-        "description": "Bilgisayardaki dersleri, bölümlerini ve görsellerini listeler.",
+        "description": "Bilgisayardaki dersleri, bölümlerini ve görsellerini listeler. Öğrenci 'kendi makalem', 'kendi "
+                       "makalelerimden', 'eklediğim PDF' gibi bir şey derse ders='kendi-makalelerim' kitaplığını kullan "
+                       "(içindeki makaleler bu listede ve makaleler aracında görünür); başka bir makaleli dersi açma.",
         "inputSchema": {"type": "object", "properties": {}},
     },
     {
@@ -544,6 +548,13 @@ ARACLAR = [
                        "önceki hâline döner) ve anlatımın bitmesini tahta gibi bekler. birak=true: anlatımı sürdürmez, bırakır.",
         "inputSchema": {"type": "object", "properties": {
             "birak": {"type": "boolean", "description": "anlatımı sürdürme, bırak (konu değiştiyse)"}}},
+    },
+    {
+        "name": "ses_yeniden_baslat",
+        "description": "Pocket (doğal Türkçe ses) işçisini kapatıp yeniden açar. tahtayi_ac ya da tahta_durumu 'ses' alanında "
+                       "Pocket'in yüklenemediğini söylüyorsa ve kullanıcı bir düzeltme yaptıysa (ör. KUR'u yeniden çalıştırdı) "
+                       "kullan; sunucu penceresini kapatmak gerekmez. Yükleme ~1 dk sürer, o arada yedek ses konuşur.",
+        "inputSchema": {"type": "object", "properties": {}},
     },
     {
         "name": "durdur",
@@ -656,6 +667,13 @@ def ar_dersler(_):
                                             "ders paketini (.zip) sor; yolunu verirse ders_paketi_ekle ile kur, vermezse "
                                             "ders_paketi_ekle'yi yolsuz çağırıp paket sayfasını aç. Öğrenci derssiz, kendi "
                                             "makalesiyle çalışmak isterse makale_ekle(ders='kendi-makalelerim') kullan."})
+    for x in out:
+        if x["ders"] == makale_bulucu.KENDI:
+            mo = makale_bulucu.ozet(x["ders"])
+            x["kendi_kitaplik"] = True
+            x["makaleler"] = [m["kisa"] for m in mo["makaleler"] if m["durum"] == "hazir"]
+            x["not"] = ("Öğrencinin derse bağlı olmayan kendi makaleleri. Öğrenci 'kendi makalem', 'kendi PDF'im', "
+                        "'eklediğim makale' derse bu dersi seç (egitmen_hazirla(ders='kendi-makalelerim')).")
     return metin(out)
 
 
@@ -1619,8 +1637,52 @@ def ar_kayit_anonim_aktar(a):
 
 
 # ---------- Tahta ----------
+def _ayni_klasor(a, b):
+    try:
+        return os.path.normcase(os.path.realpath(a)) == os.path.normcase(os.path.realpath(b))
+    except (TypeError, ValueError):
+        return False
+
+
+def baska_kurulum_mu(d):
+    """Açık sunucu başka bir KlinikKoç kurulumundan mı? Eski sürüm sunucu yolunu söylemez: o zaman None."""
+    kok = (d or {}).get("kok")
+    if not kok:
+        return None
+    return None if _ayni_klasor(kok, KOK) else kok
+
+
+def ar_ses_yeniden_baslat(_):
+    if not sunucu_acik():
+        return metin({"durum": "sunucu kapalı", "not": "Önce tahtayi_ac."})
+    try:
+        return metin(istek("ses_yeniden", {}, zaman=10))
+    except urllib.error.HTTPError as e:
+        return metin({"durum": "desteklenmiyor", "hata": "Açık sunucu bu komutu bilmiyor (%s); sunucu penceresini "
+                                                         "kapatıp tahtayi_ac'ı yeniden çağır." % e.code}, hata=True)
+
+
 def ar_tahtayi_ac(_):
     d = sunucu_acik()
+    yabanci = baska_kurulum_mu(d)
+    if d and (yabanci or "kok" not in d):
+        # Aynı bilgisayarda iki kurulum: açık sunucu başka klasörden. Dersler, görseller ve ses karışmasın diye
+        # onu kapatıp bu kurulumun sunucusunu açarız. Eski sürüm sunucu kapatılamazsa kullanıcıya söyleriz.
+        try:
+            istek("kapat", {}, zaman=5)
+            for _ in range(20):
+                time.sleep(0.5)
+                if not sunucu_acik():
+                    break
+        except Exception:
+            pass
+        d = sunucu_acik()
+        if d:
+            return metin({"durum": "başka kurulum", "hata": (
+                "Bu bilgisayarda açık olan KlinikKoç sunucusu başka bir kurulumdan çalışıyor%s; bu kurulum: %s. "
+                "Kullanıcıdan o kurulumun siyah sunucu penceresini (ya da BASLAT penceresini) kapatmasını iste, "
+                "sonra tahtayi_ac'ı yeniden çağır." % (" (%s)" % yabanci if yabanci else " (eski bir sürüm)", KOK))},
+                hata=True)
     if not d:
         sunucuyu_baslat()
         for _ in range(30):
@@ -1797,13 +1859,33 @@ def ar_anlatima_devam(a):
     return metin(s)
 
 
+SESSIZ_SINIR_SN = 600  # kullanıcı bu kadar süre hiç konuşmazsa dinleme döngüsü bırakılır
+_sessizlik = {"bas": None}
+
+
 def ar_dinle(a):
     try:
         sure = max(5, min(int(a.get("bekle") or 40), 50))
     except (TypeError, ValueError):
         sure = 40
     try:
-        return metin(istek("dinle?bekle=%d" % sure, zaman=sure + 20))
+        y = istek("dinle?bekle=%d" % sure, zaman=sure + 20)
+        if isinstance(y, dict) and y.get("durum") == "sessiz":
+            simdi = time.time()
+            if _sessizlik["bas"] is None:
+                _sessizlik["bas"] = simdi - sure
+            gecen = int(simdi - _sessizlik["bas"])
+            y["sessiz_sn"] = gecen
+            y["devam"] = gecen < SESSIZ_SINIR_SN
+            if y["devam"]:
+                y["not"] = "Kullanıcı ara vermiş olabilir; hemen yeniden dinle çağır."
+            else:
+                _sessizlik["bas"] = None
+                y["not"] = ("Uzun sessizlik: dinlemeyi bırak. Sohbete kısa not yaz: tahtaya dönünce mikrofona basıp "
+                            "konuşsun ya da buraya 'tahtaya bak' yazsın.")
+        else:
+            _sessizlik["bas"] = None
+        return metin(y)
     except urllib.error.URLError:
         return metin({"durum": "bağlı değil", "hata": "Yerel tahta sunucusu kapalı. Önce tahtayi_ac aracını çağır."})
 
@@ -2000,7 +2082,8 @@ ISLEYICILER = {"egitmen_hazirla": ar_egitmen_hazirla, "kayit_oku": ar_kayit_oku,
                "makale_bul": ar_makale_bul, "makale_ekle": ar_makale_ekle,
                "sihirbaz_oku": ar_sihirbaz_oku, "sihirbaz_oner": ar_sihirbaz_oner,
                "ders_bitir": ar_ders_bitir, "tekrar_karti_yaz": ar_tekrar_karti_yaz, "depolama": ar_depolama,
-               "ders_arsivle": ar_ders_arsivle, "ders_paketi_ekle": ar_ders_paketi_ekle, "arsivden_geri_yukle": ar_arsivden_geri_yukle}
+               "ders_arsivle": ar_ders_arsivle, "ders_paketi_ekle": ar_ders_paketi_ekle,
+               "ses_yeniden_baslat": ar_ses_yeniden_baslat, "arsivden_geri_yukle": ar_arsivden_geri_yukle}
 
 
 def metin(veri, hata=False):

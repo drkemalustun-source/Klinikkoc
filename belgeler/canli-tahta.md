@@ -60,7 +60,7 @@ Kaldırma: `python tools/tahta-mcp.py --kaldir` (gerekirse `--ayar "<yol>"` ile)
 | `kayit_disa_aktar` / `kayit_ice_aktar` | Öğrencinin bütün kaydını tek dosyaya yazar / başka bilgisayarda içe alır |
 | `kayit_anonim_aktar` | Yalnız öğretmen: seçilen öğrencilerin kimliksiz araştırma dosyası (deneme kayıtları hariç) |
 | `olcme_testi` / `olcme_kaydet` | Öğretmenin onayladığı pilot testi (ön / son / gecikmeli) seçenekleri karıştırarak verir; yanıtları puanlayıp kayda yazar |
-| `tahtayi_ac` | Yerel sunucu kapalıysa açar, tahta sayfasını açar ve bağlanmasını bekler |
+| `tahtayi_ac` | Yerel sunucu kapalıysa açar, tahta sayfasını açar ve bağlanmasını bekler; açık sunucu başka bir KlinikKoç klasöründense onu kapatıp bu klasörden açar |
 | `dersler` | Bilgisayardaki dersleri, bölümlerini ve görsellerini listeler |
 | `ders_paketi_ekle` | Öğretmenin verdiği ders paketini (.zip) kurar ve makalelerini aramaya başlar; yol verilmezse paket sayfasını açar |
 | `ders_oku` | Ders planını ya da bir bölümün anlatımını, tahta komutlarını ve sorularını okur |
@@ -72,6 +72,7 @@ Kaldırma: `python tools/tahta-mcp.py --kaldir` (gerekirse `--ayar "<yol>"` ile)
 | `videolar` | Dersin videolarını listeler (klasördeki dosyalar ve YouTube bağlantıları) |
 | `anlatima_devam` | Siz söz alınca duraklayan anlatımı, Claude cevap verdikten sonra kaldığı cümleden sürdürür |
 | `durdur` | Anlatımı hemen keser |
+| `ses_yeniden_baslat` | Pocket sesi açılamadıysa ya da durduysa beklemeden yeniden başlatır (kendiliğinden de bir dakikada bir dener) |
 
 Tahta komutları: başlık, madde, terim, not, tablo, akış, karşılaştırma, ders görseli,
 görselde işaretleme ve yakınlaştırma, serbest çizim (çizgi, ok, kutu, elips, yazı).

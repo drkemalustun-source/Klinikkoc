@@ -258,7 +258,8 @@ class Canli:
                  "konusma_bekleyen": len(self.konusmalar),
                  "duraklatildi": self.duraklatildi,
                  "claude_dinliyor": self.dinliyor(),
-                 "ses": self.ses_durumu()}
+                 "ses": self.ses_durumu(),
+                 "kok": KOK}  # hangi kurulumdan çalıştığı: tahta aracı kendi klasörüyle karşılaştırır
             if al and self.konusmalar:
                 d["bekleyen_konusmalar"] = [dict(x) for x in self.konusmalar]
                 self._konusma_ekle(d)
@@ -530,6 +531,7 @@ class Canli:
         piper = self.piper_durumu()
         piper_olur = piper in ("hazır", "yüklenecek")
         if a.get("motor") == "pocket":
+            POCKET.baslat()  # önceki deneme başarısızsa (ve bekleme süresi geçtiyse) yeniden dener
             if POCKET.durum == "hazır":
                 return {"motor": "pocket", "yazi": "Pocket (%s)" % a.get("ses"), "ayrinti": "Pocket %s: hazır" % a.get("ses")}
             if POCKET.durum == "yükleniyor" and piper_olur:
@@ -692,6 +694,13 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
                 return self._json(200, CANLI.dinle(float(q.get("bekle", 40))))
             if yol == "kanal":
                 return self._json(200, CANLI.kanal(float(q.get("bekle", 25))))
+            if yol == "kapat" and self.command == "POST":
+                # Başka bir kurulumun tahta aracı bu sunucuyu kendi sunucusuyla değiştirmek istediğinde (bkz. tahtayi_ac).
+                threading.Thread(target=self.server.shutdown, daemon=True).start()
+                return self._json(200, {"durum": "kapanıyor", "kok": KOK})
+            if yol == "ses_yeniden":
+                POCKET.baslat(zorla=True)  # Pocket işçisini kapatıp yeniden açar (ör. ses kurulumu düzeltildikten sonra)
+                return self._json(200, {"durum": "yeniden başlatılıyor", "ses": CANLI.ses_durumu()})
             if yol == "birak":
                 return self._json(200, CANLI.birak_konusmalari())
             if yol == "merhaba":

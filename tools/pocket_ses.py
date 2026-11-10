@@ -43,8 +43,20 @@ def ortam_python():
     return None
 
 
+YENIDEN_DENE_SN = 60  # işçi açılamadıysa bu kadar saniye sonra (bir sonraki istekte) yeniden denenir
+
+
+def isci_komutu(py):
+    """Pocket işçisinin komutu. -X utf8: kitaplıklar (pocket_tts'in config okuması gibi) dosyaları kodlama
+    belirtmeden açtığında da UTF-8 kullansın; yoksa Windows'ta Türkçe harfli kurulum yolu ('koç deneme')
+    bozulur ve model dosyaları bulunamaz."""
+    return [py, "-I", "-X", "utf8", os.path.join(KOK, "tools", "pocket-isci.py")]
+
+
 class PocketIsci:
-    """Tek bir işçi süreci; istekler sırayla gider. durum: 'yükleniyor' | 'hazır' | hata metni."""
+    """Tek bir işçi süreci; istekler sırayla gider. durum: 'yükleniyor' | 'hazır' | hata metni.
+    İşçi açılamaz ya da sonradan kapanırsa YENIDEN_DENE_SN sonra bir sonraki istekte yeniden başlatılır;
+    böylece bir düzeltmeden (ör. ses kurulumu) sonra sunucu penceresini kapatıp açmak gerekmez."""
 
     def __init__(self):
         self.surec = None
@@ -52,10 +64,24 @@ class PocketIsci:
         self.hazir = threading.Event()
         self.kilit = threading.Lock()
         self.sayac = 0
+        self.son_deneme = 0.0
 
-    def baslat(self):
-        if self.surec is not None:
+    def _calisiyor(self):
+        """Yükleniyor ya da hazır ve süreç hâlâ açık: yeniden başlatmaya gerek yok."""
+        if self.durum == "yükleniyor":
+            return True
+        return self.durum == "hazır" and (self.surec is None or self.surec.poll() is None)
+
+    def baslat(self, zorla=False):
+        if not zorla and self._calisiyor():
             return
+        if self.durum != "başlatılmadı":
+            if not zorla and time.time() - self.son_deneme < YENIDEN_DENE_SN:
+                return
+            self.kapat()
+            self.surec = None
+            self.hazir.clear()
+        self.son_deneme = time.time()
         py = ortam_python()
         if not py:
             self.durum = "Pocket ses ortamı yok (python tools/ses-uret.py --kur-pocket)"
@@ -64,27 +90,30 @@ class PocketIsci:
         bayrak = getattr(subprocess, "CREATE_NO_WINDOW", 0)
         self.durum = "yükleniyor"
         self.surec = subprocess.Popen(
-            [py, "-I", os.path.join(KOK, "tools", "pocket-isci.py")], cwd=KOK,
+            isci_komutu(py), cwd=KOK,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
             encoding="utf-8", bufsize=1, creationflags=bayrak)
-        threading.Thread(target=self._ilk_yanit, daemon=True).start()
+        threading.Thread(target=self._ilk_yanit, args=(self.surec,), daemon=True).start()
 
-    def _oku(self):
+    def _oku(self, surec=None):
+        surec = surec or self.surec
         while True:
-            satir = self.surec.stdout.readline()
+            satir = surec.stdout.readline()
             if not satir:
                 raise RuntimeError("Pocket işçisi kapandı")
             if satir.startswith("@@"):
                 return json.loads(satir[2:])
 
-    def _ilk_yanit(self):
+    def _ilk_yanit(self, surec):
         try:
-            y = self._oku()
-            self.durum = "hazır" if y.get("hazir") else ("Pocket yüklenemedi: " + str(y.get("hata")))
+            y = self._oku(surec)
+            durum = "hazır" if y.get("hazir") else ("Pocket yüklenemedi: " + str(y.get("hata")))
             self.yukleme_sn = y.get("sure")
         except Exception as e:
-            self.durum = "Pocket yüklenemedi: %s" % e
-        self.hazir.set()
+            durum = "Pocket yüklenemedi: %s" % e
+        if surec is self.surec:  # bu arada yeniden başlatıldıysa eski sürecin sonucu yazılmaz
+            self.durum = durum
+            self.hazir.set()
 
     def wav(self, metin, ses="female_3", tohum=1, bekle=0.0):
         """WAV baytları döner. Model hazır değilse (bekle sn içinde) RuntimeError."""
@@ -114,7 +143,10 @@ class PocketIsci:
                 self.surec.stdin.close()
                 self.surec.wait(5)
             except Exception:
-                self.surec.kill()
+                try:
+                    self.surec.kill()
+                except Exception:
+                    pass
 
 
 UYGUN = ((3, 10), (3, 13))   # pocket-tts-turkish (torch) bu Python sürümleriyle kurulabiliyor
