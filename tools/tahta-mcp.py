@@ -41,6 +41,7 @@ import karne as karne_  # noqa: E402
 import kayit_aktar  # noqa: E402
 import kayit_deposu as kd  # noqa: E402
 import makale_bulucu  # noqa: E402
+import sihirbaz  # noqa: E402
 import veri_yeri  # noqa: E402
 
 
@@ -252,6 +253,28 @@ ARACLAR = [
             "dosya": {"type": "string", "description": "PDF'in bu bilgisayardaki tam yolu"},
             "kaynak": {"type": "string", "description": "makaleler listesindeki id (isteğe bağlı)"}},
             "required": ["ders", "dosya"]},
+    },
+    {
+        "name": "sihirbaz_oku",
+        "description": "Öğretmen için: ders hazırlama sihirbazındaki bir ders taslağını okur (ders kartı, makale künyeleri ve "
+                       "özetleri, ders notunun bölümleri, öğretmenin soruları ve dikkat edilecekler, onaylı hedefler) ve "
+                       "nasıl öneri yazılacağını söyler. ders verilmezse taslaklar listelenir. Öğretmen 'X dersi için "
+                       "öneri hazırla' derse önce bunu, sonra sihirbaz_oner'i çağır.",
+        "inputSchema": {"type": "object", "properties": {"ders": {"type": "string"}}},
+    },
+    {
+        "name": "sihirbaz_oner",
+        "description": "Öğretmen için: ders taslağına öneri yazar (hedefler + Bloom düzeyi, terimler, soru taslakları, "
+                       "yanılgılar). Öneriler öğretmen sihirbaz sayfasında kabul etmeden derse girmez. Biçim için "
+                       "sihirbaz_oku'nun talimatına uy. Yalnız gönderdiğin türler değişir.",
+        "inputSchema": {"type": "object", "properties": {
+            "ders": {"type": "string"},
+            "hedefler": {"type": "array", "items": {"type": "object"}},
+            "terimler": {"type": "array", "items": {"type": "string"}},
+            "sorular": {"type": "array", "items": {"type": "object"}},
+            "yanilgilar": {"type": "array", "items": {"type": "object"}},
+            "ac": {"type": "boolean", "description": "sihirbaz sayfasını tarayıcıda aç"}},
+            "required": ["ders"]},
     },
     {
         "name": "vakalar",
@@ -845,6 +868,7 @@ def ar_egitmen_hazirla(a):
                     "kaynak": eg.get("kaynak") or d.get("source"), "hedefler": eg.get("hedefler"),
                     "ogretmen_notlari": eg.get("ogretmenNotlari"), "bilinen_yanilgilar": eg.get("yanilgilar"),
                     "oturumlar": eg.get("oturumlar"), "arac_seti": eg.get("aracSeti"), "olcme": olcme_ozeti(eg),
+                    "ogretmenin_sorulari": eg.get("soruBankasi") or None,
                     "gorseller": {k: v.get("aciklama") for k, v in (eg.get("gorseller") or {}).items()}
                     or {k: v.get("caption") for k, v in (d.get("assets") or {}).items()},
                     "hazir_anlatim_bolumleri": [s["id"] for s in d.get("sections", [])],
@@ -1742,6 +1766,29 @@ def ar_makale_ekle(a):
     return metin(makale_bulucu.elle_ekle(ders, veri, os.path.basename(yol), a.get("kaynak") or None))
 
 
+def ar_sihirbaz_oku(a):
+    if not a.get("ders"):
+        return metin({"taslaklar": sihirbaz.liste(),
+                      "not": "Öğretmen yeni dersi sihirbaz sayfasında açar: http://localhost:%d/sihirbaz.html" % PORT})
+    return metin(sihirbaz.claude_icin_malzeme(a["ders"]))
+
+
+def ar_sihirbaz_oner(a):
+    ders = a.get("ders")
+    o = sihirbaz.oneri_yaz(ders, {k: a.get(k) for k in ("hedefler", "terimler", "sorular", "yanilgilar")}, kim="claude")
+    out = {"durum": "yazıldı", "sayilar": {k: len(v) for k, v in o.items() if isinstance(v, list)},
+           "not": "Öneriler sihirbaz sayfasında öğretmenin onayını bekliyor. Öğretmene bunu söyle."}
+    if a.get("ac"):
+        if not sunucu_acik():
+            sunucuyu_baslat()
+            for _ in range(30):
+                time.sleep(0.5)
+                if sunucu_acik():
+                    break
+        webbrowser.open("http://localhost:%d/sihirbaz.html?ders=%s" % (PORT, ders))
+    return metin(out)
+
+
 ISLEYICILER = {"egitmen_hazirla": ar_egitmen_hazirla, "kayit_oku": ar_kayit_oku, "kayit_yaz": ar_kayit_yaz,
                "rapor_yaz": ar_rapor_yaz, "olcme_testi": ar_olcme_testi, "olcme_kaydet": ar_olcme_kaydet,
                "tahtayi_ac": ar_tahtayi_ac, "dersler": ar_dersler, "ders_oku": ar_ders_oku,
@@ -1752,7 +1799,8 @@ ISLEYICILER = {"egitmen_hazirla": ar_egitmen_hazirla, "kayit_oku": ar_kayit_oku,
                "sozlu_prova": ar_sozlu_prova, "tekrar_listesi": ar_tekrar_listesi,
                "kayit_disa_aktar": ar_kayit_disa_aktar, "kayit_ice_aktar": ar_kayit_ice_aktar,
                "kayit_anonim_aktar": ar_kayit_anonim_aktar, "makaleler": ar_makaleler,
-               "makale_bul": ar_makale_bul, "makale_ekle": ar_makale_ekle}
+               "makale_bul": ar_makale_bul, "makale_ekle": ar_makale_ekle,
+               "sihirbaz_oku": ar_sihirbaz_oku, "sihirbaz_oner": ar_sihirbaz_oner}
 
 
 def metin(veri, hata=False):

@@ -12,6 +12,7 @@ Ne yapar:
      ses/ses-ayari.json'daki sesle (Pocket TTS kadın 3; yedek Piper dfki) anlatır. Yalnızca bu bilgisayarın içinden erişilir.
   4. Makaleler (/api/makale/...): ders paketindeki makaleleri bulup indirir, öğrencinin sürükleyip bıraktığı
      PDF'leri ve ders paketlerini kurar (makaleler.html). Yalnızca bu bilgisayarın içinden erişilir.
+  5. Ders hazırlama sihirbazı (/api/sihirbaz/..., sihirbaz.html): öğretmenin ders taslakları, öneriler ve paketleme.
 
 Kullanım:
   python3 tools/sunucu.py              # sunucuyu açar, tarayıcıda ses testini açar
@@ -46,6 +47,7 @@ import pocket_ses  # noqa: E402  (tools/pocket_ses.py)
 import terim_sozlugu  # noqa: E402
 import ders_paketi  # noqa: E402
 import makale_bulucu  # noqa: E402
+import sihirbaz  # noqa: E402
 import veri_yeri  # noqa: E402
 
 KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -763,6 +765,70 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             return self._json(500, {"hata": "%s: %s" % (type(e).__name__, e)})
 
+    def _sihirbaz(self, govde=b""):
+        """Öğretmen ekranı: ders taslakları, künyeler, notlar, vakalar, öneriler, paketleme."""
+        u = urllib.parse.urlparse(self.path)
+        q = dict(urllib.parse.parse_qsl(u.query))
+        yol = u.path[len("/api/sihirbaz/"):]
+        if not self._yerel_mi():
+            return self._json(403, {"hata": "Yalnızca bu bilgisayardan"})
+        S = sihirbaz
+        try:
+            if yol == "liste":
+                return self._json(200, {"taslaklar": S.liste(), "kademeler": S.KADEME_ADI, "bloom": S.BLOOM})
+            if yol == "taslak":
+                return self._json(200, S.taslak_oku(q.get("ders", "")))
+            if yol == "bolumler":
+                return self._json(200, {"bolumler": S.not_bolumleri(q.get("ders", ""), q.get("not", ""))})
+            if yol == "denetle":
+                return self._json(200, S.denetle(q.get("ders", "")))
+            if self.command != "POST":
+                return self._json(405, {"hata": "POST gerekli"})
+            ders = q.get("ders", "")
+            if yol == "not":
+                return self._json(200, S.not_ekle(ders, govde, q.get("ad") or "not.docx", q.get("kademe") or "fakulte"))
+            if yol == "vaka":
+                return self._json(200, S.vaka_ekle(ders, govde, q.get("ad") or "vaka.json", q.get("kademe") or "fakulte"))
+            v = json.loads(govde.decode("utf-8")) if govde else {}
+            ders = str(v.get("ders") or ders)
+            if yol == "yeni":
+                return self._json(200, S.yeni(ders, v.get("baslik") or ""))
+            if yol == "kart":
+                return self._json(200, S.kart_guncelle(ders, v.get("alanlar") or {}))
+            if yol == "doi":
+                return self._json(200, S.doi_ekle(ders, str(v.get("metin", ""))))
+            if yol == "kunye_yenile":
+                return self._json(200, S.kunyeleri_yenile(ders))
+            if yol == "ana":
+                return self._json(200, S.ana_kaynak(ders, str(v.get("id", ""))))
+            if yol == "oge":
+                return self._json(200, S.oge_kaydet(ders, str(v.get("liste", "")), v.get("oge") or {}))
+            if yol == "sil":
+                return self._json(200, S.oge_sil(ders, str(v.get("liste", "")), str(v.get("id", ""))))
+            if yol == "oner_kural":
+                return self._json(200, S.kural_onerileri(ders))
+            if yol == "kabul":
+                return self._json(200, S.oneri_kabul(ders, str(v.get("tur", "")), str(v.get("oneri_id", "")),
+                                                     v.get("duzeltme") or None))
+            if yol == "reddet":
+                return self._json(200, S.oneri_reddet(ders, str(v.get("tur", "")), str(v.get("oneri_id", ""))))
+            if yol == "paketle":
+                return self._json(200, S.paketle(ders))
+            if yol == "klasor_ac":
+                k = os.path.join(veri_yeri.belgeler(), "KlinikKoç Ders Paketleri")
+                os.makedirs(k, exist_ok=True)
+                klasoru_ac(k)
+                return self._json(200, {"acildi": k})
+            return self._json(404, {"hata": "Bilinmeyen istek"})
+        except FileExistsError as e:
+            return self._json(409, {"hata": str(e)})
+        except FileNotFoundError as e:
+            return self._json(404, {"hata": str(e)})
+        except (ValueError, KeyError, zipfile.BadZipFile, RuntimeError) as e:
+            return self._json(400, {"hata": str(e)})
+        except Exception as e:
+            return self._json(500, {"hata": "%s: %s" % (type(e).__name__, e)})
+
     def _host_yerel_mi(self):
         host = self.headers.get("Host") or ""
         return not host or (urllib.parse.urlsplit("//" + host).hostname or "") in self.YEREL
@@ -777,6 +843,8 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
             return self._canli()
         if self.path.startswith("/api/makale/"):
             return self._makale()
+        if self.path.startswith("/api/sihirbaz/"):
+            return self._sihirbaz()
         if urllib.parse.urlparse(self.path).path.lower().endswith(self.VIDEO):
             return self._video()
         return super().do_GET()
@@ -844,11 +912,13 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
         n = int(self.headers.get("Content-Length") or 0)
         if n > 600 * 1024 * 1024:
             return self._json(413, {"hata": "Dosya çok büyük"})
-        if self.path.startswith("/api/makale/") and not self._yerel_mi():
+        if self.path.startswith(("/api/makale/", "/api/sihirbaz/")) and not self._yerel_mi():
             return self._json(403, {"hata": "Yalnızca bu bilgisayardan"})
         govde = self.rfile.read(n) if n else b""
         if self.path.startswith("/api/makale/"):
             return self._makale(govde)
+        if self.path.startswith("/api/sihirbaz/"):
+            return self._sihirbaz(govde)
         if self.path.startswith("/api/canli/"):
             return self._canli(govde)
         if self.path.startswith("/api/ses-testi/kaydet"):

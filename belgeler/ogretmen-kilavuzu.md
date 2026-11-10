@@ -2,6 +2,9 @@
 
 > Bu kılavuz iskelettir; 1. aşama bitince adım adım ekran görüntüleriyle tamamlanacak.
 
+> **Kolay yol:** Dersi dosya yazmadan, ekrandan hazırlamak için [ders hazırlama sihirbazı](sihirbaz.md).
+> Bu kılavuz dosyaları elle yazmak isteyenler içindir.
+
 KlinikKoç'ta bir konu üç parçadan oluşur:
 
 1. **Ders** (`lessons/<ders>/`): kısa temel anlatım, hedefler, sorular. Öğrenci vakada takılınca buraya döner.

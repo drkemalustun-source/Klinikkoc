@@ -245,6 +245,12 @@ def ders_parcalari(ders):
                             "metin": duz(" ".join(parcalar)), "bolum": s["id"], "adim": st.get("id"),
                             "hedef": q.get("goal") or hedef, "kaynak": q.get("sourceRef")})
 
+    # 2b. Öğretmenin soru bankası (sihirbazla hazırlanan derslerde egitmen.json → soruBankasi)
+    for q in eg.get("soruBankasi") or []:
+        parcalar = [q.get("metin") or "", " ".join(q.get("secenekler") or []), q.get("ornek_cevap") or ""]
+        out.append({"ders": ders, "tur": "soru", "baslik": "Soru: " + (q.get("metin") or "")[:60],
+                    "metin": duz(" ".join(parcalar)), "hedef": q.get("hedef"), "kaynak": "öğretmenin sorusu"})
+
     # 3. Öğretmen notları (egitmen.json)
     for n in eg.get("ogretmenNotlari") or []:
         metin = n.get("metin") or n.get("not") or n.get("kural") or ""

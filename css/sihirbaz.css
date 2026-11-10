@@ -1,0 +1,35 @@
+/* Ders hazırlama sihirbazı: makaleler.css üzerine form ve öneri kartları. */
+.sh h3 { font-size: .95em; margin: 1.2em 0 .4em; color: var(--chalk-dim); }
+.sh input, .sh select, .sh textarea { font: inherit; color: var(--chalk); background: var(--board);
+  border: 1px solid var(--board-line); border-radius: 10px; padding: .45em .6em; min-height: 44px;
+  width: 100%; max-width: 100%; }
+.sh textarea { min-height: 0; resize: vertical; }
+.sh-form { display: grid; gap: .7em; margin: .7em 0; }
+.sh-form label { display: grid; gap: .25em; font-size: .9em; color: var(--chalk-dim); }
+.sh-iki { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.sh-genis { grid-column: 1 / -1; }
+.sh-yeni summary { cursor: pointer; color: var(--info); margin-top: .8em; }
+.sh-adimlar { position: sticky; top: 0; z-index: 2; display: flex; gap: .4em; flex-wrap: wrap;
+  background: var(--board); padding: .5em 0; margin-bottom: .5em; }
+.sh-adimlar a { color: var(--chalk-dim); text-decoration: none; border: 1px solid var(--board-line);
+  border-radius: 999px; padding: .2em .8em; font-size: .82em; }
+.sh-adimlar a:hover { color: var(--chalk); border-color: var(--chalk-dim); }
+.sh-ekle { display: flex; gap: .5em; margin: .4em 0; }
+.sh-ekle input { flex: 1 1 auto; }
+.sh-terimler { display: flex; flex-wrap: wrap; gap: .4em; }
+.sh-terim { display: inline-flex; align-items: center; gap: .3em; border: 1px solid var(--board-line);
+  border-radius: 999px; padding: .15em .3em .15em .7em; font-size: .85em; }
+.sh-terim button { background: none; border: 0; color: var(--chalk-dim); cursor: pointer; font-size: 1em; padding: 0 .3em; }
+.sh-oneri { border: 1px dashed var(--board-line); border-radius: 12px; padding: .6em .8em; margin: .5em 0; display: grid; gap: .4em; }
+.sh-oneri .sh-kim { font-size: .75em; color: var(--chalk-dim); }
+.sh-oneri .sh-gerekce { font-size: .82em; color: var(--chalk-dim); }
+.sh-satir { display: flex; gap: .5em; flex-wrap: wrap; align-items: center; }
+.sh-satir > input { flex: 1 1 260px; }
+.sh-satir > select { flex: 0 1 180px; }
+.sh-hata { color: var(--warn); }
+.sh-uyari { color: var(--accent); }
+.sh-tamam { color: var(--ok); }
+.sh-ozet { color: var(--chalk-dim); font-size: .85em; overflow-wrap: anywhere; }
+.sh details.sh-bolumler summary { cursor: pointer; color: var(--info); font-size: .85em; }
+.sh details.sh-bolumler ol { font-size: .85em; color: var(--chalk-dim); margin: .3em 0; }
+@media (max-width: 640px) { .sh-iki { grid-template-columns: minmax(0, 1fr); } }

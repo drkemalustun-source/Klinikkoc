@@ -49,7 +49,8 @@ vakaya geri döner. Sorular not için değildir; karne yalnız öğrencinin kend
   derse dosyaya sağ tıklayıp **Aç → Aç** deyin. Python 3 yoksa kurulum bunu söyler
   ([python.org](https://www.python.org/downloads/macos/)). Claude'u kapatmak için Cmd+Q.
 
-**Öğretmen:** Kendi dersinizi ve vakalarınızı eklemek için [belgeler/ogretmen-kilavuzu.md](belgeler/ogretmen-kilavuzu.md).
+**Öğretmen:** Dersi ekrandan adım adım hazırlamak için ders hazırlama sihirbazı: [belgeler/sihirbaz.md](belgeler/sihirbaz.md).
+Dosyaları elle yazmak isterseniz [belgeler/ogretmen-kilavuzu.md](belgeler/ogretmen-kilavuzu.md).
 
 **Makaleler ve ders paketleri:** Ders paketinde makalelerin yalnız listesi (künye ve DOI) vardır; KlinikKoç
 makaleleri öğrencinin bilgisayarına kendisi indirir, inmeyenleri öğrenci sürükleyip bırakır. Ayrıntı:
