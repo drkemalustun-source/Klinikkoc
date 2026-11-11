@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#16201c">
+  <title>KlinikKoç · Çizim şablonları</title>
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/tahta.css">
+  <style>
+    body { margin: 0; background: #16201c; color: #e8efe9; font-family: system-ui, sans-serif; }
+    main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+    h1 { font-size: 1.3rem; margin: 8px 0; }
+    p { color: #b8c6bd; margin: 6px 0 12px; }
+    a { color: #f2d35b; }
+    .sg-satir { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+    select, button { font: inherit; padding: 8px 12px; border-radius: 8px; border: 1px solid #44554c; background: #223029; color: inherit; cursor: pointer; }
+    button.secili { background: #f2d35b; color: #16201c; border-color: #f2d35b; }
+    svg#sgTahta { width: 100%; aspect-ratio: 16 / 9; background: #1d2a25; border-radius: 12px; display: block; }
+  </style>
+</head>
+<body>
+  <main>
+    <a href="index.html">‹ Dersler</a>
+    <h1>Çizim şablonları</h1>
+    <p>Eğitmenin tahtada kullandığı hazır anatomik çizimler. Bir şablon seçin, sonra durum düğmelerine basın: çizim bir durumdan ötekine akarak geçer.</p>
+    <div class="sg-satir">
+      <label for="sgSablon">Şablon</label> <select id="sgSablon"></select>
+      <label for="sgEtiket">Etiketler</label>
+      <select id="sgEtiket"><option value="hepsi">Temel</option><option value="ayrinti">Ayrıntı</option><option value="yok">Yok</option></select>
+      <label><input type="checkbox" id="sgSonda"> Sonda</label>
+    </div>
+    <div class="sg-satir" id="sgDurumlar"></div>
+    <svg id="sgTahta" viewBox="0 0 160 90" role="img" aria-label="Anatomik şablon"></svg>
+  </main>
+  <script src="js/anatomi.js"></script>
+  <script src="js/anatomi-bolge.js"></script>
+  <script src="js/sablon-galerisi.js"></script>
+</body>
+</html>
