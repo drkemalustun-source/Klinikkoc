@@ -50,17 +50,29 @@
   // Başka sekme tahtayı devralınca bu sekmenin bekleyen istekleri kesilir (aynı komutu iki sekme almasın).
   const sekmeKesici = new AbortController();
   let sekmeKapandi = false;
-  async function api(yol, govde) {
+  // sure (ms): istek en çok bu kadar bekler; sunucu takılırsa tahta da takılı kalmasın.
+  async function api(yol, govde, sure) {
     if (sekmeKapandi) throw new Error('Tahta başka sekmede açık');
-    const r = await fetch('/api/canli/' + yol, govde === undefined ? { cache: 'no-store', signal: sekmeKesici.signal } : {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(govde)
-    });
-    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).hata || ('HTTP ' + r.status));
-    return r;
+    const kesici = new AbortController();
+    const kes = () => kesici.abort();
+    sekmeKesici.signal.addEventListener('abort', kes);
+    const zaman = sure ? setTimeout(kes, sure) : null;
+    try {
+      const r = await fetch('/api/canli/' + yol, govde === undefined ? { cache: 'no-store', signal: kesici.signal } : {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(govde), signal: kesici.signal
+      });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).hata || ('HTTP ' + r.status));
+      return r;
+    } finally {
+      if (zaman) clearTimeout(zaman);
+      sekmeKesici.signal.removeEventListener('abort', kes);
+    }
   }
 
   // ---------- Ses ----------
   const HIZLAR = [1, 1.2, 1.4];
+  const SES_SURE = 25000; // ms: bir cümlenin sesi bundan uzun sürerse yedek sese geçilir
+  const ONDEN = 2; // kaç cümle önceden seslendirilsin
   let hiz = Number(AT.prefs.get('canliHiz')) || 1.2;
   const duz = (t) => String(t || '').replace(/\*\*|(?<!\w)_|_(?!\w)/g, '').replace(/\{\d+\}/g, '').replace(/\s+/g, ' ').trim();
 
@@ -71,10 +83,12 @@
     web: new AT.speech.WebSpeechEngine('tr-TR'),
     konusuyor: false,
 
+    // Bir cümlenin sesi en çok SES_SURE ms beklenir; gelmezse o cümle tarayıcı sesiyle okunur (anlatım takılmaz).
     async wav(metin) {
-      const r = await api('ses', { metin });
+      const r = await api('ses', { metin }, SES_SURE);
       return URL.createObjectURL(await r.blob());
     },
+    hata: 0,
 
     // Döner: 'kesildi' (durduruldu ya da araya cevap girdi) ya da undefined (bitti).
     // secenek.bas: kaçıncı cümleden başlansın; secenek.cumle(i): okunan cümle bildirilir (kaldığı yer için).
@@ -88,28 +102,46 @@
       try {
         const cumleler = AT.speech.sentences(metin);
         const bas = Math.max(0, Math.min(secenek.bas || 0, cumleler.length - 1));
-        let sonraki = this.piperVar ? this.wav(cumleler[bas]).catch(() => null) : null;
+        // Sıradaki ÖNDEN cümlenin sesi şimdiden istenir: cümle araları kısalır.
+        const hazir = new Map();
+        const iste = (k) => {
+          if (!this.piperVar || k >= cumleler.length || hazir.has(k)) return;
+          hazir.set(k, this.wav(cumleler[k]).catch(() => null));
+        };
+        for (let k = bas; k <= bas + ONDEN; k++) iste(k);
+        const birak = () => { for (const p of hazir.values()) p.then((u) => u && URL.revokeObjectURL(u)); };
         for (let i = bas; i < cumleler.length; i++) {
           await durak.bekle();
-          if (my !== this.token) return 'kesildi';
+          if (my !== this.token) { birak(); return 'kesildi'; }
           if (secenek.cumle) secenek.cumle(i);
-          const url = sonraki ? await sonraki : null;
-          sonraki = this.piperVar && i + 1 < cumleler.length ? this.wav(cumleler[i + 1]).catch(() => null) : null;
+          const bekleyen = hazir.get(i);
+          const url = bekleyen ? await bekleyen : null;
+          hazir.delete(i);
+          iste(i + ONDEN + 1);
           altyazi(cumleler[i], 'Claude');
           await durak.bekle();
-          if (my !== this.token) { if (url) URL.revokeObjectURL(url); return 'kesildi'; }
+          if (my !== this.token) { if (url) URL.revokeObjectURL(url); birak(); return 'kesildi'; }
           if (url) {
+            this.hata = 0;
             await this.cal(url, my);
             URL.revokeObjectURL(url);
-            if (my !== this.token) return 'kesildi';
+            if (my !== this.token) { birak(); return 'kesildi'; }
           } else {
-            if (this.piperVar) {
+            // Bu cümlenin sesi gelmedi: yalnız bu cümle tarayıcı sesiyle okunur. Üst üste 3 kez olursa sunucu sesi
+            // bırakılır (sayfa yenilenene kadar).
+            if (this.piperVar && ++this.hata >= 3) {
               this.piperVar = false;
-              toast('Bu bilgisayarın sesi açılamadı; tarayıcının Türkçe sesi (yedek) kullanılıyor.', 6000);
+              toast('Bu bilgisayarın sesi yanıt vermiyor; tarayıcının Türkçe sesi (yedek) kullanılıyor.', 6000);
               sesGoster({ motor: 'tarayici', yazi: 'tarayıcı sesi (yedek)',
-                ayrinti: 'Sunucu sesi (Pocket/Piper) yanıt vermedi; tarayıcının Türkçe sesi kullanılıyor.' }, true);
+                ayrinti: 'Sunucu sesi (Pocket/Piper) üst üste yanıt vermedi; tarayıcının Türkçe sesi kullanılıyor.' }, true);
             }
             this.web.setRate(hiz);
+            if (this.piperVar) {
+              await this.web.speak(cumleler[i]);
+              if (my !== this.token) { birak(); return 'kesildi'; }
+              continue;
+            }
+            birak();
             let j = i;
             await this.web.speak(cumleler.slice(i).join(' '), { onSentence: (s) => {
               altyazi(s, 'Claude');
@@ -928,7 +960,7 @@
       if (sozAlindi) {
         // Söz sunucuya ulaşmadan sonucu bildirme: Claude sözü sonuçla birlikte ya da ondan önce alsın.
         if (sozBitti) await Promise.race([sozBitti, new Promise((r) => setTimeout(r, 20000))]);
-        sonuc = Object.assign({}, sonuc, { not: 'Kullanıcı mikrofonla söz aldı; söylediğini dinle aracıyla al.' });
+        sonuc = Object.assign({}, sonuc, { not: 'Kullanıcı mikrofonla söz aldı; söylediğini bekle aracıyla al.' });
         sozAlindi = false;
         sozBitti = null;
       }
@@ -1062,7 +1094,7 @@
     if (k) api('bitti', { no: k.no, sonuc: { durum: 'durduruldu' }, durum: durum() }).catch(() => {});
   }
 
-  // Claude 'dinle' aracıyla (ya da bekleyen bir tahta çağrısıyla) beklerken mikrofon tuşunun çevresinde
+  // Claude 'bekle' aracıyla (ya da bekleyen bir tahta çağrısıyla) beklerken mikrofon tuşunun çevresinde
   // yeşil halka ve üstteki ışık yanar.
   let claudeDinliyor = false;
   const isikEl = $('#claudeIsik');
@@ -1077,6 +1109,35 @@
     if (SR) mikBtn.title = claudeDinliyor ? 'Claude dinliyor · dokunup konuşun (M)' : 'Konuş: dokunun, konuşun; susunca gönderilir (M)';
     if (!calisan && !mik.aktif) durumEl.textContent = hazirYazisi();
   }
+  // Otomatik uyandırma: Claude dinlemiyorken söylenen söz birkaç saniye sonra Claude sohbetine kendiliğinden yazılıp
+  // gönderilir (tools/uyandirma.py). Bekleyen uyarısındaki düğmeyle açılıp kapatılır.
+  let uyandirmaT = '';
+  let uyandirmaAcik = false;
+  const uyDugme = $('#otomatikGonder');
+  function uyandirmaGoster(u) {
+    uyandirmaAcik = !!u.acik;
+    if (uyDugme && u.destek === false) uyDugme.hidden = true; // bu sistemde otomatik gönderme yok
+    if (uyDugme) {
+      uyDugme.setAttribute('aria-pressed', uyandirmaAcik ? 'true' : 'false');
+      uyDugme.textContent = 'Otomatik gönder: ' + (uyandirmaAcik ? 'açık' : 'kapalı');
+    }
+    const t = u.t === undefined ? '' : String(u.t);
+    if (t === uyandirmaT) return;
+    const ilk = uyandirmaT === '';
+    uyandirmaT = t;
+    if (ilk) return; // sayfa yeni açıldı: eski bildirimi gösterme
+    if (u.durum === 'gonderildi') toast('Sorunuz Claude sohbetine gönderildi; Claude birazdan tahtada cevaplar.', 6000);
+    else if (u.durum === 'olmadi') toast('Sorunuz Claude\'a kendiliğinden gönderilemedi: ' + (u.neden || '') +
+      ' Sohbete "tahtaya bak" yazın ya da "Sohbete kopyala"ya basın.', 9000);
+    bekleyenGoster(bekleyenSoz);
+  }
+  if (uyDugme) uyDugme.addEventListener('click', async () => {
+    try {
+      const r = await api('uyandirma', { acik: !uyandirmaAcik });
+      uyandirmaGoster(await r.json());
+    } catch (e) { toast('Ayar değiştirilemedi: ' + e.message, 5000); }
+  });
+
   // Claude dinlemiyorken söylenenler: üstte uyarı ve "Sohbete kopyala" düğmesi.
   let bekleyenSoz = [];
   const bekleyenEl = $('#bekleyenSoru');
@@ -1085,6 +1146,10 @@
     const goster = bekleyenSoz.length > 0 && !claudeDinliyor;
     bekleyenEl.hidden = !goster;
     if (goster) $('#bekleyenMetin').textContent = '“' + bekleyenSoz.join(' ') + '”';
+    const aciklama = $('#bekleyenAciklama');
+    if (aciklama) aciklama.innerHTML = uyandirmaAcik
+      ? 'Claude şu an dinlemiyor. Sorunuz birkaç saniye içinde Claude sohbetine <b>kendiliğinden</b> gönderilecek.'
+      : 'Claude şu an dinlemiyor. Sohbete <b>“tahtaya bak”</b> yazın ya da sorunuzu kopyalayıp yapıştırın.';
   }
   async function panoyaYaz(metin) {
     try {
@@ -1125,6 +1190,7 @@
       const j = await r.json();
       son = j.sayac || 0;
       sesGoster(j.ses);
+      if (j.uyandirma) uyandirmaGoster(j.uyandirma);
     } catch (e) {
       baglanti(false);
       return setTimeout(yokla, 3000);
@@ -1133,13 +1199,15 @@
     for (;;) {
       if (sekmeKapandi) return;
       try {
-        const r = await api('al?son=' + son + '&dinliyor=' + (claudeDinliyor ? 1 : 0) + '&bekleyen=' + bekleyenSoz.length);
+        const r = await api('al?son=' + son + '&dinliyor=' + (claudeDinliyor ? 1 : 0) + '&bekleyen=' + bekleyenSoz.length +
+          '&uy=' + encodeURIComponent(uyandirmaT), undefined, 45000);
         const j = await r.json();
         if (sekmeKapandi) return;
         const komutlar = j.komutlar;
         sesGoster(j.ses);
         baglanti(true);
         if (typeof j.dinliyor === 'boolean' && j.dinliyor !== claudeDinliyor) dinlemeIsareti(j.dinliyor);
+        if (j.uyandirma) uyandirmaGoster(j.uyandirma);
         if (Array.isArray(j.bekleyen_konusma)) bekleyenGoster(j.bekleyen_konusma);
         for (const k of komutlar || []) {
           son = Math.max(son, k.no);

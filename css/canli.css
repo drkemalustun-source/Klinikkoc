@@ -148,6 +148,8 @@
 .canli-bekleyen-metin { display: block; margin-top: .25em; font-style: italic; overflow-wrap: anywhere; }
 .canli-bekleyen strong, .canli-bekleyen b { color: inherit; }
 .canli-bekleyen .btn { flex: none; background: #1b2420; color: #fff; border-color: #1b2420; }
+.canli-bekleyen-dugmeler { display: flex; flex-direction: column; gap: .35em; flex: none; }
+.canli-bekleyen .btn.ikincil { background: transparent; color: inherit; border-color: currentColor; font-size: .85em; }
 
 @media (max-width: 760px) {
   .canli-ipucu { display: none; }

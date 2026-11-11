@@ -49,6 +49,12 @@ Kaldırma: `python tools/tahta-mcp.py --kaldir` (gerekirse `--ayar "<yol>"` ile)
 
 ## Claude'un araçları
 
+**Öğrenci ve öğretmen araçları:** Claude her sohbette bütün araç tanımlarını okur. Öğrencinin kullanmadığı
+öğretmen araçları (`sihirbaz_oku`, `sihirbaz_oner`, `makale_sayfasi_bak`, `makale_sekli_ekle`,
+`degerlendirme_ozeti`) öğrenci bilgisayarında gizlenir; böylece sohbet daha az yer kaplar ve Claude yanlış araca
+yönelmez. Bu bilgisayarda ders sihirbazı sayfası bir kez açıldıysa öğretmen araçları kendiliğinden açılır (Claude'u bir kez yeniden başlatın). Elle seçmek için
+kalıcı veri klasöründeki `ayarlar.json`'a `"profil": "ogretmen"` (ya da `"ogrenci"`) yazın ve Claude'u yeniden başlatın.
+
 | Araç | Ne yapar |
 |---|---|
 | `egitmen_hazirla` | Dersin eğitmenini (İnci ya da Mercan), kurallarını, hedeflerini ve öğrencinin kaydını yükler |
@@ -67,8 +73,8 @@ Kaldırma: `python tools/tahta-mcp.py --kaldir` (gerekirse `--ayar "<yol>"` ile)
 | `gorsel_bak` | Ders görselini Claude'a gösterir (işaretleyeceği yeri seçmek için) |
 | `tahta` | Adım adım: önce tahtaya yazar/çizer, sonra o adımı sesli anlatır |
 | `soru_sor` | Tahtada soru kartı açar, dokunduğunuz cevabı Claude'a iletir |
-| `tahta_durumu` | Tahtanın durumu; süren bir anlatımın ya da sorunun bitmesini bekler |
-| `dinle` | Mikrofon tuşuyla söylediğinizi bekler ve yazı olarak alır (sesli sohbet) |
+| `tahta_durumu` | Tahtanın durumu; "tahtaya bak" deyince bekleyen sözünüzü alır |
+| `bekle` | Tek bekleme aracı: söylediğinizi (mikrofon ya da yazı kutusu) ya da süren anlatımın bitmesini bekler; bir çağrı birkaç dakika açık kalabilir (eski adı `dinle`, hâlâ çalışır) |
 | `videolar` | Dersin videolarını listeler (klasördeki dosyalar ve YouTube bağlantıları) |
 | `anlatima_devam` | Siz söz alınca duraklayan anlatımı, Claude cevap verdikten sonra kaldığı cümleden sürdürür |
 | `durdur` | Anlatımı hemen keser |
@@ -155,8 +161,19 @@ Hangi tanıyıcının daha iyi olduğunu ses testi sayfasındaki **Duyu ile tara
   "Claude dinlemiyor". Claude masaüstü uygulaması, Claude cevabını bitirip beklemeye geçtiğinde
   kendiliğinden yeni bir iş başlatamaz; o sırada ışık gridir.
 - Işık griyken konuşursanız sorunuz kaybolmaz; tahtada sarı bir uyarı çıkar: "Sorunuz bekliyor".
-  İki yol var: Claude sohbetine **tahtaya bak** yazın (Claude sorunuzu tahtadan alır) ya da
-  **Sohbete kopyala** düğmesine basıp sohbete yapıştırın (Mac'te Cmd+V, Windows'ta Ctrl+V).
+- **Otomatik gönder (varsayılan açık):** Claude birkaç saniye içinde sorunuzu kendisi almazsa (sırası
+  bitmiştir), yerel sunucu Claude masaüstü penceresini bir anlığına öne getirir, sorunuzu
+  "Tahtadan sesli soru: ..." diye sohbet kutusuna yapıştırıp gönderir ve tahtaya geri döner. Claude
+  böylece "tahtaya bak" yazmanıza gerek kalmadan cevap verir. Sarı uyarıdaki **Otomatik gönder** düğmesiyle
+  açıp kapatabilirsiniz (ayar kalıcı veri klasöründeki `ayarlar.json`: `"otomatik_uyandirma"`).
+  - Claude masaüstü uygulaması açık olmalı ve ders sohbeti seçili durmalı; bir kez sohbet kutusuna tıklamış
+    olmanız yeterli.
+  - Mac'te ilk seferde izin istenir: **Sistem Ayarları › Gizlilik ve Güvenlik › Erişilebilirlik**'te
+    Claude'u (sunucuyu Terminal'den açtıysanız Terminal'i de) açın.
+  - Gönderilemezse tahta nedenini söyler; o zaman eski yol: Claude sohbetine **tahtaya bak** yazın ya da
+    **Sohbete kopyala** düğmesine basıp yapıştırın (Mac'te Cmd+V, Windows'ta Ctrl+V).
+- Claude'un bir bekleme çağrısı yarıda kalırsa (siz sohbete yazdınız, durdurdunuz ya da süre doldu)
+  sözünüz yine kaybolmaz: sunucu sözü, Claude'a gerçekten ulaştığı onaylanana kadar saklar.
 
 ### Claude Code ile (isteğe bağlı): sorular sohbete kendiliğinden düşsün
 

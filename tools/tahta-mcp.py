@@ -76,570 +76,143 @@ def _surum_oku():
 
 SURUM = _surum_oku()  # programın sürümü: kök klasördeki SURUM dosyası (config.js'teki ile aynı olmalı)
 AD = "klinik-koc"
+from mcp_araclar import ARACLAR, KOMUT_SEMASI, TALIMAT  # noqa: E402,F401  (araç tanımları ve talimat)
 
-TALIMAT = """KlinikKoç: bu bilgisayardaki tarayıcıda açık bir kara tahta. Bu araçlarla
-tahtaya yazar, ders görsellerini gösterip işaretler ve Türkçe sesli anlatırsın (Pocket TTS Türkçe Kadın 3 sesi; hazır değilse Piper dfki).
-Öğrenci kimliği: egitmen_hazirla'yı öğrencinin adı ve kısa bir ayırt ediciyle (öğrenci numarasının son 3 hanesi
-ya da takma ad; ayirt alanı) çağır. Araç 'ayirt_gerekli' ya da 'ayni_ad_var' dönerse verdiği talimata uy
-("Bu adla kayıt var, sen misin?"). Dönen kimliği sonraki bütün araçlarda ogrenci alanına yaz. Öğretmen
-deniyorsa ogrenci='deneme' ya da deneme=true ver; deneme kayıtları araştırmaya katılmaz. Kayıtlar yalnız bu
-bilgisayarda durur; kendiliğinden hiçbir yere gönderilmez (öğrenci isterse kayit_disa_aktar).
-Eğitmen (İnci ya da Mercan): Bir dersi öğretmeye başlamadan önce egitmen_hazirla aracını çağır. O araç
-dersin eğitmenini, öğretim kurallarını, hedeflerini, öğretmen notlarını ve öğrencinin kaydını verir; bütün
-oturum boyunca o kurallara uy. Öğrencinin ilerlemesini kayit_yaz ile işle, bitişte rapor_yaz ile rapor yaz.
-Bilgi bankası: Cevabından emin değilsen ya da öğrenci ders dışı görünen bir şey sorarsa önce bilgi_ara ile
-dersin kaynaklarında, anlatımında, öğretmen notlarında ve vakalarında ara; bulduğun parçanın kaynağını (sayfa) söyle.
-bilgi_ara sonucundaki dayanak alanına uy: "yok" ise kaynakta olmadığını söyle, "zayif" ise yalnız parçanın
-açıkça söylediğini aktar.
-Vakalar: Dersin vaka kartları varsa (vakalar aracı) vaka_oku ile bir vakayı aç ve dönen vaka kurallarına uy.
-Her cevaplanan soruyu ve vaka adımını kayit_yaz'ın cevaplar alanına işle (Bloom düzeyi ve rubrik puanıyla);
-öğrenci "karnem" derse karne aracını çağır.
-Sözlü sınav provası için sozlu_prova, bütün derslerden zayıf konu tekrarı için tekrar_listesi aracını kullan.
-Karar ağacı: vaka ya da ayırıcı tanı anlatırken tahtada tree komutuyla ağacı adım adım kur.
-Pilot ölçme testleri (ön/son/gecikmeli) yalnız olcme_testi ve olcme_kaydet araçlarıyla, öğretmenin onayladığı
-sorularla yapılır; test sırasında ipucu ve açıklama verilmez.
-Nasıl çalış:
-- İlk iş tahtayi_ac. Ders konusu varsa dersler ve ders_oku ile içeriği oku; şekli işaretleyeceksen
-  önce gorsel_bak ile görseli gör (işaret koordinatları görselin 0–1 arası oranlarıdır).
-- tahta aracında anlatımı 2–6 adıma böl. Her adımda önce tahta komutları, sonra o adımın anlatımı.
-  Anlatım konuşma dilinde, kısa cümlelerle, ders kitabı Türkçesiyle olsun; madde başına en çok ~10 sözcük.
-- Tahtada tek görsel alan vardır (image, table, flow, compare, draw, tree'den biri); yanında title, bullets,
-  term, text notları durabilir. Yeni konuya geçerken {"type":"clear"} ile başla.
-- Ders görselleri dışında görsel kullanma; kendi çizimin için draw komutunu kullan.
-Video: Dersin videoları (klasördeki dosyalar ve öğretmenin eklediği YouTube bağlantıları) videolar aracıyla
-  listelenir; tahtada video komutuyla gösterilir. Klasördeki video internetsiz oynar, YouTube internet ister.
-  Videoyu kısa tut (baslangic/bitis ile 1–3 dk); önce ne izleneceğini bir cümleyle söyle, video bitince anlat.
-  Kullanıcı sohbete ya da tahtaya bir YouTube bağlantısı verirse onu da youtube alanıyla oynatabilirsin.
-- Bilgi dersin içeriğine dayansın; dersin dışına çıkarsan bunu açıkça söyle.
-- Anlatım bitince sohbet penceresinde çok kısa özet ver; tahtada anlattığını sohbete tekrar yazma.
-Sesli sohbet (dikte): Kullanıcı tahtadaki mikrofon tuşuna (ya da M tuşuna) basıp konuşabilir; söyledikleri
-yazıya çevrilip sana gelir. Tanıyıcı (Duyu-small, bu bilgisayarda; yoksa tarayıcınınki) alan terimlerini
-bozabilir; metin terim sözlüğünden geçer. 'ham_metin' alanı tanıyıcının ilk çıktısıdır: düzeltme yanlış
-görünüyorsa ya da cümle anlamsızsa öğrenciye ne demek istediğini kısaca sor.
-- Söz kesme: Anlatım sürerken kullanıcı konuşursa tahta anlatımı kaldığı yerde duraklatır ve bekleyen tahta /
-  tahta_durumu(no) çağrın beklemeden {"durum": "kullanici_konustu", "kullanici_konustu": "..."} döner.
-  Önce ona cevap ver: tahtada sesli (tahta aracı; cevap araya girer, tahta sonra eski hâline döner) ya da
-  sohbette. Sonra anlatima_devam ile anlatımı kaldığı yerden sürdür; konu değiştiyse anlatima_devam(birak=true).
-- Soru kartı açıkken konuşursa kart kapanır; gerekirse soruyu yeniden sor.
-- tahta ya da soru_sor 'gonderilmedi: true' ile dönerse kullanıcının cevaplanmamış sözü vardır; önce ona cevap ver.
-- Ders ya da sohbet sırasında bir bölümü/cevabı bitirince dinle aracını çağır; gelen metne tahtada sesli
-  cevap ver (gerekirse çizerek), sonra yeniden dinle. "sessiz" dönerse sonuçtaki 'devam' alanına bak:
-  devam=true ise hemen yeniden dinle (kullanıcı kısa bir ara vermiş olabilir; ~10 dakika dinlemeyi sürdür);
-  devam=false gelince döngüyü bırak ve sohbete "Tahtaya dönünce mikrofona basıp konuşun ya da buraya
-  'tahtaya bak' yazın" diye kısa bir not yaz.
-- Bir oturumda cevabını bitirmeden önce son iş olarak dinle çağır; kullanıcı sesli sohbetteyse dinleme
-  döngüsünü sürdür. Sen dinlemezken söylenenler bekler; tahta sayfası kullanıcıya sohbete "tahtaya bak"
-  yazmasını söyler. Kullanıcı "tahtaya bak" yazarsa tahta_durumu'nu (no'suz) çağır: bekleyen sözü döndürür.
-  Kullanıcı sohbete "Tahtadan sesli soru: ..." yapıştırırsa bu da tahtada söylenmiş bir sözdür.
-- tahta, soru_sor ve tahta_durumu sonuçlarında 'kullanici_konustu' alanı varsa kullanıcı o sırada
-  konuşmuştur; önce ona cevap ver.
-- Claude Code'da kanal açıksa (tahta-mcp.py --kanal) sen dinlemezken söylenenler sohbete <channel
-  source="klinik-koc"> iletisi olarak düşer; ona da tahtada cevap ver.
-- "dur", "bekle", "ara verelim" gibi isteklerde dinlemeyi de bırak.
-- Ders sırasında dersin kendisinde bir sorun görürsen (yanlış ya da çelişkili bilgi, kaynakta olmayan ama çok
-  sorulan konu, belirsiz cevap anahtarı, anlaşılmayan adım, araç hatası, dikte hatası) degerlendirme_notu ile hemen
-  not al; öğrenciye söylemen gerekmez. ders_bitir ders sonu değerlendirme formunu açar; formda bu notlar görünür.
-Duraklat: Kullanıcı tahtadaki ⏸ tuşuyla (ya da P / Boşluk) anlatımı duraklatabilir. Bu iptal değildir.
-- tahta, soru_sor ya da tahta_durumu 'duraklatildi' dönerse hata sayma, yeni komut gönderme, sohbete de
-  yazma; aynı no ile tahta_durumu çağırarak beklemeyi sürdür. Devam edince anlatım kaldığı yerden sürer
-  ve sonuç olağan biçimde 'bitti' gelir. Uzun süre duraklatılmış kalırsa beklemeyi bırakıp kısa bir not yaz."""
+# ---------- Araç profili: öğrenci / öğretmen ----------
+# Claude her sohbette bütün araç tanımlarını okur; öğrencinin kullanmadığı öğretmen araçları hem yer kaplar (abonelik
+# sınırını daha çabuk doldurur) hem Claude'u yanlış araca yöneltebilir. Öğrenci kurulumunda gizlenirler.
+# Öğretmen profili: KLINIK_KOC_PROFIL=ogretmen, ayarlar.json'da "profil": "ogretmen" ya da bu bilgisayarda ders
+# sihirbazı kullanılmışsa (veri klasöründe sihirbaz/ taslakları) kendiliğinden.
+OGRETMEN_ARACLARI = {"sihirbaz_oku", "sihirbaz_oner", "makale_sayfasi_bak", "makale_sekli_ekle", "degerlendirme_ozeti"}
+GIZLI_ARACLAR = {"dinle"}  # eski ad: bekle'ye yönlenir; eski sohbetler çağırırsa çalışır ama listede görünmez
 
-KOMUT_SEMASI = {
-    "type": "object",
-    "description": "Tahta komutu. Türe göre alanlar: "
-                   "clear | title{text,subtitle} | bullets{title?,items[]} | point{text} | text{text,style?:note|key|warn} | "
-                   "term{term,definition} | image{asset,caption?} | highlight{region[x,y,g,y] 0–1,label?,color?,shape?:rect|ellipse,id?} | "
-                   "unhighlight{id?} | zoom{region} | unzoom | table{title?,headers[],rows[][],caption?} | "
-                   "flow{title?,nodes[],direction?:row|column} | compare{title?,columns[{title,items?[],asset?,caption?,color?}]} "
-                   "(asset verilen sütunda o ders görseli gösterilir: iki fotoğrafı yan yana karşılaştırmak için) | "
-                   "draw{title?,viewBox?='0 0 160 90',shapes[{kind:line|arrow|rect|ellipse|path|text, ...}]} | "
-                   "tree{title?,nodes[{id,text,parent?,edge?,state?:ok|warn|accent|danger|dim}],path?[id],caption?} "
-                   "(klinik karar ağacı: kök düğümün parent'ı yok; edge dala yazılan koşuldur, ör. 'ateş var'; path öğrencinin "
-                   "seçtiği yolu vurgular. Aynı title ile düğüm ekleyerek yeniden gönderirsen ağaç adım adım büyür). "
-                   "ANATOMİK ŞABLON (diş/implant çizimi için serbest çizim yerine bunu kullan): "
-                   "draw{title?,template:dis|implant,variant?,labels?[{part,text?,side?:sol|sag,color?}] ya da 'hepsi',"
-                   "highlight?[part],probe?:true,shapes?[ek şekiller, aynı 160x90 tuvalde]}. Bukkal solda, ~3,4 birim = 1 mm. "
-                   "dis variant: saglikli|gingivitis|periodontitis; parçalar: mine, dentin, pulpa, kok-kanali, apeks, mine-sement, "
-                   "sement, pdl, kemik, kret, dis-eti, yapisik-dis-eti, mgj, mukoza, dis-eti-epiteli, cep, ba (birleşim epiteli), "
-                   "bd (bağ dokusu ataşmanı), dis; gingivitis/periodontitis ek: iltihap, plak; periodontitis ek: tartar, "
-                   "atasman-kaybi, kemik-kaybi. implant variant: saglikli|mukozitis|peri-implantitis; parçalar: kron, dayanak, "
-                   "platform, implant, yiv, mukoza, cep, bariyer-epiteli, bd, kemik, osseo, kret, alveol-mukozasi; "
-                   "mukozitis/peri-implantitis ek: iltihap, plak, kanama; peri-implantitis ek: krater, supurasyon, acik-yiv. "
-                   "probe:true periodontal sondayı cebe yerleştirir (parça: sonda, derinliği mm yazar). "
-                   "Adım adım kurmak için aynı template+variant ile labels listesini büyüterek yeniden gönder: çizim yerinde kalır, "
-                   "yalnız yeni etiketler belirir. Etiket metnini yazmazsan doğru Türkçe terim kullanılır. "
-                   "Renkler: chalk, accent, warn, ok. Metinde **kalın** ve _italik_ kullanılabilir. "
-                   "VIDEO: video{video?:videolar aracındaki kimlik | youtube?:bağlantı ya da kimlik, baslangic?:sn, "
-                   "bitis?:sn, oynat?=true, bekle?=true, sessiz?, caption?} görsel alanını kaplar; bekle=true iken o adımın "
-                   "anlatımı video bitince başlar (videonun üstüne konuşma); kısa klip için baslangic/bitis ver. "
-                   "video_kontrol{eylem:oynat|duraklat|git, saniye?} tahtadaki videoyu yönetir.",
-    "properties": {"type": {"type": "string", "enum": [
-        "clear", "title", "bullets", "point", "text", "term", "image", "highlight", "unhighlight",
-        "zoom", "unzoom", "table", "flow", "compare", "draw", "tree", "video", "video_kontrol"]}},
-    "required": ["type"],
-    "additionalProperties": True,
-}
 
-ARACLAR = [
-    {
-        "name": "egitmen_hazirla",
-        "description": "Bir dersi öğretmeden önce ilk çağrılacak araç. Dersin eğitmenini (İnci: lisans, Mercan: uzmanlık), "
-                       "öğretim kurallarını, hedefleri ve Bloom hedef düzeylerini, öğretmen notlarını, bilinen yanılgıları "
-                       "ve ogrenci verilirse öğrencinin kaydını (tekrar zamanı gelen hedefler, mola noktası) döndürür. "
-                       "Dönen kurallara bütün oturum boyunca uy.",
-        "inputSchema": {"type": "object", "properties": {
-            "ders": {"type": "string"},
-            "ogrenci": {"type": "string", "description": "öğrencinin adı (ya da daha önce dönen kimliği). Kayıt yalnız "
-                                                         "bu bilgisayarda tutulur."},
-            "ayirt": {"type": "string", "description": "kısa ayırt edici: öğrenci numarasının son 3 hanesi ya da takma ad"},
-            "ogrenci_kimligi": {"type": "string", "description": "'Bu adla kayıt var, sen misin?' sorusuna evet denince "
-                                                                 "o kaydın kimliği"},
-            "yeni_ogrenci": {"type": "boolean", "description": "aynı adlı kayıt öğrencinin değilse true: ayrı kayıt açılır"},
-            "deneme": {"type": "boolean", "description": "öğretmen denemesi: kayıt 'deneme' olarak işaretlenir, "
-                                                         "araştırma aktarımına katılmaz"},
-            "egitmen": {"type": "string", "enum": ["inci", "mercan"],
-                        "description": "yalnız ders izin veriyorsa başka eğitmen seçmek için"}},
-            "required": ["ders"]},
-    },
-    {
-        "name": "kayit_yaz",
-        "description": "Öğrencinin ilerlemesini bu bilgisayardaki kayda işler. Her anlamlı adımdan sonra çağır. "
-                       "hedefler: [{id, duzey (hatirla|anla|uygula|cozumle|degerlendir|olustur), yardim (yardimsiz|destekle), "
-                       "iskele (S0 yardımsız | S1 genel yönlendirme | S2 odaklı ipucu | S3 kısmi çözüm ya da seçenek daraltma | "
-                       "S4 cevabı gösterip açıklama; cevaba ulaşılan basamak, isteğe bağlı), "
-                       "dogru, solo (yapi_oncesi|tek|cok|iliskisel|genisletilmis), durum (ele_alinmadi|destekle_yapti|"
-                       "bagimsiz_yapti|tekrar_gerekli), tur (yanit|geri_cagirma|uygulama), kanit (tek cümle)}]. "
-                       "yanilgilar: [{id, durum (acik|cozuldu), not}]. guven: [{hedef, soru, guven (tahmin|biraz|emin), dogru}]. "
-                       "sorular: [{soru, kaynakta_yok}]. testler: [{tur (on|son|gecikmeli), dogru, toplam}]. "
-                       "cevaplar: her cevaplanan soru ve vaka adımı için [{soru (kimlik ya da kısa metin), hedef, bloom, "
-                       "tur (secmeli|acik|sozlu|vaka_karar|vaka_acik|vaka_veri), puan, en_yuksek (rubrik toplamı; seçmelide 1), "
-                       "ilk_deneme (true/false), ipucu (kullanılan ipucu sayısı), vaka, dugum, tehlikeli (true/false), "
-                       "karsilanan_olcutler [ölçüt metni, kısa], eksik_olcutler [ölçüt metni, kısa]}]. "
-                       "mod: once_anlat|once_yanitla. mola: bekleyen nokta metni ya da null. oturum: {egitmen, ozet, sure_dk "
-                       "(oturumun yaklaşık süresi, dakika)}. "
-                       "Aralıklı tekrar tarihleri otomatik hesaplanır.",
-        "inputSchema": {"type": "object", "properties": {
-            "ogrenci": {"type": "string"}, "ders": {"type": "string"},
-            "hedefler": {"type": "array", "items": {"type": "object"}},
-            "yanilgilar": {"type": "array", "items": {"type": "object"}},
-            "guven": {"type": "array", "items": {"type": "object"}},
-            "sorular": {"type": "array", "items": {"type": "object"}},
-            "testler": {"type": "array", "items": {"type": "object"}},
-            "cevaplar": {"type": "array", "items": {"type": "object"}},
-            "vaka_sonucu": {"type": "object", "description": "vaka bitince: {vaka, sonuc (iyi|kabul|kotu|yarim), dugum_sayisi, yeniden_anlatilan_bolumler[]}"},
-            "mod": {"type": "string"}, "mola": {"type": ["string", "null"]},
-            "oturum": {"type": "object"}},
-            "required": ["ogrenci", "ders"]},
-    },
-    {
-        "name": "bilgi_ara",
-        "description": "Bu bilgisayardaki derslerin kaynak metinlerinde (ders notu/makale sayfaları), hazır anlatımlarında, "
-                       "sorularında, öğretmen notlarında ve vaka kartlarında arar. Sözcük araması her zaman açıktır; "
-                       "anlam araması kuruluysa anlamca yakın parçaları da bulur. Her sonuçta kaynak (sayfa) bilgisi vardır. "
-                       "Sonuçta 'dayanak' (guclu | zayif | yok) kaynakta bu soruya gerçekten dayanak olup olmadığını söyler.",
-        "inputSchema": {"type": "object", "properties": {
-            "sorgu": {"type": "string", "description": "aranacak soru ya da anahtar sözcükler (Türkçe)"},
-            "ders": {"type": "string", "description": "yalnız bu derste ara (isteğe bağlı)"},
-            "tur": {"type": "string", "enum": ["kaynak", "anlatim", "ogretmen_notu", "vaka", "soru"],
-                    "description": "yalnız bu türde ara (isteğe bağlı)"},
-            "k": {"type": "integer", "description": "en çok kaç sonuç (varsayılan 6, en çok 15)"}},
-            "required": ["sorgu"]},
-    },
-    {
-        "name": "makaleler",
-        "description": "Bir dersin makale listesini ve her makalenin durumunu gösterir: hazir (indirildi, aramada), eksik "
-                       "(bulunamadı; öğrenci yayıncı sayfasından indirip eklemeli), hata, denenmedi. Ders paketinde makalelerin "
-                       "kendisi yoktur; makale_bul onları bu bilgisayara indirir. ac true ise makaleler sayfası tarayıcıda "
-                       "açılır (öğrenci orada eksik PDF'leri sürükleyip bırakabilir). Dersi anlatmaya başlamadan önce bak: "
-                       "eksik makale varsa öğrenciye söyle; o makaleye dayanan soruda 'bu makaleyi okuyamadım' de.",
-        "inputSchema": {"type": "object", "properties": {
-            "ders": {"type": "string", "description": "verilmezse makale listesi olan dersler listelenir"},
-            "ac": {"type": "boolean", "description": "makaleler sayfasını tarayıcıda aç"}}},
-    },
-    {
-        "name": "ders_paketi_ekle",
-        "description": "Öğretmenin verdiği ders paketini (.zip) bu bilgisayara kurar ve makalelerini arka planda aramaya "
-                       "başlar. Program derssiz gelir; öğrenci 'ders listesi boş', 'ders yok' derse ya da bir zip'ten söz "
-                       "ederse bunu kullan. zip verilmezse ders paketleri sayfasını açar (öğrenci zip'i oraya sürükler). "
-                       "Ders zaten kuruluysa öğrenciye güncellemek isteyip istemediğini sor; isterse uzerine: true.",
-        "inputSchema": {"type": "object", "properties": {
-            "zip": {"type": "string", "description": "paketin bu bilgisayardaki yolu, ör. İndirilenler'deki dosya"},
-            "uzerine": {"type": "boolean", "description": "ders kuruluysa yenisiyle değiştir (kayıtlar korunur)"}}},
-    },
-    {
-        "name": "makale_bul",
-        "description": "Dersin makalelerini arka planda bulup indirir: önce bilgisayardaki makale klasörü, sonra açık erişimli "
-                       "sürüm, sonra yayıncı (bilgisayar üniversite ağındaysa abonelikli dergiler de iner). İnenler metne "
-                       "çevrilip aramaya eklenir. Birkaç dakika sürebilir; ilerlemeyi makaleler aracıyla izle.",
-        "inputSchema": {"type": "object", "properties": {"ders": {"type": "string"}}, "required": ["ders"]},
-    },
-    {
-        "name": "makale_ekle",
-        "description": "Öğrencinin bu bilgisayardaki bir PDF'ini derse ekler. kaynak verilirse o makalenin yerine geçer; "
-                       "verilmezse PDF'teki DOI'den listedeki makale bulunur, bulunamazsa 'öğrencinin eklediği' ayrı kaynak olur. "
-                       "Makale hiçbir derse bağlı değilse (ya da hiç ders yoksa) ders='kendi-makalelerim' kullan: öğrencinin "
-                       "kişisel kitaplığıdır; sonra egitmen_hazirla(ders='kendi-makalelerim') ile o makalelerle çalışılır.",
-        "inputSchema": {"type": "object", "properties": {
-            "ders": {"type": "string", "description": "ders kimliği ya da 'kendi-makalelerim'"},
-            "dosya": {"type": "string", "description": "PDF'in bu bilgisayardaki tam yolu"},
-            "kaynak": {"type": "string", "description": "makaleler listesindeki id (isteğe bağlı)"}},
-            "required": ["ders", "dosya"]},
-    },
-    {
-        "name": "sihirbaz_oku",
-        "description": "Öğretmen için: ders hazırlama sihirbazındaki bir ders taslağını okur (ders kartı, makale künyeleri ve "
-                       "özetleri, ders notunun bölümleri, öğretmenin soruları ve dikkat edilecekler, onaylı hedefler) ve "
-                       "nasıl öneri yazılacağını söyler. ders verilmezse taslaklar listelenir. Öğretmen 'X dersi için "
-                       "öneri hazırla' derse önce bunu, sonra sihirbaz_oner'i çağır.",
-        "inputSchema": {"type": "object", "properties": {"ders": {"type": "string"}}},
-    },
-    {
-        "name": "sihirbaz_oner",
-        "description": "Öğretmen için: ders taslağına öneri yazar (hedefler + Bloom düzeyi, terimler, soru taslakları, "
-                       "yanılgılar). Öneriler öğretmen sihirbaz sayfasında kabul etmeden derse girmez. Biçim için "
-                       "sihirbaz_oku'nun talimatına uy. Yalnız gönderdiğin türler değişir.",
-        "inputSchema": {"type": "object", "properties": {
-            "ders": {"type": "string"},
-            "hedefler": {"type": "array", "items": {"type": "object"}},
-            "terimler": {"type": "array", "items": {"type": "string"}},
-            "sorular": {"type": "array", "items": {"type": "object"}},
-            "yanilgilar": {"type": "array", "items": {"type": "object"}},
-            "ac": {"type": "boolean", "description": "sihirbaz sayfasını tarayıcıda aç"}},
-            "required": ["ders"]},
-    },
-    {
-        "name": "ders_bitir",
-        "description": "Öğrenci dersi bitirince (bütün hedefler ele alındı ya da öğrenci 'bitirdim' dedi) çağır. Tamamlama "
-                       "raporunu öğrencinin bilgisayarına yazar (hedefler, zorlandığı konular, vakalar, çalışma süresi, "
-                       "notu), zorlandığı sorulardan en çok 10 tekrar kartı çıkarır ve kaydı 'tamamlandı' diye işaretler. "
-                       "Ders yerinde kalır; arşivlenmez. Önce öğrenciye derse dair bir notu olup olmadığını sor.",
-        "inputSchema": {"type": "object", "properties": {
-            "ogrenci": {"type": "string"}, "ders": {"type": "string"},
-            "ogrenci_notu": {"type": "string", "description": "öğrencinin kendi notu (isteğe bağlı, kelimesi kelimesine)"},
-            "claude_tespitleri": {"type": "array", "description": "değerlendirme formuna senin tespitlerin (henüz "
-                                  "degerlendirme_notu ile yazmadıkların): [{tur, ayrinti, yer}]",
-                                  "items": {"type": "object"}},
-            "form": {"type": "boolean", "description": "değerlendirme formunu tarayıcıda aç (varsayılan true)"}},
-            "required": ["ogrenci", "ders"]},
-    },
-    {
-        "name": "makale_sayfasi_bak",
-        "description": "Öğretmen için: derse makaleden şekil eklerken makalenin bir sayfasını görüntü olarak gösterir "
-                       "(makalenin PDF'i bu bilgisayarda hazır olmalı). bolge verilirse yalnız o kısım. Şeklin yerini "
-                       "bulup makale_sekli_ekle'ye bolge vermek için kullan. bolge = [sol, üst, sağ, alt], sayfanın "
-                       "0–1 arası oranları (sol-üst köşe 0,0).",
-        "inputSchema": {"type": "object", "properties": {
-            "ders": {"type": "string"}, "kaynak": {"type": "string", "description": "kaynaklar.json'daki makale kimliği"},
-            "sayfa": {"type": "integer"}, "bolge": {"type": "array", "items": {"type": "number"}}},
-            "required": ["ders", "kaynak", "sayfa"]},
-    },
-    {
-        "name": "makale_sekli_ekle",
-        "description": "Öğretmen için: kurulu bir derse makalenin bir şeklini ekler. Pakete şeklin kendisi değil yalnız "
-                       "yeri (makale, sayfa, bölge) girer; her öğrencinin bilgisayarı şekli onun kendi PDF'inden çizer. "
-                       "Abonelikli makalelerin şekilleri için tek doğru yol budur. Önce makale_sayfasi_bak ile bölgeyi "
-                       "bul; bu araç kesilen şekli gösterir, kenarlar kesik ya da fazlaysa bolge'yi düzeltip yeniden "
-                       "çağır. Tahtada tahta aracının image komutunda gorsel adıyla kullanılır.",
-        "inputSchema": {"type": "object", "properties": {
-            "ders": {"type": "string"}, "ad": {"type": "string", "description": "görsel adı, ör. sekil1"},
-            "kaynak": {"type": "string"}, "sayfa": {"type": "integer"},
-            "bolge": {"type": "array", "items": {"type": "number"}, "description": "[sol, üst, sağ, alt] 0–1"},
-            "baslik": {"type": "string", "description": "ör. Şekil 1"}, "aciklama": {"type": "string"}},
-            "required": ["ders", "ad", "kaynak", "sayfa"]},
-    },
-    {
-        "name": "degerlendirme_notu",
-        "description": "Ders sırasında DERSİN KENDİSİNDE bir sorun fark edince HEMEN çağır; ders sonu değerlendirme "
-                       "formuna 'Eğitmenin (Claude) tespitleri' olarak girer, öğrenci göndermeden önce görür ve "
-                       "çıkarabilir. tur: yanlis_bilgi (derste yanlış/çelişkili bilgi), eksik_kaynak (kaynakta olmayan "
-                       "ya da çok sorulan ama derste olmayan konu), anlatim (anlaşılmayan, çok uzun/kısa ya da yeniden "
-                       "anlatmak zorunda kaldığın adım), soru (cevap anahtarı belirsiz/yanlış soru), teknik (araç "
-                       "hatası, gecikme, açılmayan görsel, ses), dikte (tanıyıcının bozduğu terim: ham → doğru), diger. "
-                       "ayrinti: kısa ve somut; yer: kanıt (bölüm/adım/soru kimliği). Öğrencinin başarısını, adını ya "
-                       "da kişisel bilgisini yazma.",
-        "inputSchema": {"type": "object", "properties": {
-            "ogrenci": {"type": "string"}, "ders": {"type": "string"},
-            "tur": {"type": "string", "enum": ["yanlis_bilgi", "eksik_kaynak", "anlatim", "soru", "teknik", "dikte", "diger"]},
-            "ayrinti": {"type": "string"}, "yer": {"type": "string"}},
-            "required": ["ogrenci", "ders", "tur", "ayrinti"]},
-    },
-    {
-        "name": "degerlendirme_ozeti",
-        "description": "Öğretmen için: öğrencilerin gönderdiği değerlendirme formlarını (bir klasördeki .json/.txt/.eml "
-                       "dosyaları ya da e-postadan kaydedilmiş metinler) toplar; ölçekli soru ortalamaları, seçmeli "
-                       "dağılımlar, açık uçlu cevaplar, Claude tespitleri ve hedef durumlarını tek özet yapar. "
-                       "Klasör verilmezse Belgeler/KlinikKoç Değerlendirmeler.",
-        "inputSchema": {"type": "object", "properties": {
-            "klasor": {"type": "string"}, "kaydet": {"type": "boolean", "description": "özeti klasöre .md olarak yaz"},
-            "deneme_dahil": {"type": "boolean"}}},
-    },
-    {
-        "name": "tekrar_karti_yaz",
-        "description": "tekrar_listesi'ndeki bir tekrar kartının sonucunu işler (ders arşivde olsa bile). dogru: öğrenci "
-                       "yardımsız doğru cevapladı mı. Doğru → kart daha seyrek gelir; yanlış → ertesi gün yeniden.",
-        "inputSchema": {"type": "object", "properties": {
-            "ogrenci": {"type": "string"}, "ders": {"type": "string"},
-            "kart": {"type": "string", "description": "kartın id'si"}, "dogru": {"type": "boolean"}},
-            "required": ["ogrenci", "ders", "kart", "dogru"]},
-    },
-    {
-        "name": "depolama",
-        "description": "Derslerin bu bilgisayarda kapladığı yeri, sınırı (varsayılan 2 GB) ve arşivdeki dersleri gösterir. "
-                       "Sınır aşıldıysa öğrenciye 'Hangi dersleri arşive kaldıralım?' diye sor; dersleri boyutları ve son "
-                       "açılma tarihleriyle say. Arşivleme otomatik değildir. ac true ise depolama sayfası tarayıcıda açılır.",
-        "inputSchema": {"type": "object", "properties": {"ac": {"type": "boolean"}}},
-    },
-    {
-        "name": "ders_arsivle",
-        "description": "Bir dersi arşive kaldırır. YALNIZ öğrenci o dersi açıkça seçip onaylayınca çağır. Arşiv zip'i "
-                       "(Belgeler/KlinikKoç Arşiv) tamamlama raporlarını, ilerlemeyi ve makale listesini taşır; PDF'ler "
-                       "makale klasöründe kalır. Zip denetlendikten sonra dersin işlenmiş parçaları silinir. Tekrar kartları kalır.",
-        "inputSchema": {"type": "object", "properties": {"ders": {"type": "string"}}, "required": ["ders"]},
-    },
-    {
-        "name": "arsivden_geri_yukle",
-        "description": "Arşive kaldırılmış bir dersi geri getirir: ders kurulur, ilerleme kaldığı yerden sürer, PDF'ler önce "
-                       "makale klasöründe aranır, olmayanlar yeniden indirilmeye çalışılır.",
-        "inputSchema": {"type": "object", "properties": {
-            "ders": {"type": "string", "description": "arşiv listesindeki ders (depolama aracı listeler)"},
-            "dosya": {"type": "string", "description": "ya da arşiv zip'inin tam yolu"}}},
-    },
-    {
-        "name": "vakalar",
-        "description": "Bir dersin vaka kartlarını listeler (başlık, hedefler, süre, onay durumu). Tanıyı ele vermez.",
-        "inputSchema": {"type": "object", "properties": {"ders": {"type": "string"}}, "required": ["ders"]},
-    },
-    {
-        "name": "vaka_oku",
-        "description": "Bir vaka kartını eğitmen için açar: bütün bulgular, karar düğümleri, doğru cevaplar, rubrikler, "
-                       "örnek cevaplar ve takılınca dönülecek ders bölümleri, ayrıca vakanın nasıl yürütüleceğine dair kurallar. "
-                       "Cevapları öğrenciye önceden gösterme.",
-        "inputSchema": {"type": "object", "properties": {
-            "ders": {"type": "string"}, "vaka": {"type": "string", "description": "vaka kimliği (vakalar aracından)"}},
-            "required": ["ders", "vaka"]},
-    },
-    {
-        "name": "sozlu_prova",
-        "description": "Sözlü sınav provası hazırlar: dersin ve vakalarının açık uçlu sorularını (rubrik ve örnek cevapla), "
-                       "öğrencinin zayıf ve tekrar zamanı gelen hedeflerine göre sıralı verir; sınav hocası gibi yürütme "
-                       "kurallarını da verir. Öğrenci 'sözlü provası', 'sınav provası' derse çağır.",
-        "inputSchema": {"type": "object", "properties": {
-            "ders": {"type": "string"}, "ogrenci": {"type": "string"},
-            "soru_sayisi": {"type": "integer", "description": "1–12, varsayılan 5"}},
-            "required": ["ders"]},
-    },
-    {
-        "name": "tekrar_listesi",
-        "description": "Öğrencinin bütün derslerinden tekrar zamanı gelen, başarısı düşük kalan hedefleri ve açık yanılgıları "
-                       "tek listede, en gecikmiş olandan başlayarak verir; tekrar oturumunun kurallarını da verir. "
-                       "Zamanı gelen tekrar kartlarını da verir (zorlanılan sorular; ders arşivde olsa bile). "
-                       "Öğrenci 'tekrar yapalım', 'zayıf konularım' derse ya da oturumun başında ders seçilmemişse çağır.",
-        "inputSchema": {"type": "object", "properties": {"ogrenci": {"type": "string"}}, "required": ["ogrenci"]},
-    },
-    {
-        "name": "karne",
-        "description": "Öğrencinin karnesini hesaplar: hedef başına başarı, Bloom düzeyine göre başarı, soru başına güçlük, "
-                       "rubrik puanları, vaka sonuçları, tehlikeli seçimler ve tekrar zamanı gelen hedefler. "
-                       "yaz=true ise karneyi öğrencinin bilgisayarına Markdown dosyası olarak da yazar. Karne not için değil, "
-                       "öğrencinin kendini geliştirmesi içindir; hiçbir yere gönderilmez.",
-        "inputSchema": {"type": "object", "properties": {
-            "ogrenci": {"type": "string"}, "ders": {"type": "string"}, "yaz": {"type": "boolean"}},
-            "required": ["ogrenci", "ders"]},
-    },
-    {
-        "name": "kayit_oku",
-        "description": "Öğrencinin bu dersteki kaydının özetini verir (hedef düzeyleri, açık yanılgılar, tekrar zamanı "
-                       "gelenler, mola noktası). ayrinti=true ile bütün kayıt.",
-        "inputSchema": {"type": "object", "properties": {
-            "ogrenci": {"type": "string"}, "ders": {"type": "string"}, "ayrinti": {"type": "boolean"}},
-            "required": ["ogrenci", "ders"]},
-    },
-    {
-        "name": "rapor_yaz",
-        "description": "Oturum sonunda ya da 'rapor oluştur' denince öğretmen için Markdown rapor yazar (öğrencinin "
-                       "bilgisayarında, kalıcı kayıt klasöründe <kimlik>/raporlar/). Hedef tablosu, yanılgılar, güven ve sorular kayıttan "
-                       "otomatik gelir; sen ogretmen_ozeti (6–8 cümle) ve isteğe bağlı guclukler, oneriler, geri_bildirim yaz.",
-        "inputSchema": {"type": "object", "properties": {
-            "ogrenci": {"type": "string"}, "ders": {"type": "string"},
-            "ogretmen_ozeti": {"type": "string"}, "guclukler": {"type": "string"},
-            "oneriler": {"type": "string"}, "geri_bildirim": {"type": "string"}},
-            "required": ["ogrenci", "ders", "ogretmen_ozeti"]},
-    },
-    {
-        "name": "kayit_disa_aktar",
-        "description": "Öğrencinin bu bilgisayardaki bütün kaydını (dersler, raporlar, karneler) TEK dosyaya yazar "
-                       "(varsayılan: masaüstü). Öğrenci başka bilgisayarda çalışmak ya da kaydını saklamak isterse çağır. "
-                       "Hiçbir yere göndermez.",
-        "inputSchema": {"type": "object", "properties": {
-            "ogrenci": {"type": "string"}, "cikti": {"type": "string", "description": "dosya ya da klasör yolu (isteğe bağlı)"}},
-            "required": ["ogrenci"]},
-    },
-    {
-        "name": "kayit_ice_aktar",
-        "description": "kayit_disa_aktar ile yazılmış kayıt dosyasını bu bilgisayara alır. Buradaki kayıt daha yeniyse "
-                       "ona dokunmaz (uzerine=true ile yazar; eski sürüm yedekte kalır).",
-        "inputSchema": {"type": "object", "properties": {
-            "dosya": {"type": "string", "description": "kayıt dosyasının tam yolu"}, "uzerine": {"type": "boolean"}},
-            "required": ["dosya"]},
-    },
-    {
-        "name": "kayit_anonim_aktar",
-        "description": "YALNIZ ÖĞRETMEN İÇİN, öğretmen açıkça isterse: seçilen öğrencilerin (ya da hepsinin) kayıtlarını "
-                       "kimlik bilgisi olmadan (ad, kimlik, ayırt edici ve serbest metin yok; rastgele kod; tarihler gün "
-                       "farkı) tek araştırma dosyasına yazar. Deneme kayıtları varsayılan olarak dışarıda kalır.",
-        "inputSchema": {"type": "object", "properties": {
-            "ogrenciler": {"type": "array", "items": {"type": "string"}, "description": "kimlikler; boşsa hepsi"},
-            "dosyalar": {"type": "array", "items": {"type": "string"},
-                         "description": "öğrencilerin dışa aktardığı kayıt dosyaları (içe almadan anonimleştirilir)"},
-            "deneme_dahil": {"type": "boolean"}, "cikti": {"type": "string"},
-            "ham_yanitlar": {"type": "boolean", "description": "true: ölçme testlerindeki kısa yazılı cevapların ham "
-                             "metnini de ekle (puanlayıcı uyumu çalışması için). Serbest metindir; dosyayı paylaşmadan "
-                             "önce öğretmen okumalı."}}},
-    },
-    {
-        "name": "olcme_testi",
-        "description": "Pilot ölçme testini başlatır: öğretmenin onayladığı soruları (ön test, son test ya da gecikmeli "
-                       "test) seçenek sırası bu öğrenci için karıştırılmış olarak verir ve testin nasıl uygulanacağını "
-                       "söyler. Yalnız öğrenci kabul ederse ya da isterse çağır. Test bitince olcme_kaydet ile kaydet.",
-        "inputSchema": {"type": "object", "properties": {
-            "ders": {"type": "string"}, "ogrenci": {"type": "string"},
-            "tur": {"type": "string", "enum": ["on", "son", "gecikmeli"]}},
-            "required": ["ders", "ogrenci", "tur"]},
-    },
-    {
-        "name": "olcme_kaydet",
-        "description": "Biten ölçme testinin yanıtlarını kaydeder ve puanlar. Çoktan seçmelilerde tahtanın döndürdüğü "
-                       "secim (0'dan başlayan sıra) verilir, puanı araç hesaplar. Kısa yazılı sorularda ölçüte göre "
-                       "puan (0, 1, 2), öğrencinin cevabı kelimesi kelimesine ham_yanit ve kısa yanit_ozet verilir. "
-                       "Her soruda guven: tahmin|biraz|emin.",
-        "inputSchema": {"type": "object", "properties": {
-            "ders": {"type": "string"}, "ogrenci": {"type": "string"},
-            "tur": {"type": "string", "enum": ["on", "son", "gecikmeli"]},
-            "yanitlar": {"type": "array", "items": {"type": "object", "properties": {
-                "no": {"type": "string"}, "secim": {"type": "integer"}, "puan": {"type": "integer"},
-                "yanit_ozet": {"type": "string"},
-                "ham_yanit": {"type": "string", "description": "kısa yazılı soruda öğrencinin cevabı, kelimesi kelimesine, "
-                              "düzeltmeden ve özetlemeden (sonradan insan puanlamasıyla karşılaştırmak için)"},
-                "yanilgi_secildi": {"type": "boolean", "description": "kısa yanıtta ölçütteki yanılgı dile getirildiyse true"},
-                "guven": {"type": "string", "enum": ["tahmin", "biraz", "emin"]}},
-                "required": ["no"]}},
-            "yarim_kaldi": {"type": "boolean", "description": "öğrenci testi bitirmeden bıraktıysa true"}},
-            "required": ["ders", "ogrenci", "tur", "yanitlar"]},
-    },
-    {
-        "name": "tahtayi_ac",
-        "description": "Tahtayı hazırlar: yerel sunucu kapalıysa açar, canlı tahta sayfası açık değilse "
-                       "tarayıcıda açar ve bağlanmasını bekler. Derse başlamadan önce bir kez çağır.",
-        "inputSchema": {"type": "object", "properties": {}},
-    },
-    {
-        "name": "dersler",
-        "description": "Bilgisayardaki dersleri, bölümlerini ve görsellerini listeler. Öğrenci 'kendi makalem', 'kendi "
-                       "makalelerimden', 'eklediğim PDF' gibi bir şey derse ders='kendi-makalelerim' kitaplığını kullan "
-                       "(içindeki makaleler bu listede ve makaleler aracında görünür); başka bir makaleli dersi açma.",
-        "inputSchema": {"type": "object", "properties": {}},
-    },
-    {
-        "name": "ders_oku",
-        "description": "Bir dersin içeriğini okur. bolum verilmezse ders planı (hedefler, bölümler, görseller); "
-                       "bolum verilirse o bölümün anlatım metni, tahta komutları ve soruları; sayfa verilirse "
-                       "kaynağın (ders notu ya da makale) o sayfasının metni.",
-        "inputSchema": {"type": "object", "properties": {
-            "ders": {"type": "string", "description": "ders kimliği, ör. peri-implantitis-cerrahi"},
-            "bolum": {"type": "string", "description": "bölüm kimliği (isteğe bağlı)"},
-            "sayfa": {"type": "integer", "description": "kaynağın bu sayfasının metnini ve o sayfaya ait öğretmen notlarını oku"}},
-            "required": ["ders"]},
-    },
-    {
-        "name": "gorsel_bak",
-        "description": "Bir ders görselini sana gösterir; işaretleme ve yakınlaştırma bölgelerini seçmek için kullan.",
-        "inputSchema": {"type": "object", "properties": {
-            "ders": {"type": "string"}, "gorsel": {"type": "string", "description": "görsel kimliği, ör. sekil2"}},
-            "required": ["ders", "gorsel"]},
-    },
-    {
-        "name": "tahta",
-        "description": "Tahtaya yazar ve sesli anlatır. adimlar sırayla uygulanır: her adımda önce komutlar "
-                       "tahtaya çizilir, sonra anlat metni okunur. Anlatım ~40 sn'den uzun sürerse araç "
-                       "'sürüyor' döner; bitişini tahta_durumu ile bekleyebilirsin. Kullanıcı tahtada duraklattıysa "
-                       "'duraklatildi' döner: hata değil, tahta_durumu ile beklemeyi sürdür. Kullanıcı konuşursa "
-                       "anlatım duraklar ve araç hemen 'kullanici_konustu' döner: cevap ver, sonra anlatima_devam.",
-        "inputSchema": {"type": "object", "properties": {
-            "ders": {"type": "string", "description": "image komutu kullanılacaksa görsellerin alınacağı ders"},
-            "adimlar": {"type": "array", "minItems": 1, "maxItems": 12, "items": {
-                "type": "object", "properties": {
-                    "komutlar": {"type": "array", "items": KOMUT_SEMASI},
-                    "anlat": {"type": "string", "description": "bu adımda sesli okunacak metin"}}}},
-            "bekle": {"type": "boolean", "description": "anlatımın bitmesini bekle (varsayılan: evet)"}},
-            "required": ["adimlar"]},
-    },
-    {
-        "name": "soru_sor",
-        "description": "Tahtada çoktan seçmeli bir soru kartı açar ve dokunulan cevabı döndürür (en çok ~40 sn bekler; "
-                       "cevap gelmezse tahta_durumu ile beklemeyi sürdür). dogru verilirse kart doğru/yanlışı ve "
-                       "aciklama'yı gösterir. Sorular not için değil, öğrenmek içindir.",
-        "inputSchema": {"type": "object", "properties": {
-            "soru": {"type": "string"},
-            "secenekler": {"type": "array", "minItems": 2, "maxItems": 6, "items": {"type": "string"}},
-            "dogru": {"type": "integer", "description": "doğru seçeneğin sırası, 0'dan başlar (isteğe bağlı)"},
-            "aciklama": {"type": "string", "description": "cevaptan sonra kartta görünecek kısa açıklama"},
-            "anlat": {"type": "string", "description": "soruyu sesli okumak için metin (isteğe bağlı)"},
-            "etiket": {"type": "string", "description": "kartın üstündeki küçük etiket, ör. 'Ön test · 3/12'"}},
-            "required": ["soru", "secenekler"]},
-    },
-    {
-        "name": "tahta_durumu",
-        "description": "Tahtanın durumunu verir. no verilirse o komutun (anlatım ya da soru) bitmesini en çok ~40 sn bekler "
-                       "ve sonucunu döndürür; kullanıcı konuşursa beklemeden 'kullanici_konustu' döner. "
-                       "'duraklatildi': kullanıcı anlatımı duraklattı; aynı no ile beklemeyi sürdür. no verilmezse "
-                       "kullanıcının bekleyen sözünü de 'kullanici_konustu' alanında verir (kullanıcı 'tahtaya bak' derse).",
-        "inputSchema": {"type": "object", "properties": {"no": {"type": "integer"}}},
-    },
-    {
-        "name": "dinle",
-        "description": "Kullanıcının tahtadaki mikrofon tuşuyla söylediğini bekler ve yazı olarak döndürür "
-                       "(en çok ~40 sn). Kimse konuşmazsa 'sessiz' döner; yeniden çağırabilirsin. Sesli sohbet "
-                       "döngüsü: anlat → dinle → cevapla → dinle. Dikteyle gelen sözde 'metin' terim sözlüğüyle "
-                       "düzeltilmiştir, 'ham_metin' tanıyıcının ilk çıktısı, 'motor' duyu|tarayici|yazi.",
-        "inputSchema": {"type": "object", "properties": {
-            "bekle": {"type": "integer", "description": "en çok kaç saniye beklensin (5–50, varsayılan 40)"}}},
-    },
-    {
-        "name": "videolar",
-        "description": "Dersin videolarını listeler: ders klasöründeki videolar/ dosyaları (internetsiz oynar) ve dersin "
-                       "egitmen.json/ders.json'unda tanımlı YouTube bağlantıları. Tahtada göstermek için tahta aracında "
-                       "{type:'video', video:'<kimlik>'} kullan.",
-        "inputSchema": {"type": "object", "properties": {"ders": {"type": "string"}}, "required": ["ders"]},
-    },
-    {
-        "name": "anlatima_devam",
-        "description": "Kullanıcı söz alınca duraklayan anlatımı, cevabından sonra kaldığı cümleden sürdürür (tahta cevaptan "
-                       "önceki hâline döner) ve anlatımın bitmesini tahta gibi bekler. birak=true: anlatımı sürdürmez, bırakır.",
-        "inputSchema": {"type": "object", "properties": {
-            "birak": {"type": "boolean", "description": "anlatımı sürdürme, bırak (konu değiştiyse)"}}},
-    },
-    {
-        "name": "ses_yeniden_baslat",
-        "description": "Pocket (doğal Türkçe ses) işçisini kapatıp yeniden açar. tahtayi_ac ya da tahta_durumu 'ses' alanında "
-                       "Pocket'in yüklenemediğini söylüyorsa ve kullanıcı bir düzeltme yaptıysa (ör. KUR'u yeniden çalıştırdı) "
-                       "kullan; sunucu penceresini kapatmak gerekmez. Yükleme ~1 dk sürer, o arada yedek ses konuşur.",
-        "inputSchema": {"type": "object", "properties": {}},
-    },
-    {
-        "name": "durdur",
-        "description": "Anlatımı hemen keser ve sıradaki komutları iptal eder.",
-        "inputSchema": {"type": "object", "properties": {}},
-    },
-]
+def profil():
+    p = (os.environ.get("KLINIK_KOC_PROFIL") or _ayar("profil") or "").strip().lower()
+    if p in ("ogretmen", "öğretmen", "ogrenci", "öğrenci"):
+        return "ogretmen" if p.startswith(("ogr", "öğr")) and "etmen" in p else "ogrenci"
+    try:
+        klasor = os.path.join(veri_yeri.veri_kok(), "sihirbaz")
+        if os.path.isdir(klasor) and any(os.scandir(klasor)):
+            return "ogretmen"
+    except OSError:
+        pass
+    return "ogrenci"
+
+
+def araclar():
+    gizli = set(GIZLI_ARACLAR)
+    if profil() != "ogretmen":
+        gizli |= OGRETMEN_ARACLARI
+    return [a for a in ARACLAR if a["name"] not in gizli]
 
 
 # ---------- Yerel sunucuyla konuşma ----------
-def istek(yol, govde=None, zaman=60):
+# Her araç çağrısının bir bağlamı vardır (iş parçacığına özel): bekleme kimliği (Claude çağrıyı iptal ederse sunucudaki
+# bekleme hemen biter), teslim edilecek söz numaraları (söz ancak Claude'a yazıldıktan sonra sunucudan silinir),
+# bitiş zamanı (bekleme bütçesi) ve iptal işareti.
+_BAGLAM = threading.local()
+
+
+def _baglam():
+    return getattr(_BAGLAM, "c", None)
+
+
+def _ham_istek(yol, govde=None, zaman=60):
     veri = None if govde is None else json.dumps(govde, ensure_ascii=False).encode("utf-8")
     r = urllib.request.Request(ADRES + "/api/canli/" + yol, data=veri,
-                               headers={"Content-Type": "application/json"})
+                               headers={"Content-Type": "application/json", "X-KlinikKoc-Arac": "1"})
     with urllib.request.urlopen(r, timeout=zaman) as y:
         return json.loads(y.read().decode("utf-8"))
+
+
+def istek(yol, govde=None, zaman=60):
+    c = _baglam()
+    if c is not None:
+        yol += ("&" if "?" in yol else "?") + "bekleme=%s&teslim=1" % c["bekleme"]
+    y = _ham_istek(yol, govde, zaman)
+    if c is not None and isinstance(y, dict) and y.get("teslim"):
+        c["teslimler"].append(y.pop("teslim"))
+    return y
+
+
+def _arka_planda(yol, zaman=3):
+    """Sonucu beklenmeyen kısa bildirim (teslim onayı, iptal, etkinlik)."""
+    def git():
+        try:
+            _ham_istek(yol, zaman=zaman)
+        except Exception:
+            pass
+    threading.Thread(target=git, daemon=True).start()
+
+
+# ---- Bekleme bütçesi: bir araç çağrısı en çok ne kadar açık kalabilir? ----
+# Claude masaüstü bir araç çağrısını belli bir süre sonra (çoğu sürümde ~60 sn) zaman aşımıyla keser. Çağrı açıkken
+# "ilerleme" bildirimi gönderilirse bazı sürümler süreyi uzatır. Bu yüzden: ilerleme jetonu varsa ilk denemede
+# DENEME_SN beklenir; Claude zaman aşımıyla keserse kesildiği süre öğrenilir ve ayarlar.json'a yazılır
+# (arac_bekleme_sn); sonraki çağrılar o sınırın biraz altında kalır. Söz bu arada kaybolmaz (teslim onayı).
+VARSAYILAN_BEKLEME_SN = 50
+DENEME_BEKLEME_SN = 170
+NABIZ_SN = float(os.environ.get("KLINIK_KOC_NABIZ_SN") or 10)  # ilerleme bildirimi aralığı
+PARCA_SN = 25  # sunucuya tek istekte en çok bu kadar beklenir; aralarda iptal ve bütçe denetlenir
+
+
+def _ayar(anahtar, varsayilan=None):
+    try:
+        return ders_sonu.ayarlar().get(anahtar, varsayilan)
+    except Exception:
+        return varsayilan
+
+
+def _ayar_yaz(anahtar, deger):
+    try:
+        a = ders_sonu.ayarlar()
+        a[anahtar] = deger
+        ders_sonu._json_yaz(ders_sonu.ayar_yolu(), a)
+    except Exception:
+        pass
+
+
+def bekleme_butcesi(ilerleme_var):
+    try:
+        ogrenilen = int(_ayar("arac_bekleme_sn") or 0)
+    except (TypeError, ValueError):
+        ogrenilen = 0
+    if ogrenilen >= 20:
+        return min(ogrenilen, 600)
+    return DENEME_BEKLEME_SN if ilerleme_var else VARSAYILAN_BEKLEME_SN
+
+
+def _kalan():
+    c = _baglam()
+    return (c["bitis"] - time.time()) if c else float(VARSAYILAN_BEKLEME_SN)
+
+
+def _iptal_edildi():
+    c = _baglam()
+    return bool(c and c["iptal"])
+
+
+def uzun_bekle(no=None, ilk=None):
+    """no verilirse o komutun (anlatım, soru) bitmesini, verilmezse kullanıcının sözünü bekler. Sunucuya kısa
+    parçalarla sorar; bütçe dolana, Claude iptal edene ya da bir şey olana dek sürer. ilk: elde zaten bir ara sonuç
+    varsa (ör. gonder 'sürüyor' döndüyse) o."""
+    y = ilk
+    bitis = time.time() + _kalan()
+    while True:
+        if y is not None:
+            durum = y.get("durum") if isinstance(y, dict) else None
+            if durum not in ("sürüyor", "sessiz", "duraklatildi") or _iptal_edildi():
+                return y
+        kalan = bitis - time.time()
+        if kalan < 4 and y is not None:
+            return y
+        parca = int(max(3, min(PARCA_SN, kalan - 2)))
+        yol = ("sonuc?no=%d&bekle=%d" % (int(no), parca)) if no is not None else ("dinle?bekle=%d" % parca)
+        once = time.time()
+        y = istek(yol, zaman=parca + 20)
+        if time.time() - once < 1 and isinstance(y, dict) and y.get("durum") in ("sürüyor", "sessiz", "duraklatildi"):
+            time.sleep(1)  # sunucu beklemeden döndüyse (eski sürüm vb.) boşuna dönüp durmayalım
 
 
 def sunucu_acik():
@@ -663,9 +236,23 @@ def sunucuyu_baslat():
 
 def gonder(komut, bekle=True):
     try:
-        return istek("gonder", {"komut": komut, "bekle": 40 if bekle else 0.5}, zaman=70)
+        if not bekle:
+            return istek("gonder", {"komut": komut, "bekle": 0.5}, zaman=30)
+        ilk = istek("gonder", {"komut": komut, "bekle": int(max(1, min(PARCA_SN, _kalan() - 2)))}, zaman=PARCA_SN + 20)
+        no = ilk.get("no") if isinstance(ilk, dict) else None
+        if no is None:
+            return ilk
+        y = uzun_bekle(no, ilk)
+        return _suruyor_notu(y)
     except urllib.error.URLError:
         return {"durum": "bağlı değil", "hata": "Yerel tahta sunucusu kapalı. Önce tahtayi_ac aracını çağır."}
+
+
+def _suruyor_notu(y):
+    if isinstance(y, dict) and y.get("durum") == "sürüyor" and y.get("no"):
+        y["not"] = ("Anlatım hâlâ sürüyor (hata değil). Sohbete yazma; bekle(no=%d) çağırarak bitişini bekle. "
+                    "Kullanıcı konuşursa hemen döner." % y["no"])
+    return y
 
 
 # ---------- Ders dosyaları ----------
@@ -1370,7 +957,7 @@ def ar_karne(a):
 SOZLU_TALIMAT = """Bu bir sözlü sınav provası. Sen sınav hocasısın; sakin, saygılı ve kısa konuş. Not vermezsin.
 - Başta söyle: kaç soru soracağını, her soruda önce sesli düşünmesinin serbest olduğunu, sonunda ayrıntılı
   geri bildirim vereceğini. Sınav sırasında ders anlatma, ipucu verme, cevabı onaylama ya da düzeltme.
-- Soruyu tahtaya yaz (tahta: title + text) ve sesli sor; cevabı dinle aracıyla al. Sessiz kalırsa bir kez
+- Soruyu tahtaya yaz (tahta: title + text) ve sesli sor; cevabı bekle aracıyla al. Sessiz kalırsa bir kez
   "Acele etme, aklına gelenden başla." de; ikinci sessizlikte bir sonraki soruya geç ve bunu not al.
 - Cevap kısa kalırsa gerçek sınavdaki gibi en çok bir izleme sorusu sor ("Neden?", "Ayırıcı tanıda ne düşünürsün?",
   "Bu hastada bunu hangi bulguya dayanarak söylüyorsun?"). İzleme sorusu yeni bilgi vermemeli.
@@ -1492,9 +1079,9 @@ OLCME_TALIMAT = """Bu bir ölçme testi, ders değil. Eğitmen kurallarını tes
 - Önce öğrenciye kısaca söyle: soru sayısı, yaklaşık 15 dakika, not için değil, sonuçlar ve doğru cevaplar sonda.
 - Soruları sırayla, tek tek sor. Çoktan seçmeli soruda soru_sor'u 'dogru' ve 'aciklama' OLMADAN, verilen secenekler
   sırasıyla ve etiket ile çağır (ör. "Ön test · 3/12"). Dönen 'secim' değerini not al.
-- Kısa yazılı soruda soruyu tahtaya yaz (tahta: title + text) ve öğrencinin cevabını sohbetten ya da dinle ile al.
+- Kısa yazılı soruda soruyu tahtaya yaz (tahta: title + text) ve öğrencinin cevabını sohbetten ya da bekle ile al.
   Puanı 'olcut'e göre sessizce ver (0, 1, 2); öğrenciye söyleme. olcme_kaydet'te öğrencinin cevabını kelimesi
-  kelimesine ham_yanit olarak ver (düzeltme, özetleme yok; konuştuysa dinle'nin ham_metin'i).
+  kelimesine ham_yanit olarak ver (düzeltme, özetleme yok; konuştuysa bekle'nin ham_metin'i).
 - Her sorudan sonra güveni sor: soru_sor ile secenekler ["Tahmin", "Biraz", "Emin"], etiket "Ne kadar eminsin?".
 - Bütün sorular bitince olcme_kaydet'i çağır. Sonra puanı ve her yanlış sorunun doğru cevabını kısa, sakin bir dille
   göster; 'emin ama yanlış' olanları özellikle düzelt. Öğrenci testi yarıda bırakırsa yarim_kaldi=true ile kaydet.
@@ -1833,7 +1420,7 @@ def ar_soru_sor(a):
 def ar_tahta_durumu(a):
     if a.get("no"):
         try:
-            return metin(istek("sonuc?no=%d&bekle=40" % int(a["no"]), zaman=70))
+            return metin(_suruyor_notu(uzun_bekle(int(a["no"]))))
         except urllib.error.URLError:
             return metin({"durum": "bağlı değil"})
     try:
@@ -1928,7 +1515,7 @@ def ar_anlatima_devam(a):
         return metin(r)
     # Anlatım sürüyor: bitişini tahta aracındaki gibi bekle (kullanıcı yine konuşursa hemen döner).
     try:
-        s = istek("sonuc?no=%d&bekle=40" % int(no), zaman=70)
+        s = _suruyor_notu(uzun_bekle(int(no)))
     except urllib.error.URLError:
         return metin(r)
     s["devam"] = r.get("durum")
@@ -1936,31 +1523,45 @@ def ar_anlatima_devam(a):
 
 
 SESSIZ_SINIR_SN = 600  # kullanıcı bu kadar süre hiç konuşmazsa dinleme döngüsü bırakılır
+UYANDIRMALI_SINIR_SN = 180  # otomatik uyandırma açıksa Claude dinlemeyi daha erken bırakabilir: söz sohbete düşer
 _sessizlik = {"bas": None}
 
 
+def ar_bekle(a):
+    """Tek bekleme aracı: no verilirse anlatımın/sorunun bitmesini, verilmezse öğrencinin sözünü bekler."""
+    if a.get("no"):
+        return ar_tahta_durumu({"no": a["no"]})
+    return ar_dinle(a)
+
+
 def ar_dinle(a):
+    bas = time.time()
     try:
-        sure = max(5, min(int(a.get("bekle") or 40), 50))
-    except (TypeError, ValueError):
-        sure = 40
-    try:
-        y = istek("dinle?bekle=%d" % sure, zaman=sure + 20)
+        y = uzun_bekle(None)
         if isinstance(y, dict) and y.get("durum") == "sessiz":
             simdi = time.time()
             if _sessizlik["bas"] is None:
-                _sessizlik["bas"] = simdi - sure
+                _sessizlik["bas"] = bas
             gecen = int(simdi - _sessizlik["bas"])
+            uyandirmali = bool(y.pop("uyandirma", False))
+            sinir = UYANDIRMALI_SINIR_SN if uyandirmali else SESSIZ_SINIR_SN
             y["sessiz_sn"] = gecen
-            y["devam"] = gecen < SESSIZ_SINIR_SN
+            y["devam"] = gecen < sinir
             if y["devam"]:
-                y["not"] = "Kullanıcı ara vermiş olabilir; hemen yeniden dinle çağır."
+                y["not"] = "Kullanıcı ara vermiş olabilir; hemen yeniden bekle çağır."
             else:
                 _sessizlik["bas"] = None
-                y["not"] = ("Uzun sessizlik: dinlemeyi bırak. Sohbete kısa not yaz: tahtaya dönünce mikrofona basıp "
-                            "konuşsun ya da buraya 'tahtaya bak' yazsın.")
+                if uyandirmali:
+                    y["not"] = ("Uzun sessizlik: beklemeyi bırak, sohbete tek cümlelik kısa bir not yaz. Otomatik uyandırma "
+                                "açık: öğrenci tahtada konuşunca sözü bu sohbete 'Tahtadan sesli soru: ...' diye kendiliğinden "
+                                "düşer; ona tahtada cevap ver.")
+                else:
+                    y["not"] = ("Uzun sessizlik: beklemeyi bırak. Sohbete kısa not yaz: tahtaya dönünce mikrofona basıp "
+                                "konuşsun ya da buraya 'tahtaya bak' yazsın.")
         else:
             _sessizlik["bas"] = None
+            if isinstance(y, dict):
+                y.pop("uyandirma", None)
         return metin(y)
     except urllib.error.URLError:
         return metin({"durum": "bağlı değil", "hata": "Yerel tahta sunucusu kapalı. Önce tahtayi_ac aracını çağır."})
@@ -2217,7 +1818,7 @@ ISLEYICILER = {"egitmen_hazirla": ar_egitmen_hazirla, "kayit_oku": ar_kayit_oku,
                "rapor_yaz": ar_rapor_yaz, "olcme_testi": ar_olcme_testi, "olcme_kaydet": ar_olcme_kaydet,
                "tahtayi_ac": ar_tahtayi_ac, "dersler": ar_dersler, "ders_oku": ar_ders_oku,
                "gorsel_bak": ar_gorsel_bak, "tahta": ar_tahta, "soru_sor": ar_soru_sor,
-               "tahta_durumu": ar_tahta_durumu, "dinle": ar_dinle, "durdur": ar_durdur,
+               "tahta_durumu": ar_tahta_durumu, "dinle": ar_dinle, "bekle": ar_bekle, "durdur": ar_durdur,
                "anlatima_devam": ar_anlatima_devam, "videolar": ar_videolar,
                "bilgi_ara": ar_bilgi_ara, "vakalar": ar_vakalar, "vaka_oku": ar_vaka_oku, "karne": ar_karne,
                "sozlu_prova": ar_sozlu_prova, "tekrar_listesi": ar_tekrar_listesi,
@@ -2282,11 +1883,93 @@ def kanali_baslat():
         threading.Thread(target=kanal_dongusu, daemon=True).start()
 
 
+# Beklemeli araçlar ayrı iş parçacığında, ötekiler eskisi gibi sırayla çalışır (kayıt dosyaları aynı anda yazılmasın).
+BEKLEMELI = {"tahta", "soru_sor", "tahta_durumu", "dinle", "bekle", "anlatima_devam", "durdur", "tahtayi_ac"}
+_SIRALI = threading.Lock()
+_ISTEKLER = {}  # JSON-RPC id → çağrı bağlamı (iptal için)
+_ISTEK_KILIT = threading.Lock()
+
+
+def iptal_et(istek_no, neden=""):
+    """Claude bir çağrıyı iptal etti (kullanıcı durdurdu ya da zaman aşımı): sunucudaki beklemesi hemen biter,
+    o çağrıya verilmiş söz kuyruğa geri döner."""
+    with _ISTEK_KILIT:
+        c = _ISTEKLER.get(istek_no)
+    if not c:
+        return
+    c["iptal"] = True
+    c["neden"] = str(neden or "")
+    _arka_planda("iptal?bekleme=%s" % c["bekleme"])
+
+
+def _ogren(c, gecen):
+    """Zaman aşımıyla kesilen bekleme: Claude'un bu bilgisayardaki araç süresi sınırını öğren."""
+    neden = c.get("neden", "").lower()
+    if c.get("araci") in BEKLEMELI and ("timed out" in neden or "timeout" in neden or "zaman" in neden) and gecen >= 25:
+        _ayar_yaz("arac_bekleme_sn", max(20, int(gecen) - 12))
+
+
+def arac_cagir(no, p):
+    """tools/call: bağlam kurar, aracı çalıştırır, yanıtı yazar; teslim onayını ya da geri koymayı yapar."""
+    ad = p.get("name")
+    ilerleme = ((p.get("_meta") or {}).get("progressToken"))
+    bas = time.time()
+    c = {"bekleme": "%x-%s" % (os.getpid(), no), "teslimler": [], "iptal": False, "araci": ad,
+         "bitis": bas + bekleme_butcesi(ilerleme is not None)}
+    with _ISTEK_KILIT:
+        _ISTEKLER[no] = c
+    dur = threading.Event()
+    if ilerleme is not None and ad in BEKLEMELI:
+        def nabiz():
+            # Çağrı uzun sürerken Claude'a "hâlâ çalışıyorum" bildirimi (zaman aşımını uzatabilir).
+            while not dur.wait(NABIZ_SN):
+                yaz({"jsonrpc": "2.0", "method": "notifications/progress",
+                     "params": {"progressToken": ilerleme, "progress": int(time.time() - bas),
+                                "message": "Tahta bekleniyor"}})
+        threading.Thread(target=nabiz, daemon=True).start()
+    _arka_planda("etkin", zaman=2)
+    _BAGLAM.c = c
+    try:
+        if ad in BEKLEMELI:
+            sonuc = isle({"jsonrpc": "2.0", "id": no, "method": "tools/call", "params": p})
+        else:
+            with _SIRALI:
+                sonuc = isle({"jsonrpc": "2.0", "id": no, "method": "tools/call", "params": p})
+        hata = None
+    except Exception as e:
+        sonuc, hata = None, e
+    finally:
+        _BAGLAM.c = None
+        dur.set()
+        with _ISTEK_KILIT:
+            _ISTEKLER.pop(no, None)
+    _arka_planda("etkin", zaman=2)
+    if c["iptal"]:
+        # İptal edilen çağrıya yanıt yazılmaz; ona verilmiş söz kaybolmasın, kuyruğa geri dönsün.
+        for t in c["teslimler"]:
+            _arka_planda("teslim?no=%d&onay=0" % int(t))
+        _ogren(c, time.time() - bas)
+        return
+    basarisiz = hata is not None or (isinstance(sonuc, dict) and sonuc.get("isError"))
+    try:
+        if hata is not None:
+            yaz({"jsonrpc": "2.0", "id": no, "error": {"code": -32603, "message": str(hata)}})
+        else:
+            yaz({"jsonrpc": "2.0", "id": no, "result": sonuc})
+        yazildi = True
+    except Exception:
+        yazildi = False
+    for t in c["teslimler"]:
+        _arka_planda("teslim?no=%d&onay=%d" % (int(t), 1 if yazildi and not basarisiz else 0))
+
+
 def isle(m):
     yontem, no, p = m.get("method"), m.get("id"), m.get("params") or {}
     if no is None:
         if yontem == "notifications/initialized":
             kanali_baslat()
+        elif yontem == "notifications/cancelled":
+            iptal_et(p.get("requestId"), p.get("reason"))
         return None  # bildirim: yanıt verilmez
     if yontem == "initialize":
         yetenek = {"tools": {}}
@@ -2299,7 +1982,7 @@ def isle(m):
     if yontem == "ping":
         return {}
     if yontem == "tools/list":
-        return {"tools": ARACLAR}
+        return {"tools": araclar()}
     if yontem == "tools/call":
         f = ISLEYICILER.get(p.get("name"))
         if not f:
@@ -2343,6 +2026,10 @@ def calis():
         except Exception:
             yaz({"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Geçersiz JSON"}})
             continue
+        if m.get("method") == "tools/call" and m.get("id") is not None:
+            # Araç ayrı iş parçacığında çalışır: o beklerken ping, iptal ve başka çağrılar hemen işlenir.
+            threading.Thread(target=arac_cagir, args=(m["id"], m.get("params") or {}), daemon=True).start()
+            continue
         try:
             sonuc = isle(m)
             if m.get("id") is not None:
@@ -2353,118 +2040,9 @@ def calis():
             yaz({"jsonrpc": "2.0", "id": m.get("id"), "error": {"code": -32603, "message": str(e)}})
 
 
-# ---------- Claude masaüstü ayarı ----------
-# Claude masaüstü uygulamasının MCP ayarı (claude_desktop_config.json) kuruluma göre farklı yerdedir:
-#  - Windows, Microsoft Store (MSIX) kurulumu, yeni sürümler: %LOCALAPPDATA%\Claude-Data\claude_<paket>\
-#    (uygulama veriyi buraya taşır, eski paket klasörüne ".user-data-left.*" işareti bırakır)
-#  - Windows, MSIX eski sürümler: %LOCALAPPDATA%\Packages\Claude_<paket>\LocalCache\Roaming\Claude\
-#  - Windows, .exe kurulumu: %APPDATA%\Claude\
-#  - macOS: ~/Library/Application Support/Claude/   - Linux: ~/.config/Claude/
-# Kesin yol, uygulamada Ayarlar › Geliştirici › "Yapılandırmayı düzenle" düğmesinin açtığı dosyadır;
-# bulunamazsa kullanıcı onu --ayar "<yol>" ile verebilir.
-AYAR_ADI = "claude_desktop_config.json"
-
-
-def _paket_kimligi(klasor_adi):
-    """'Claude_pzs8sxrjxfjjc' / 'claude_pzs8sxrjxfjjc' → 'pzs8sxrjxfjjc'."""
-    return klasor_adi.split("_", 1)[1].lower() if "_" in klasor_adi else ""
-
-
-def ayar_adaylari(isletim=None, ortam=None):
-    """Olası ayar dosyalarını [(yol, tur, aciklama)] olarak döndürür.
-
-    tur: "asil"  → Claude'un okuduğu dosya (kur buraya yazar)
-         "eski"  → eskiden kullanılan, artık okunmayan dosya (yalnız bilgi için listelenir)
-    Klasörü olmayan adaylar listelenmez. Hiç aday yoksa boş liste döner.
-    """
-    isletim = isletim or ("nt" if os.name == "nt" else sys.platform)
-    ortam = os.environ if ortam is None else ortam
-    sonuc = []
-    if isletim == "nt":
-        appdata = ortam.get("APPDATA", "")
-        yerel = ortam.get("LOCALAPPDATA", "")
-        tasinan = set()
-        if yerel:
-            for d in sorted(glob.glob(os.path.join(yerel, "Claude-Data", "claude_*"))):
-                if os.path.isdir(d):
-                    tasinan.add(_paket_kimligi(os.path.basename(d)))
-                    sonuc.append((os.path.join(d, AYAR_ADI), "asil", "Microsoft Store kurulumu (yeni yer)"))
-        msix_var = False
-        if yerel:
-            for paket in sorted(glob.glob(os.path.join(yerel, "Packages", "Claude_*"))):
-                d = os.path.join(paket, "LocalCache", "Roaming", "Claude")
-                if not os.path.isdir(d):
-                    continue
-                msix_var = True
-                ayrildi = glob.glob(os.path.join(d, ".user-data-left*"))
-                if ayrildi or _paket_kimligi(os.path.basename(paket)) in tasinan:
-                    sonuc.append((os.path.join(d, AYAR_ADI), "eski", "Microsoft Store paket klasörü (veri taşınmış)"))
-                else:
-                    sonuc.append((os.path.join(d, AYAR_ADI), "asil", "Microsoft Store paket klasörü"))
-        if appdata and os.path.isdir(os.path.join(appdata, "Claude")):
-            if msix_var or tasinan:
-                # Store kurulumunda uygulama %APPDATA%\Claude'u okumaz.
-                sonuc.append((os.path.join(appdata, "Claude", AYAR_ADI), "eski", "%APPDATA%\\Claude (Store kurulumu bunu okumaz)"))
-            else:
-                sonuc.append((os.path.join(appdata, "Claude", AYAR_ADI), "asil", "Claude .exe kurulumu"))
-    else:
-        if isletim == "darwin":
-            d = os.path.expanduser("~/Library/Application Support/Claude")
-        else:
-            d = os.path.join(ortam.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"), "Claude")
-        if os.path.isdir(d):
-            sonuc.append((os.path.join(d, AYAR_ADI), "asil", "Claude masaüstü"))
-    return sonuc
-
-
-def ayar_dosyalari():
-    """Claude'un okuduğu ayar dosyaları (kur bunlara yazar)."""
-    return [y for y, tur, _ in ayar_adaylari() if tur == "asil"]
-
-
-YOL_GOSTER = ("Claude'un ayar dosyası bulunamadı.\n"
-              "Claude masaüstü uygulamasını açın → Ayarlar → Geliştirici → \"Yapılandırmayı düzenle\".\n"
-              "Açılan dosyanın yolunu kopyalayıp şunu çalıştırın:\n"
-              "  python tools/tahta-mcp.py --kur --ayar \"<dosyanın yolu>\"")
-
-
-def _ayar_yolu_arg():
-    if "--ayar" in sys.argv:
-        i = sys.argv.index("--ayar")
-        if i + 1 >= len(sys.argv):
-            sys.exit("--ayar'dan sonra dosya yolunu yazın.")
-        yol = os.path.abspath(os.path.expanduser(sys.argv[i + 1].strip('"')))
-        if os.path.isdir(yol):
-            yol = os.path.join(yol, AYAR_ADI)
-        return yol
-    return None
-
-
-def sunucu_girdisi():
-    return {"command": sys.executable, "args": [os.path.abspath(__file__)],
-            "env": {"PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}}
-
-
-def ayara_yaz(yol, kaldir=False):
-    """Yalnız mcpServers[AD]'yi değiştirir; dosyadaki öteki alanlar (preferences vb.) olduğu gibi kalır."""
-    os.makedirs(os.path.dirname(yol), exist_ok=True)
-    ayar = {}
-    if os.path.exists(yol) and os.path.getsize(yol) > 0:
-        try:
-            with open(yol, encoding="utf-8-sig") as f:
-                ayar = json.load(f) or {}
-        except Exception:
-            sys.exit("Ayar dosyası okunamadı (bozuk JSON?): %s\nDosyayı düzeltip yeniden deneyin." % yol)
-        shutil.copy2(yol, yol + ".yedek")
-    sunucular = ayar.setdefault("mcpServers", {})
-    if kaldir:
-        sunucular.pop(AD, None)
-    else:
-        sunucular[AD] = sunucu_girdisi()
-    gecici = yol + ".yaziliyor"
-    with open(gecici, "w", encoding="utf-8") as f:
-        json.dump(ayar, f, ensure_ascii=False, indent=2)
-    os.replace(gecici, yol)
+# ---------- Claude masaüstü ayarı (tools/claude_ayari.py) ----------
+from claude_ayari import (AYAR_ADI, CAKISAN_SUNUCULAR, YOL_GOSTER, _ayar_yolu_arg, _paket_kimligi,  # noqa: E402,F401
+                          ayar_adaylari, ayar_dosyalari, ayar_raporu, ayara_yaz, cakisanlar, sunucu_girdisi)
 
 
 def kur(kaldir=False):
@@ -2474,8 +2052,11 @@ def kur(kaldir=False):
         print(YOL_GOSTER)
         sys.exit(1)
     for yol in hedefler:
-        ayara_yaz(yol, kaldir)
+        cikan = ayara_yaz(yol, kaldir)
         print(("Kaldırıldı: " if kaldir else "Eklendi (Claude'un okuduğu dosya): ") + yol)
+        for ad in cikan:
+            print("Eski tahta bağlantısı çıkarıldı: '%s' (aynı araç adlarını kullanıyordu; Claude yanlış tahtayı "
+                  "dinleyebilirdi). Eski ayar yedekte: %s.yedek" % (ad, yol))
     if not elle:
         for yol, tur, aciklama in ayar_adaylari():
             if tur == "eski":
@@ -2488,33 +2069,6 @@ def kur(kaldir=False):
         print("  python tools/tahta-mcp.py --kur --ayar \"<yol>\"  ile verin.")
         print("Sonra Claude'a şunu yazın:  Tahtayı aç ve bana Şekil 2'yi anlat.")
         kayit_yeri_hazirla()
-
-
-def ayar_raporu():
-    """--dene için: bulunan her ayar dosyasında bu sunucu var mı? Sorun varsa uyarı satırları döndürür."""
-    satirlar, uyarilar = [], []
-    adaylar = ayar_adaylari()
-    if not adaylar:
-        uyarilar.append(YOL_GOSTER)
-    for yol, tur, aciklama in adaylar:
-        durum = "dosya yok"
-        if os.path.exists(yol):
-            try:
-                with open(yol, encoding="utf-8-sig") as f:
-                    g = ((json.load(f) or {}).get("mcpServers") or {}).get(AD)
-                if g:
-                    hedef = (g.get("args") or [""])[0]
-                    durum = AD + " var" + ("" if os.path.exists(hedef) else " AMA dosyası yok: " + hedef)
-                    if tur == "asil" and not os.path.exists(hedef):
-                        uyarilar.append("%s girdisi var olmayan bir dosyayı gösteriyor: %s\nKUR'u bu klasörden yeniden çalıştırın." % (AD, hedef))
-                else:
-                    durum = AD + " YOK"
-            except Exception as e:
-                durum = "okunamadı (%s)" % e
-        satirlar.append("  [%s] %s\n        %s — %s" % ("asıl" if tur == "asil" else "eski", aciklama, yol, durum))
-        if tur == "asil" and AD + " var" not in durum:
-            uyarilar.append("Claude'un okuduğu dosyada %s yok: %s\nKUR'u yeniden çalıştırın." % (AD, yol))
-    return satirlar, uyarilar
 
 
 def kayit_yeri_hazirla():
