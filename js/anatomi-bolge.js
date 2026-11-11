@@ -1323,7 +1323,7 @@
 
 
   /* ---------------- Yandan görünüm: çeneler, trigeminal dallar ve arterler ----------------
-   * Yüz sola bakar; ≈ 0,55 birim = 1 mm (şematik). sinir, arter: katman görünürlüğü (0–1); loop: mental sinirin
+   * Yüz sola bakar; 0,66 birim = 1 mm, ölçüler ortalama erişkin değerleri. sinir, arter: katman görünürlüğü (0–1); loop: mental sinirin
    * ön loop'unun belirginliği (0–1). Kemik içinden ya da medialden geçen yollar kesikli çizilir. */
   const YG_DURUM = {
     kemik:            { sinir: 0, arter: 0, loop: 0.4 },
@@ -1333,121 +1333,164 @@
     'mental-foramen': { sinir: 1, arter: 0, loop: 1 }
   };
 
+  // Yandan diş: [genişlik, kuron boyu, kök boyu, tip, kuron ucu y] (mm). Tip: I kesici, C kanin, P küçük azı, M büyük azı, M3 üç bukkal tüberküllü.
+  const UST_DIS = [[4.5, 10.5, 13, 'I', 1.5], [5.5, 9, 13, 'I', 0.6], [7, 10, 17, 'C', 0.8], [7, 8, 14, 'P', 1], [6.5, 7.5, 14, 'P', 1], [10, 7, 12.5, 'M', 1.2], [9, 6.5, 12, 'M', 1.2], [8, 6, 10.5, 'M', 1]];
+  const ALT_DIS = [[2.5, 9, 12.5, 'I', -1], [3, 9.5, 14, 'I', -1], [6, 11, 16, 'C', -1.6], [7, 8.5, 14, 'P', -0.4], [7, 8, 14.5, 'P', -0.4], [11, 7.5, 13, 'M3', -0.5], [10.5, 7, 13, 'M', -0.5], [10, 6.5, 11, 'M', -0.3]];
+  const YS = 0.66, YX = 52.5, YY = 54;
+  const ym = (x, y) => [YX + YS * x, YY + YS * y];
+
   function yanCiz(g0, variant, opt) {
     const p = { ...YG_DURUM.kemik, ...(opt.p || YG_DURUM[variant] || YG_DURUM.kemik) };
     const id = uid();
     const defs = svg('defs', {}, g0);
     const kes = svg('clipPath', { id: id + 'c' }, defs);
-    svg('rect', { x: 49.5, y: 3, width: 62, height: 84, rx: 3 }, kes);
-    const g = svg('g', { 'clip-path': `url(#${id}c)` }, g0);
+    svg('rect', { x: 49.5, y: 3, width: 61.5, height: 84, rx: 3 }, kes);
+    const gk = svg('g', { 'clip-path': `url(#${id}c)` }, g0);
+    // Çizim milimetre koordinatlarında: x arkaya, y aşağıya; başlangıç üst kesici ucu hizası, okluzal düzlem y = 0.
+    const g = svg('g', { transform: `translate(${YX},${YY}) scale(${YS})` }, gk);
     const parts = {};
     const sn = clamp(p.sinir), ar = clamp(p.arter), lp = clamp(p.loop);
-    // Kafa iskeleti arka planı (silik) ve elmacık kemiği-kavsi.
-    svg('path', { d: smooth([[58, 13], [62, 4], [112, 2], [112, 40], [104, 36], [96, 33], [90, 30], [86, 24], [80, 10], [70, 7], [62, 10]]) + ' Z', class: 'an-kafa' }, g);
-    tagger(svg('ellipse', { cx: 71.5, cy: 17.5, rx: 8.2, ry: 7.6, class: 'an-orbita' }, g), 'orbita');
-    // Maksilla.
-    const maks = [[54.6, 41], [56.2, 45], [55.8, 50], [70, 50.6], [87, 50], [89.2, 46], [88.4, 39], [86.5, 31], [79, 27], [71, 26.2], [64.5, 24.6], [62.4, 14], [59, 12.6], [58, 20], [60.4, 30], [58.4, 37.4]];
-    tagger(svg('path', { d: smooth(maks) + ' Z', class: 'an-kemik-yuz' }, g), 'maksilla');
-    const zig = [[76.4, 25.6], [84, 21.6], [88.4, 24.6], [89.6, 29.6], [112, 29.2], [112, 32.6], [89, 34.6], [83.6, 38.2], [78.4, 35]];
-    tagger(svg('path', { d: smooth(zig) + ' Z', class: 'an-kemik-yuz an-kemik-acik' }, g), 'zigoma');
-    // Mandibula.
-    const mand = [[57, 62], [55.6, 66], [54.2, 72], [55.6, 77.6], [60, 80.4], [72, 79.8], [84, 78.4], [90, 77.6], [97.4, 78.8], [100.6, 74], [101.6, 60], [102.2, 44], [102.8, 36.8], [100.6, 34.6], [98.6, 37], [98, 41.4], [94, 44.4], [90.6, 37], [88.8, 38.4], [88.2, 50], [87.6, 58], [86.4, 62], [70, 62.4]];
-    tagger(svg('path', { d: smooth(mand) + ' Z', class: 'an-kemik-yuz' }, g), 'mandibula');
-    // Dişler (kuronlar): 1–8, üstte ve altta.
-    const DX = [[55.4, 58], [58, 60.6], [60.6, 64.2], [64.2, 67.6], [67.6, 71], [71, 76.6], [76.6, 81.6], [81.6, 86]];
-    DX.forEach(([a, b], i) => {
-      const ust = i === 2 ? 7.2 : i < 2 ? 6.6 : 5.6, alt = i === 2 ? 6.4 : 5.4, k = i < 3 ? 0.9 : 0;
-      svg('path', { d: `M${a - k + 0.2},49.4 L${b - k - 0.2},49.4 L${b - k - 0.3},${f(49.6 + ust - 1)} Q${(a + b) / 2 - k},${f(50.4 + ust)} ${a - k + 0.3},${f(49.6 + ust - 1)} Z`, class: 'an-mine' }, g).dataset.part = 'ust-disler';
-      svg('path', { d: `M${a + 0.5},63 L${b + 0.2},63 L${b + 0.1},${f(63.2 - alt + 1)} Q${(a + b) / 2 + 0.3},${f(62.4 - alt)} ${a + 0.6},${f(63.2 - alt + 1)} Z`, class: 'an-mine' }, g).dataset.part = 'alt-disler';
-    });
-    // Foramenler.
-    const MF = [68, 70.2], IOF = [69, 30.4], MANF = [95, 52];
-    nokta(g, IOF[0], IOF[1], 0.9, 'an-foramen', 'infraorbital-foramen');
-    nokta(g, MF[0], MF[1], 0.9, 'an-foramen', 'mental-foramen');
-    tagger(svg('ellipse', { cx: MANF[0], cy: MANF[1], rx: 0.9, ry: 1.3, class: 'an-foramen', opacity: 0.55 }, g), 'mandibular-foramen');
-    // Mandibular kanal (kemik içinde, kesikli) ve ön loop.
-    const lx = MF[0] - 1.2 - 3.2 * lp;
-    const kanal = `M${MANF[0]},${MANF[1]} C93,62 88,69 78,71.6 L${f(MF[0] + 1)},72.4 C${f(lx + 1)},73 ${f(lx)},72.6 ${f(lx)},71.6 C${f(lx)},70.6 ${f(MF[0] - 1.2)},70 ${MF[0]},${MF[1]}`;
-    tagger(svg('path', { d: kanal, class: 'an-kanal-kesik' }, g), 'mandibular-kanal');
-    svg('path', { d: `M${f(lx + 0.4)},72.8 L58.6,73.4`, class: 'an-kanal-kesik', opacity: 0.6 }, g).dataset.part = 'insisiv-kanal';
+    const yol = (pts, kapali = true) => smooth(pts) + (kapali ? ' Z' : '');
 
-    // Sinirler (n. trigeminus): V2 dalları ve V3 dalları.
+    // Kafa iskeleti (silik), pterigoid çıkıntı, orbita.
+    svg('path', { d: yol([[9, -80], [100, -80], [100, -22], [91, -20], [89, -36], [85, -41], [62, -52], [44, -54], [40, -70]]), class: 'an-kafa' }, g);
+    svg('path', { d: yol([[58, -47], [64.5, -45], [63, -12], [58.5, -8]]), class: 'an-kafa an-kafa-acik' }, g).dataset.part = 'pterigoid';
+    tagger(svg('ellipse', { cx: 22.5, cy: -65, rx: 15.5, ry: 17, class: 'an-orbita' }, g), 'orbita');
+    // Maksilla: prostion → A noktası → spina nasalis anterior → apertura piriformis → frontal çıkıntı → infraorbital kenar
+    // → zigomatik payanda → tuber → alveol kenarı.
+    const maks = [[0, -10.5], [2.6, -20], [-2, -29], [4, -31.5], [7.4, -41], [6.4, -52], [7.6, -68], [9.6, -78], [13.6, -78], [13, -62], [16, -51.5], [23, -48.6], [31, -47.4],
+      [45, -46.4], [56, -44.6], [58.8, -32], [59, -14], [57.4, -7.2], [45, -7.4], [30, -8.4], [12, -10]];
+    tagger(svg('path', { d: yol(maks), class: 'an-kemik-yuz' }, g), 'maksilla');
+    // Zigomatik kemik ve kavis.
+    const zig = [[27, -48.4], [33, -60], [36.4, -73], [40.4, -73], [41, -59], [46, -52.6], [62, -50.4], [100, -50.6], [100, -44.6], [62, -44.4], [47, -41], [40, -35], [34, -34], [30.4, -40]];
+    tagger(svg('path', { d: yol(zig), class: 'an-kemik-yuz an-kemik-acik' }, g), 'zigoma');
+    tagger(svg('path', { d: yol([[35, -34.4], [35.6, -26], [38, -15]], false), class: 'an-kemik-sirt', opacity: 0.6 }, g), 'payanda');
+    // Mandibula: gövde, angulus, ramus, kondil, sigmoid çentik, koronoid, dış oblik sırt.
+    const mand = [[2.4, 10], [5, 18], [2.6, 32], [4.6, 38.6], [9, 41.4], [30, 40], [52, 37.6], [62, 35.6], [70, 37.4], [76.6, 37], [79, 30], [80.6, 12], [82, -4], [84, -15], [86.2, -21.6], [86.2, -26], [83, -28.6],
+      [79.6, -26.6], [78, -21.6], [75.4, -16], [70.5, -13.4], [66, -17.6], [62.8, -27.6], [60.6, -31], [58.8, -29], [56, -18], [53.6, -8], [52, 1], [51, 8.6], [40, 9], [20, 9.6]];
+    tagger(svg('path', { d: yol(mand), class: 'an-kemik-yuz' }, g), 'mandibula');
+    svg('path', { d: yol([[52, 1], [50, 9], [44, 15], [36, 18.6]], false), class: 'an-kemik-sirt' }, g).dataset.part = 'dis-oblik';
+
+    // Dişler: kök (kemik içinde, silik) ve kuron. yon: +1 üst (kuron aşağı), −1 alt (kuron yukarı).
+    const disCiz = (x0, [w, hc, hr, tip, ucY], yon, grup) => {
+      const cej = ucY - yon * hc, V = (v) => f(cej + yon * v), R = (v) => f(cej - yon * v), X = (u) => f(x0 + u * w);
+      let kokYol;
+      if (tip[0] === 'M') {
+        const g1 = hr * 0.3;
+        kokYol = `M${X(0.12)},${R(-0.4)} C${X(0.08)},${R(hr * 0.5)} ${X(0.16)},${R(hr * 0.9)} ${X(0.27)},${R(hr)} C${X(0.36)},${R(hr * 0.9)} ${X(0.4)},${R(hr * 0.55)} ${X(0.48)},${R(g1)} ` +
+          `C${X(0.56)},${R(hr * 0.5)} ${X(0.6)},${R(hr * 0.84)} ${X(0.72)},${R(hr * 0.93)} C${X(0.84)},${R(hr * 0.84)} ${X(0.92)},${R(hr * 0.45)} ${X(0.88)},${R(-0.4)} Z`;
+      } else {
+        kokYol = `M${X(0.15)},${R(-0.4)} C${X(0.2)},${R(hr * 0.5)} ${X(0.36)},${R(hr * 0.88)} ${X(0.54)},${R(hr)} C${X(0.68)},${R(hr * 0.88)} ${X(0.82)},${R(hr * 0.5)} ${X(0.85)},${R(-0.4)} Z`;
+      }
+      svg('path', { d: kokYol, class: 'an-kok-silik' }, grup);
+      let uc;
+      if (tip === 'I') uc = `C${X(0.02)},${V(hc * 0.55)} ${X(0)},${V(hc * 0.75)} ${X(0)},${V(hc * 0.86)} Q${X(0)},${V(hc)} ${X(0.2)},${V(hc)} L${X(0.8)},${V(hc * 0.97)} Q${X(1)},${V(hc * 0.97)} ${X(1)},${V(hc * 0.8)} `;
+      else if (tip === 'C') uc = `C${X(0.02)},${V(hc * 0.45)} ${X(0)},${V(hc * 0.6)} ${X(0.02)},${V(hc * 0.7)} L${X(0.4)},${V(hc * 0.97)} Q${X(0.46)},${V(hc * 1.01)} ${X(0.53)},${V(hc * 0.96)} L${X(0.98)},${V(hc * 0.62)} `;
+      else if (tip === 'P') uc = `C${X(0.02)},${V(hc * 0.45)} ${X(0)},${V(hc * 0.62)} ${X(0.03)},${V(hc * 0.74)} L${X(0.42)},${V(hc * 0.97)} Q${X(0.5)},${V(hc * 1.01)} ${X(0.58)},${V(hc * 0.97)} L${X(0.97)},${V(hc * 0.72)} `;
+      else if (tip === 'M3') uc = `C${X(0.01)},${V(hc * 0.45)} ${X(0)},${V(hc * 0.62)} ${X(0.02)},${V(hc * 0.78)} Q${X(0.16)},${V(hc * 1.06)} ${X(0.34)},${V(hc * 0.84)} Q${X(0.5)},${V(hc * 1.06)} ${X(0.67)},${V(hc * 0.84)} Q${X(0.82)},${V(hc * 1.0)} ${X(0.98)},${V(hc * 0.72)} `;
+      else uc = `C${X(0.01)},${V(hc * 0.45)} ${X(0)},${V(hc * 0.62)} ${X(0.02)},${V(hc * 0.78)} Q${X(0.22)},${V(hc * 1.08)} ${X(0.48)},${V(hc * 0.84)} Q${X(0.72)},${V(hc * 1.04)} ${X(0.98)},${V(hc * 0.74)} `;
+      svg('path', { d: `M${X(0.14)},${V(0)} ${uc}C${X(1)},${V(hc * 0.5)} ${X(0.94)},${V(hc * 0.25)} ${X(0.86)},${V(0)} Q${X(0.5)},${V(-hc * 0.1)} ${X(0.14)},${V(0)} Z`, class: 'an-mine an-mine-ince' }, grup);
+      if (tip[0] === 'M') svg('path', { d: `M${X(tip === 'M3' ? 0.34 : 0.48)},${V(hc * 0.84)} L${X(tip === 'M3' ? 0.35 : 0.49)},${V(hc * 0.45)}` + (tip === 'M3' ? ` M${X(0.67)},${V(hc * 0.84)} L${X(0.67)},${V(hc * 0.5)}` : ''), class: 'an-mine-oluk' }, grup);
+    };
+    const altG = svg('g', {}, g), ustG = svg('g', {}, g);
+    altG.dataset.part = 'alt-disler'; ustG.dataset.part = 'ust-disler';
+    let xa = 2.5; const altX = [];
+    for (const d of ALT_DIS) { altX.push(xa); disCiz(xa, d, -1, altG); xa += d[0]; }
+    let xu = 0; const ustX = [];
+    for (const d of UST_DIS) { ustX.push(xu); disCiz(xu, d, 1, ustG); xu += d[0]; }
+    // Ramusun ön kenarı son azıların distalini örter.
+    svg('path', { d: yol([[51, 8.6], [52, 1], [53.6, -8], [56, -18], [61, -18], [61, 9]]), class: 'an-kemik-yuz an-kenarsiz' }, g);
+    svg('path', { d: yol([[51, 8.6], [52, 1], [53.6, -8], [56, -18]], false), class: 'an-kemik-sirt' }, g);
+
+    // Foramenler ve mandibular kanal (kemik içinde, kesikli), ön loop.
+    const MF = [24.5, 24], IOF = [19, -41], MANF = [68, -1];
+    for (const [ad, n] of [['infraorbital-foramen', IOF], ['mental-foramen', MF]]) nokta(g, n[0], n[1], 1.3, 'an-foramen', ad);
+    tagger(svg('ellipse', { cx: MANF[0], cy: MANF[1], rx: 1.3, ry: 2, class: 'an-foramen', opacity: 0.5 }, g), 'mandibular-foramen');
+    const lx = MF[0] - 2 - 4 * lp;
+    const kanal = `M${MANF[0]},${MANF[1]} C66,12 58,22 44,26 L${f(MF[0] + 1.5)},27.4 C${f(lx + 1.5)},28.2 ${f(lx)},27.6 ${f(lx)},26 C${f(lx)},24.6 ${f(MF[0] - 2)},23.8 ${MF[0]},${MF[1]}`;
+    tagger(svg('path', { d: kanal, class: 'an-kanal-kesik an-mm' }, g), 'mandibular-kanal');
+    svg('path', { d: `M${f(lx + 0.6)},27.8 L8,29`, class: 'an-kanal-kesik an-mm', opacity: 0.55 }, g).dataset.part = 'insisiv-kanal';
+
     if (sn > 0.03) {
       const sg = svg('g', { opacity: f(sn) }, g);
-      const S = (d, part, kesik) => tagger(svg('path', { d, class: kesik ? 'an-sinir-yol an-kesik' : 'an-sinir-yol' }, sg), part);
-      nokta(sg, 92.6, 33.4, 1.5, 'an-sinir', 'trigeminal');
-      S('M92.6,33.4 L90,30.6', 'maksiller-sinir', true);
-      S(`M90,30.6 C84,28.6 76,29 ${IOF[0]},${IOF[1]}`, 'infraorbital-sinir', true);
-      S(`M${IOF[0]},${IOF[1]} L62.6,31.4 M${IOF[0]},${IOF[1]} L62.4,35.6 M${IOF[0]},${IOF[1]} L65,38.6`, 'infraorbital-sinir');
-      S('M89.6,31.2 C88.6,36 86.6,41 81,46.6 M86.2,42 L84.4,47.4', 'psa-sinir', true);
-      S('M80,29.4 C78,36 73,42 69.6,46.6', 'msa-sinir', true);
-      S('M72.4,29.8 C68,36 63,42 58.4,46.4 M65.6,39.4 L62.6,46.6', 'asa-sinir', true);
-      S(`M92.8,34.6 C94.6,40 95.4,46 ${MANF[0]},${MANF[1]}`, 'alt-alveol-sinir', true);
+      const S = (d, part, kesik) => tagger(svg('path', { d, class: (kesik ? 'an-sinir-yol an-kesik' : 'an-sinir-yol') + ' an-mm' }, sg), part);
+      nokta(sg, 71, -55, 2.4, 'an-sinir', 'trigeminal');
+      S('M71,-55 C66,-50 62,-47 57.6,-46', 'maksiller-sinir', true);
+      S(`M57.6,-46 C46,-50 34,-49.6 26,-47.6 L${IOF[0]},${IOF[1]}`, 'infraorbital-sinir', true);
+      S(`M${IOF[0]},${IOF[1]} L10.6,-41 M${IOF[0]},${IOF[1]} L10.4,-33.6 M${IOF[0]},${IOF[1]} L15,-29`, 'infraorbital-sinir');
+      S('M57.4,-44.6 C56.6,-36 54,-26 47,-15 M54.4,-27 L52,-13.6', 'psa-sinir', true);
+      S('M37,-48.8 C36,-36 32,-24 28,-15', 'msa-sinir', true);
+      S('M24.6,-47 C21,-36 15,-24 6,-15 M17.6,-29 L13,-16', 'asa-sinir', true);
+      S(`M70.4,-53 C68,-40 69.6,-18 ${MANF[0]},${MANF[1]}`, 'alt-alveol-sinir', true);
       S(kanal, 'alt-alveol-sinir', true);
-      S(`M${MF[0]},${MF[1]} L60.4,66 M${MF[0]},${MF[1]} L58.4,70.4 M${MF[0]},${MF[1]} L60.6,75`, 'mental-sinir');
-      S(`M${f(lx + 0.4)},72.8 L58.6,73.4`, 'insisiv-sinir', true);
-      S('M92.2,35 C91,46 86,58 77,63.4 L70,64.6', 'lingual-sinir', true);
-      S('M91.8,34.6 C90,44 85,52 77.4,57', 'bukkal-sinir');
+      S(`M${MF[0]},${MF[1]} L12.6,17.6 M${MF[0]},${MF[1]} L10,25 M${MF[0]},${MF[1]} L13.4,32.4`, 'mental-sinir');
+      S(`M${f(lx + 0.6)},27.8 L8,29`, 'insisiv-sinir', true);
+      S('M69.6,-52.6 C66,-34 62,-8 50,6.6 C44,11 36,11.6 30,9.6', 'lingual-sinir', true);
+      S('M69,-52.4 C64,-38 58,-18 50.6,-6 L44,-1.6', 'bukkal-sinir');
     }
-    // Arterler: a. carotis externa ve dalları.
     if (ar > 0.03) {
       const ag = svg('g', { opacity: f(ar) }, g);
-      const A = (d, part, kesik) => tagger(svg('path', { d, class: kesik ? 'an-arter-yol an-kesik' : 'an-arter-yol' }, ag), part);
-      tagger(svg('path', { d: 'M105.4,88 C105,70 105.6,56 105,43', class: 'an-arter-yol an-arter-kalin' }, ag), 'eksternal-karotis');
-      A('M105,43 C105.4,34 105,24 105.6,14', 'temporal-arter');
-      A('M105,43 C101,41.6 96,39 90.6,31.8', 'maksiller-arter', true);
-      A(`M97.6,40.4 C97,45 96.2,49 ${MANF[0] + 0.7},${MANF[1]} C93.8,62 88.8,69.8 78,72.6 L${f(MF[0] + 1)},73.4`, 'alt-alveol-arter', true);
-      A('M90.6,31.8 C89.6,37 87.6,41.6 84,45.6', 'psa-arter', true);
-      A(`M90.6,31.8 C84,29.8 76,30 ${IOF[0] + 0.4},${IOF[1] + 0.8} L63.4,33.6`, 'infraorbital-arter', true);
-      A('M105.2,70 C101,76 95,82.6 90.4,79.6 C87,73 80,64 73,58.6 C67,53 63,44 63.4,29', 'fasiyal-arter');
-      A('M73,58.6 L59.6,65.4', 'alt-dudak-arteri');
-      A('M68.4,53.8 L57.4,52.6', 'ust-dudak-arteri');
-      A('M105.2,75 C96,74 86,70 76,66.4', 'lingual-arter', true);
-      A('M91.4,80.6 C84,83 74,83.4 64,82.4', 'submental-arter');
+      const A = (d, part, kesik) => tagger(svg('path', { d, class: (kesik ? 'an-arter-yol an-kesik' : 'an-arter-yol') + ' an-mm' }, ag), part);
+      tagger(svg('path', { d: 'M86.4,52 C85.6,30 86.6,6 85.4,-15', class: 'an-arter-yol an-arter-kalin an-mm' }, ag), 'eksternal-karotis');
+      A('M85.4,-15 C87,-30 86,-56 87,-80', 'temporal-arter');
+      A('M85.4,-15 C80,-17 72,-28 58.4,-44', 'maksiller-arter', true);
+      A(`M78.4,-19.6 C74,-14 70.4,-8 ${MANF[0] + 1},${MANF[1]} C67.4,13 59,23.6 44,27.6 L${f(MF[0] + 1.5)},29`, 'alt-alveol-arter', true);
+      A('M58.4,-44 C57.4,-36 55.4,-27 48.6,-15', 'psa-arter', true);
+      A(`M58.4,-44.6 C46,-48.4 34,-48 26.4,-46 L${IOF[0] + 0.6},${IOF[1] + 1.2} L11,-36.6`, 'infraorbital-arter', true);
+      A('M86,31 C80,40 70,46 61,36.6 C56,26 46,10 37,3 C28,-4 18,-22 13.6,-40 C12.4,-48 12.4,-54 13,-58', 'fasiyal-arter');
+      A('M37,3 L8.6,8', 'alt-dudak-arteri');
+      A('M30.4,-3.4 L6,-8', 'ust-dudak-arteri');
+      A('M86,35 C74,32 56,24 34,16.6', 'lingual-arter', true);
+      A('M66,42 C54,45.6 34,45.6 14,44', 'submental-arter');
     }
 
+    const P = (ad, x, y, ek) => ({ ad, at: ym(x, y), ...(ek || {}) });
     Object.assign(parts, {
-      maksilla:   { ad: 'Maksilla', at: [64, 43] },
-      mandibula:  { ad: 'Mandibula gövdesi', at: [80, 76.6] },
-      ramus:      { ad: 'Ramus', at: [99, 62] },
-      kondil:     { ad: 'Kondil', at: [100.8, 36] },
-      koronoid:   { ad: 'Koronoid çıkıntı', at: [90.4, 38.6] },
-      angulus:    { ad: 'Angulus', at: [98.6, 76.6], ayrinti: true },
-      zigoma:     { ad: 'Zigomatik kemik ve kavis', at: [84, 28] },
-      orbita:     { ad: 'Orbita', at: [71.5, 15] },
-      'infraorbital-foramen': { ad: 'Foramen infraorbitale', at: IOF },
-      'mental-foramen': { ad: 'Foramen mentale', at: MF },
-      'mandibular-foramen': { ad: 'Foramen mandibulae (medialde)', at: MANF },
-      'mandibular-kanal': { ad: 'Mandibular kanal', at: [84, 70.4] },
-      tuber:      { ad: 'Tuber maxillae', at: [88, 45] },
-      'ust-disler': { ad: 'Üst dişler', at: [74, 52.6], ayrinti: true },
-      'alt-disler': { ad: 'Alt dişler', at: [74, 60], ayrinti: true }
+      maksilla:   P('Maksilla', 22, -26),
+      mandibula:  P('Mandibula gövdesi', 44, 33),
+      ramus:      P('Ramus', 74, 16),
+      kondil:     P('Kondil', 83, -24.6),
+      koronoid:   P('Koronoid çıkıntı', 59.4, -29),
+      angulus:    P('Angulus (gonion)', 75, 35, { ayrinti: true }),
+      zigoma:     P('Zigomatik kemik ve kavis', 52, -47),
+      payanda:    P('Zigomatik payanda (krista)', 35.6, -26, { ayrinti: true }),
+      orbita:     P('Orbita', 22, -62),
+      ans:        P('Spina nasalis anterior', -1, -29, { ayrinti: true }),
+      pterigoid:  P('Pterigoid çıkıntı', 61.6, -28, { ayrinti: true }),
+      'dis-oblik': P('Dış oblik sırt', 44, 15, { ayrinti: true }),
+      'infraorbital-foramen': P('Foramen infraorbitale', IOF[0], IOF[1]),
+      'mental-foramen': P('Foramen mentale', MF[0], MF[1]),
+      'mandibular-foramen': P('Foramen mandibulae (medialde)', MANF[0], MANF[1]),
+      'mandibular-kanal': P('Mandibular kanal', 52, 23.4),
+      tuber:      P('Tuber maxillae', 57, -15),
+      'ust-disler': P('Üst birinci büyük azı', ustX[5] + 5, -3, { ayrinti: true }),
+      'alt-disler': P('Alt birinci büyük azı', altX[5] + 5.5, 4, { ayrinti: true })
     });
     if (sn > 0.5) Object.assign(parts, {
-      trigeminal:           { ad: 'N. trigeminus (ganglion)', at: [92.6, 33.4] },
-      'infraorbital-sinir': { ad: 'N. infraorbitalis (V2)', at: [63, 34] },
-      'psa-sinir':          { ad: 'Arka üst alveol siniri (PSA)', at: [86.6, 41] },
-      'msa-sinir':          { ad: 'Orta üst alveol siniri (MSA)', at: [75, 40], ayrinti: lp > 0.7 },
-      'asa-sinir':          { ad: 'Ön üst alveol siniri (ASA)', at: [63.6, 41.6] },
-      'alt-alveol-sinir':   { ad: 'N. alveolaris inferior (V3)', at: [94.8, 46] },
-      'lingual-sinir':      { ad: 'N. lingualis', at: [84.6, 58.4] },
-      'bukkal-sinir':       { ad: 'N. buccalis', at: [81, 54.6] },
-      'mental-sinir':       { ad: 'N. mentalis', at: [59.6, 70.2] },
-      'insisiv-sinir':      { ad: 'N. incisivus', at: [61, 73.2], ayrinti: lp < 0.7 }
+      trigeminal:           P('N. trigeminus (ganglion)', 71, -55),
+      'infraorbital-sinir': P('N. infraorbitalis (V2)', 12, -36),
+      'psa-sinir':          P('Arka üst alveol siniri (PSA)', 54, -27),
+      'msa-sinir':          P('Orta üst alveol siniri (MSA)', 33.6, -28, { ayrinti: lp > 0.7 }),
+      'asa-sinir':          P('Ön üst alveol siniri (ASA)', 14.6, -23.6),
+      'alt-alveol-sinir':   P('N. alveolaris inferior (V3)', 68.8, -20),
+      'lingual-sinir':      P('N. lingualis', 56, -1),
+      'bukkal-sinir':       P('N. buccalis', 47, -3.6),
+      'mental-sinir':       P('N. mentalis', 11.6, 25),
+      'insisiv-sinir':      P('N. incisivus', 12, 28.6, { ayrinti: lp < 0.7 })
     });
-    if (lp > 0.7) parts['on-loop'] = { ad: 'Ön loop (anterior loop)', at: [lx, 71.6] };
+    if (lp > 0.7) parts['on-loop'] = P('Ön loop (anterior loop)', lx, 26);
     if (ar > 0.5) Object.assign(parts, {
-      'eksternal-karotis': { ad: 'A. carotis externa', at: [105.3, 60] },
-      'temporal-arter':    { ad: 'A. temporalis superficialis', at: [105.3, 22] },
-      'maksiller-arter':   { ad: 'A. maxillaris', at: [98, 39.6] },
-      'alt-alveol-arter':  { ad: 'A. alveolaris inferior', at: [96.6, 47] },
-      'psa-arter':         { ad: 'A. alveolaris superior posterior', at: [87.6, 41.6] },
-      'infraorbital-arter': { ad: 'A. infraorbitalis', at: [78, 29.8] },
-      'fasiyal-arter':     { ad: 'A. facialis', at: [80, 64] },
-      'ust-dudak-arteri':  { ad: 'A. labialis superior', at: [60, 52.9], ayrinti: sn > 0.5 },
-      'alt-dudak-arteri':  { ad: 'A. labialis inferior', at: [62, 64.2], ayrinti: sn > 0.5 },
-      'lingual-arter':     { ad: 'A. lingualis', at: [90, 71.4] },
-      'submental-arter':   { ad: 'A. submentalis', at: [74, 83.3] }
+      'eksternal-karotis': P('A. carotis externa', 86, 10),
+      'temporal-arter':    P('A. temporalis superficialis', 86.4, -60),
+      'maksiller-arter':   P('A. maxillaris', 74, -25.6),
+      'alt-alveol-arter':  P('A. alveolaris inferior', 71, -8.6),
+      'psa-arter':         P('A. alveolaris superior posterior', 55.6, -28),
+      'infraorbital-arter': P('A. infraorbitalis', 40, -48.6),
+      'fasiyal-arter':     P('A. facialis', 50, 17),
+      'ust-dudak-arteri':  P('A. labialis superior', 14, -6.4, { ayrinti: sn > 0.5 }),
+      'alt-dudak-arteri':  P('A. labialis inferior', 18, 6.4, { ayrinti: sn > 0.5 }),
+      'lingual-arter':     P('A. lingualis', 62, 26.6),
+      'submental-arter':   P('A. submentalis', 34, 45.4)
     });
     if (sn + ar > 1.5) for (const k of ['kondil', 'koronoid', 'tuber', 'zigoma', 'ramus', 'mandibula', 'orbita', 'psa-arter', 'msa-sinir', 'lingual-arter', 'mandibular-foramen']) if (parts[k]) parts[k].ayrinti = true;
     return parts;

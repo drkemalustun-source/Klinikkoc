@@ -602,3 +602,10 @@ strong { color: var(--accent); font-weight: 700; }
 .an-kanal-kesik { fill: none; stroke: #8b744b; stroke-width: 1.5; stroke-linecap: round; stroke-dasharray: 1.6 1; }
 .an-kesik { stroke-dasharray: 1.2 .8; }
 .an-arter-kalin { stroke-width: 1.1; }
+.an-kafa-acik { fill: #3a4a43; }
+.an-kemik-sirt { fill: none; stroke: #f3e7c8; stroke-width: .7; stroke-linecap: round; }
+.an-kenarsiz { stroke: none; }
+.an-kok-silik { fill: #bfab80; stroke: #a8926a; stroke-width: .25; opacity: .5; }
+.an-mine-ince { stroke-width: .3; }
+.an-mm.an-sinir-yol { stroke-width: 1; } .an-mm.an-arter-yol { stroke-width: .95; } .an-mm.an-arter-kalin { stroke-width: 1.7; }
+.an-mm.an-kanal-kesik { stroke-width: 2.2; stroke-dasharray: 2.4 1.5; } .an-mm.an-kesik { stroke-dasharray: 1.8 1.2; }
