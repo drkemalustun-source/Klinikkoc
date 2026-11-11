@@ -568,3 +568,13 @@ strong { color: var(--accent); font-weight: 700; }
 .an-panel-yazi { fill: var(--chalk-dim); stroke: none; font-family: inherit; }
 .an-yon { fill: var(--accent); stroke: none; font-family: inherit; font-size: 2.6px; font-weight: 600; }
 .an-defekt-cizgi { fill: none; stroke: #0c1411; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.an-granulasyon { fill: #c0505e; stroke: none; }
+.an-orgu-tel { fill: none; stroke: #e8d7a8; stroke-width: .45; }
+.an-orgu { stroke: none; }
+.an-membran-kollajen { fill: none; stroke: #f6f1e4; stroke-width: .9; stroke-linecap: round; }
+.an-matris { fill: #c98d86; stroke: none; }
+.an-kok-yuzey { fill: #e4c98c; stroke: #c9a865; stroke-width: .25; }
+.an-mse { fill: none; stroke: #c9a865; stroke-width: .35; }
+.an-kemik-hat { fill: none; stroke: #efe2bf; stroke-width: .45; stroke-dasharray: 1 .7; }
+.an-siyah-ucgen { fill: #0c1411; stroke: none; }
+.an-temas { fill: var(--accent); stroke: none; }

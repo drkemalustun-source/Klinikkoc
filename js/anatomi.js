@@ -613,7 +613,9 @@
       const lg = svg('g', { class: 'an-etiket ' + (a.color || '') }, g);
       svg('path', { d: `M${tx + (side === 'sol' ? 0.8 : -0.8)},${f(a.y - 1.1)} L${f(a.at[0])},${f(a.at[1])}`, class: 'an-kilavuz' }, lg);
       svg('circle', { cx: f(a.at[0]), cy: f(a.at[1]), r: 0.65, class: 'an-nokta' }, lg);
-      const t = svg('text', { x: tx, y: f(a.y), 'text-anchor': side === 'sol' ? 'end' : 'start', 'font-size': 3.4, class: 'an-yazi' }, lg);
+      // Uzun etiket kenar sütununa (≈ 45 birim) sığsın diye küçülür.
+      const fs = Math.min(3.4, 45 / (String(a.text).length * 0.56));
+      const t = svg('text', { x: tx, y: f(a.y), 'text-anchor': side === 'sol' ? 'end' : 'start', 'font-size': f(fs), class: 'an-yazi' }, lg);
       t.textContent = a.text;
       if (a.yeni) { lg.style.animationDelay = delay + 's'; lg.classList.add('fade-in'); delay += 0.35; }
     };

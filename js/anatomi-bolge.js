@@ -6,7 +6,7 @@
 (function (AT) {
   'use strict';
   if (!AT.anatomi) return;
-  const { svg, smooth, poly, bant, trabekul, range, clamp, f, uid } = AT.anatomi._y;
+  const { svg, smooth, poly, bant, ornekle, trabekul, range, clamp, f, uid } = AT.anatomi._y;
   const K = 1.4; // birim / mm
   const mm = (u) => Math.round((u / K) * 10) / 10;
   const tagger = (n, part) => { n.dataset.part = part; return n; };
@@ -515,10 +515,261 @@
     return parts;
   }
 
+  /* ---------------- Çekim soketinin iyileşmesi ve soket koruma ----------------
+   * Küçük azı soketinin bukkolingual kesiti (bukkal solda), 2,6 birim = 1 mm. t: 0 taze pıhtı → 1 granülasyon (~1. hafta)
+   * → 2 geçici matris + örgü kemik (~4. hafta) → 3 örgü kemik dolumu (~8. hafta) → 4 yeniden şekillenme (3–6 ay).
+   * Demet kemiği kaybolur, bukkal duvar daha çok rezorbe olur (yatay ≈ 3,8 mm, bukkal dikey ≈ 1,2 mm; Tan ve ark. 2012 derlemesi).
+   * koruma: greft + kollajen örtü ile soket koruma; kayıp azalır. */
+  const K2 = 2.6;
+  const SOKET_DURUM = {
+    taze:              { t: 0, koruma: 0 },
+    'birinci-hafta':   { t: 1, koruma: 0 },
+    'dorduncu-hafta':  { t: 2, koruma: 0 },
+    'sekizinci-hafta': { t: 3, koruma: 0 },
+    'alti-ay':         { t: 4, koruma: 0 },
+    'soket-koruma':    { t: 4, koruma: 1 }
+  };
+
+  function soketCiz(g, variant, opt) {
+    const p = opt.p || SOKET_DURUM[variant] || SOKET_DURUM.taze;
+    const id = uid();
+    const defs = svg('defs', {}, g);
+    trabekul(defs, id);
+    const og = svg('pattern', { id: id + 'og', width: 3.2, height: 2.6, patternUnits: 'userSpaceOnUse' }, defs);
+    svg('rect', { width: 3.2, height: 2.6, class: 'an-matris' }, og);
+    svg('path', { d: 'M0,1.3 C0.8,0.4 1.6,2 2.4,1 C2.8,0.6 3.2,1.2 3.2,1.2 M1.2,0 C1.4,0.8 1,1.6 1.6,2.6', class: 'an-orgu-tel' }, og);
+    const gr = svg('pattern', { id: id + 'gr', width: 2.2, height: 2, patternUnits: 'userSpaceOnUse' }, defs);
+    svg('rect', { width: 2.2, height: 2, class: 'an-greft-zemin' }, gr);
+    svg('path', { d: 'M0.5,0.6 l0.6,-0.3 l0.4,0.5 l-0.5,0.5 Z M1.4,1.3 l0.5,0.1 l0,0.5 l-0.6,0 Z', class: 'an-greft-tane' }, gr);
+    const parts = {};
+    const t = Math.max(0, p.t), kor = clamp(p.koruma || 0);
+    const r = clamp(t / 4) * (1 - 0.6 * kor);             // yeniden şekillenme oranı
+    const Y0 = 25, ybk = Y0 + 1.24 * K2 * r, ylk = Y0 + 0.84 * K2 * r;
+    const bukX = (y) => 68.4 - (y - Y0) * 0.14 + 3.8 * K2 * r * clamp(1 - (y - Y0) / 30);
+    const linX = (y) => 94.5 + (y - Y0) * 0.15 - 0.8 * K2 * r * clamp(1 - (y - Y0) / 20);
+    const buk = range(Math.ceil(ybk) + 1, 88, 4).reverse().map((y) => [bukX(y), y]).concat([[bukX(ybk), ybk]]);
+    const lin = [[linX(ylk), ylk]].concat(range(Math.ceil(ylk) + 1, 88, 4).map((y) => [linX(y), y]));
+    const tepeY = Math.min(ybk, ylk) - 0.6 * clamp(t - 2.5);
+    const ust = `Q${f(80)},${f(tepeY)} ${f(lin[0][0])},${f(lin[0][1])}`;
+    const sirt = smooth(buk) + ' ' + ust + ' ' + smooth(lin, false).replace(/^L/, 'L') + ' L98.5,88 L62,88 Z';
+    svg('path', { d: sirt, class: 'an-kemik-zemin' }, g);
+    tagger(svg('path', { d: sirt, fill: `url(#${id}tr)`, class: 'an-kemik' }, g), 'kemik');
+    const clip = svg('clipPath', { id: id + 'sr' }, defs);
+    svg('path', { d: sirt }, clip);
+    const soket = 'M71,25 C71,38 75,52 80,57 C85,52 89,38 89,25 Z';
+    const katman = (cls, op, part, extra = {}) => { if (op > 0.01) tagger(svg('path', Object.assign({ d: soket, class: cls, opacity: f(op), 'clip-path': `url(#${id}sr)` }, extra), g), part); };
+    // Katmanlar: pıhtı → granülasyon dokusu → geçici matris/örgü kemik → olgun kemik (desen) ; koruma: greft.
+    katman('an-soket', 1 - clamp(t - 0.4) * 0.9, 'pihti');
+    katman('an-granulasyon', clamp(t - 0.3) * (1 - clamp(t - 1.9)), 'granulasyon');
+    katman('an-orgu', clamp(t - 1.3) * (1 - 0.8 * clamp(t - 3.2)), 'orgu-kemik', { fill: `url(#${id}og)` });
+    katman('an-kemik-zemin', clamp(t - 2.8), 'olgun-kemik');
+    katman('an-kemik', clamp(t - 2.8), 'olgun-kemik', { fill: `url(#${id}tr)` });
+    katman('an-greft', kor * (1 - 0.5 * clamp(t - 3)), 'greft', { fill: `url(#${id}gr)` });
+    // Demet kemiği (soket duvarı): iyileşmeyle kaybolur.
+    const dk = 1 - clamp(t - 1);
+    if (dk > 0.01) tagger(svg('path', { d: 'M71,25 C71,38 75,52 80,57 C85,52 89,38 89,25', class: 'an-lamina', opacity: f(dk), 'clip-path': `url(#${id}sr)` }, g), 'demet-kemigi');
+    tagger(svg('path', { d: smooth(buk) + ' ' + ust + ' ' + smooth(lin, false), class: 'an-kortikal' }, g), 'kret');
+    if (r > 0.05) svg('path', { d: `M${f(bukX(Y0 + 15))},40 L68.4,25 L94.5,25`, class: 'an-eski-kemik' }, g); // eski sırt dış hattı
+
+    // Yumuşak doku: çiğneme mukozası. t < 1 iken soketin üstü açık (yara), sonra epitel kapanır.
+    const acik = 9.5 * (1 - clamp(t));
+    const dis = ornekle([[bukX(46), 46], [bukX(36), 36]].concat([[bukX(ybk), ybk]], [[80, tepeY + 0.3]], [[linX(ylk), ylk]], [[linX(36), 36], [linX(46), 46]]), 6);
+    const disa = (pts) => pts.map(([x, y]) => { const dx = x - 80, dy = y - 52, L = Math.hypot(dx, dy) || 1; return [x + (dx / L) * 6.5, y + (dy / L) * 6.5]; });
+    const parcalar = acik < 0.05 ? [dis] : [dis.filter(([x]) => x < 80 - acik), dis.filter(([x]) => x > 80 + acik)];
+    for (const pts of parcalar) if (pts.length > 1) {
+      tagger(svg('path', { d: poly(pts) + ' ' + poly(disa(pts).reverse(), false) + ' Z', class: 'an-dis-eti' }, g), 'mukoza');
+      svg('path', { d: poly(disa(pts)), class: 'an-keratin' }, g);
+    }
+    // Soket koruma örtüsü (rezorbe olan kollajen membran).
+    if (kor > 0.01) tagger(svg('path', { d: `M69.5,${f(tepeY + 0.9)} Q80,${f(tepeY - 0.6)} 90.5,${f(Math.max(ylk, tepeY) + 0.9)}`, class: 'an-membran-kollajen', opacity: f(kor * (1 - 0.8 * clamp((t - 2) / 2))) }, g), 'kollajen-ortu');
+
+    const kayipYatay = mm2(3.8 * r), kayipDikey = mm2(1.24 * r);
+    Object.assign(parts, {
+      kemik:          { ad: 'Alveol kemiği', at: [96, 70] },
+      kret:           { ad: 'Sırt (kret) dış hattı', at: [bukX(ybk + 1), ybk + 1] },
+      mukoza:         { ad: acik > 1 ? 'Dişeti (yara kenarı)' : 'Mukoza (kapanmış)', at: [acik > 1 ? 80 - acik - 2 : 80, tepeY - 3] },
+      'bukkal-duvar': { ad: 'İnce bukkal duvar', at: [bukX(40) + 1.2, 40] },
+      'lingual-duvar': { ad: 'Lingual duvar', at: [linX(40) - 1.6, 40] }
+    });
+    const ortaY = 42;
+    if (t < 0.9) parts.pihti = { ad: 'Kan pıhtısı', at: [80, ortaY] };
+    else if (t < 1.8) parts.granulasyon = { ad: 'Granülasyon dokusu', at: [80, ortaY] };
+    else if (t < 3.2) parts['orgu-kemik'] = { ad: 'Geçici matris ve örgü kemik', at: [80, ortaY] };
+    else parts['olgun-kemik'] = { ad: 'Olgunlaşan kemik', at: [80, ortaY] };
+    if (dk > 0.5) parts['demet-kemigi'] = { ad: 'Demet kemiği (soket duvarı)', at: [74, 46] };
+    if (r > 0.05) {
+      parts.rezorpsiyon = { ad: `Yatay kayıp ≈ ${kayipYatay} mm`, at: [bukX(32) - 0.5, 32] };
+      parts['dikey-kayip'] = { ad: `Bukkal dikey kayıp ≈ ${kayipDikey} mm`, at: [bukX(ybk), ybk] };
+      parts['eski-hat'] = { ad: 'Çekim anındaki sırt hattı', at: [68.4, 25.4] };
+    }
+    if (kor > 0.5) { parts.greft = { ad: 'Kemik grefti', at: [82, 36] }; parts['kollajen-ortu'] = { ad: 'Kollajen örtü', at: [86, tepeY + 0.4] }; }
+    return parts;
+  }
+  const mm2 = (v) => Math.round(v * 10) / 10;
+
+  /* ---------------- Kemik içi (infraosseöz) defektler ----------------
+   * Solda iki komşu küçük azının bukkalden görünümü (mezyal solda); defekt sağdaki dişin mezyalinde.
+   * Sağda defektin orta düzeyinde yatay kesit (bukkal üstte). wB/wL/wP: bukkal, lingual, proksimal duvar (1 var, 0 yok);
+   * krater: iki diş arasında, bukkal ve lingual duvarlı (iki duvarlı interdental krater). Ölçek 2,2 birim = 1 mm. */
+  const KID_DURUM = {
+    saglikli:      { D: 0, wB: 1, wL: 1, wP: 1, krater: 0 },
+    'uc-duvarli':  { D: 5, wB: 1, wL: 1, wP: 1, krater: 0 },
+    'iki-duvarli': { D: 5, wB: 0, wL: 1, wP: 1, krater: 0 },
+    'tek-duvarli': { D: 5, wB: 0, wL: 0, wP: 1, krater: 0 },
+    krater:        { D: 4, wB: 1, wL: 1, wP: 0, krater: 1 }
+  };
+
+  function kemikIciCiz(g, variant, opt) {
+    const p = opt.p || KID_DURUM[variant] || KID_DURUM.saglikli;
+    const id = uid();
+    const defs = svg('defs', {}, g);
+    trabekul(defs, id);
+    const parts = {};
+    const KR = 27.5, alt = KR + p.D * F, wB = clamp(p.wB), wL = clamp(p.wL), wP = clamp(p.wP), kr = clamp(p.krater);
+    const yazi = (x, y, t, cls = 'an-panel-yazi') => { const n = svg('text', { x, y, class: cls, 'font-size': 2.6, 'text-anchor': 'middle' }, g); n.textContent = t; return n; };
+    yazi(64, 4.2, 'Bukkalden görünüm');
+    yazi(96.5, 4.2, 'Defekt düzeyinde kesit');
+    yazi(50.6, 76, 'M', 'an-yon'); yazi(77.6, 76, 'D', 'an-yon');
+    yazi(96.5, 27.4, 'B', 'an-yon'); yazi(96.5, 66.6, 'L', 'an-yon');
+
+    // Sol panel: iki diş (kök kemiğin arkasında).
+    const dis = (x0) => `M${x0 + 0.8},24 C${x0 + 0.2},20 ${x0},15 ${x0 + 0.8},11 Q${x0 + 3},7.6 ${x0 + 6.75},6.8 Q${x0 + 10.5},7.6 ${x0 + 12.7},11 C${x0 + 13.5},15 ${x0 + 13.3},20 ${x0 + 12.7},24 ` +
+      `C${x0 + 12.4},36 ${x0 + 10.4},50 ${x0 + 7.6},59.4 Q${x0 + 6.75},61 ${x0 + 5.9},59.4 C${x0 + 3.1},50 ${x0 + 1.1},36 ${x0 + 0.8},24 Z`;
+    const mine = (x0) => `M${x0 + 0.8},24 C${x0 + 0.2},20 ${x0},15 ${x0 + 0.8},11 Q${x0 + 3},7.6 ${x0 + 6.75},6.8 Q${x0 + 10.5},7.6 ${x0 + 12.7},11 C${x0 + 13.5},15 ${x0 + 13.3},20 ${x0 + 12.7},24 ` +
+      `L${x0 + 11.6},23 C${x0 + 12},20 ${x0 + 12},15.6 ${x0 + 11.4},12.4 Q${x0 + 9.6},10 ${x0 + 6.75},9.4 Q${x0 + 3.9},10 ${x0 + 2.1},12.4 C${x0 + 1.5},15.6 ${x0 + 1.5},20 ${x0 + 1.9},23 Z`;
+    const xA = 50.4, xB = 65.2;
+    // Defekt (karanlık): B'nin mezyal kök yüzeyi boyunca; krater iki dişe de uzanır.
+    const kokB = xB + 0.8 + 0.35 * Math.max(0, alt - 24) / 12, sol = kokB - 4 - 3.6 * kr;
+    if (p.D > 0.05) tagger(svg('path', { d: `M${f(sol)},${f(KR - 0.5)} L${f(kokB + 0.4)},${f(KR - 0.5)} L${f(kokB + 0.4)},${f(alt)} Q${f((sol + kokB) / 2)},${f(alt + 1.8)} ${f(sol)},${f(alt - 0.8)} Z`, class: 'an-furkasyon-acik' }, g), 'defekt');
+    for (const x0 of [xA, xB]) {
+      tagger(svg('path', { d: dis(x0), class: 'an-dentin' }, g), 'dis');
+      tagger(svg('path', { d: mine(x0), class: 'an-mine' }, g), 'mine');
+    }
+    // Kemik: interdental kret A tarafında proksimal duvar (wP), defektin önünde bukkal duvar (wB) kadar yüksek.
+    const hP = KR + (1 - wP) * (alt - KR - 0.6), hB = KR + (1 - wB) * (alt - KR - 0.6);
+    const kemikYol = `M49,29.4 C51,29.2 54,28.6 57,28.8 C59.5,29 ${f(sol - 1.5)},${f(hP + 0.4)} ${f(sol - 0.3)},${f(hP)} L${f(sol + 0.6)},${f(Math.max(hP, hB))} ` +
+      `C${f(sol + 1.5)},${f(hB)} ${f(kokB - 0.5)},${f(hB)} ${f(kokB + 0.6)},${f(Math.min(hB + 0.4, 29))} C${f(xB + 4)},28.8 ${f(xB + 9)},28.8 79,29.4 L79,72 L49,72 Z`;
+    svg('path', { d: kemikYol, class: 'an-kemik-zemin', opacity: 0.74 }, g);
+    tagger(svg('path', { d: kemikYol, fill: `url(#${id}tr)`, class: 'an-kemik', opacity: 0.5 }, g), 'kemik');
+    tagger(svg('path', { d: kemikYol.split(' L79,72')[0], class: 'an-kortikal' }, g), 'kemik-duzeyi');
+    svg('path', { d: `M50,${f(KR + p.D * F * 0.55)} L78,${f(KR + p.D * F * 0.55)}`, class: 'an-kesit-duzlemi' }, g);
+    tagger(svg('path', { d: 'M49.5,22.4 L78.5,22.4', class: 'an-dis-eti-kenari' }, g), 'dis-eti-kenari');
+
+    // Sağ panel: yatay kesit, iki kök ve aradaki septum; defekt ve kalan duvarlar.
+    const cerceve = 'M83,32 C83,30 84.6,29.4 87,29.4 L106,29.4 C108.6,29.4 110,30.4 110,32.6 L110,59 C110,61.4 108.6,62 106,62 L87,62 C84.6,62 83,61.4 83,59 Z';
+    svg('path', { d: cerceve, class: 'an-kemik-zemin' }, g);
+    tagger(svg('path', { d: cerceve, fill: `url(#${id}tr)`, class: 'an-kemik' }, g), 'septum');
+    svg('path', { d: cerceve, class: 'an-kortikal' }, g);
+    if (p.D > 0.05) {
+      const x1 = 96 - (1 - wP) * 2.4 - kr * 2.6, x2 = 99.6 + kr * 0.2;
+      const y1 = 40.6 - (1 - wB) * 11.6, y2 = 51.4 + (1 - wL) * 11;
+      tagger(svg('path', { d: `M${f(x1)},${f(y1 + 1)} Q${f(x1)},${f(y1)} ${f(x1 + 1)},${f(y1)} L${f(x2)},${f(y1)} L${f(x2)},${f(y2)} L${f(x1 + 1)},${f(y2)} Q${f(x1)},${f(y2)} ${f(x1)},${f(y2 - 1)} Z`, class: 'an-hava' }, g), 'defekt-kesit');
+    }
+    const kok = (cx) => `M${cx},40.6 C${cx + 2.6},40.6 ${cx + 3.6},43 ${cx + 3.6},46 C${cx + 3.6},49 ${cx + 2.6},51.4 ${cx},51.4 C${cx - 2.6},51.4 ${cx - 3.6},49 ${cx - 3.6},46 C${cx - 3.6},43 ${cx - 2.6},40.6 ${cx},40.6 Z`;
+    for (const [cx, part] of [[90, 'kok-a'], [103.2, 'kok-b']]) {
+      svg('path', { d: kok(cx), class: 'an-pdl-cizgi' }, g);
+      tagger(svg('path', { d: kok(cx), class: 'an-dentin' }, g), part);
+      svg('path', { d: kok(cx), class: 'an-sement-cizgi' }, g);
+      nokta(g, cx, 46, 0.7, 'an-pulpa', part + '-kanal');
+    }
+
+    const duvar = Math.round(wB + wL + wP);
+    Object.assign(parts, {
+      'kemik-duzeyi':  { ad: 'Kemik düzeyi', at: [53, 28.8] },
+      'dis-eti-kenari': { ad: 'Dişeti kenarı', at: [52, 22.4] },
+      'kok-a':         { ad: 'Komşu diş kökü', at: [87, 46], ayrinti: true },
+      'kok-b':         { ad: 'Defektli diş kökü', at: [106.4, 46] },
+      septum:          { ad: 'Interdental septum', at: [96.5, 58] }
+    });
+    if (p.D > 0.2) {
+      parts.defekt = { ad: kr > 0.5 ? `İnterdental krater ≈ ${mm2(p.D)} mm` : `Kemik içi defekt ≈ ${mm2(p.D)} mm`, at: [(sol + kokB) / 2, alt - 2] };
+      parts.duvar = { ad: kr > 0.5 ? 'İki duvarlı (krater)' : `${['Sıfır', 'Tek', 'İki', 'Üç'][duvar]} duvarlı defekt`, at: [97.8, 46] };
+      if (wB > 0.5) parts['bukkal-duvar'] = { ad: 'Bukkal duvar', at: [97.8, 35] };
+      if (wL > 0.5) parts['lingual-duvar'] = { ad: 'Lingual duvar', at: [97.8, 56] };
+      if (wP > 0.5) parts['proksimal-duvar'] = { ad: 'Proksimal duvar', at: [94.6, 46] };
+    }
+    return parts;
+  }
+
+  /* ---------------- Dişeti çekilmesi (Cairo RT1–RT3) ve papilla ----------------
+   * Üst orta kesicilerin vestibülden görünümü (diş aşağı bakar), 1,8 birim = 1 mm. Çekilme sağdaki dişte.
+   * rec: bukkal çekilme (mm); ara: ara yüz ataşman/kemik kaybı (mm). Papilla doluluğu temas noktası–kemik kreti mesafesine
+   * göre (Tarnow ve ark. 1992: ≤ 5 mm ≈ %98, 6 mm ≈ %56, 7 mm ≈ %27). */
+  const C = 1.8;
+  const CEK_DURUM = {
+    saglikli: { rec: 0, ara: 0 },
+    rt1:      { rec: 3, ara: 0 },
+    rt2:      { rec: 3.5, ara: 2 },
+    rt3:      { rec: 3.5, ara: 4.5 }
+  };
+  const papillaDolu = (d) => (d <= 5 ? 1 : d <= 6 ? 1 - 0.44 * (d - 5) : d <= 7 ? 0.56 - 0.29 * (d - 6) : Math.max(0.1, 0.27 - 0.17 * (d - 7)));
+
+  function cekilmeCiz(g0, variant, opt) {
+    const p = opt.p || CEK_DURUM[variant] || CEK_DURUM.saglikli;
+    const id = uid();
+    const defs = svg('defs', {}, g0);
+    // Çizim 1,8 birim/mm koordinatlarında yapılır, tuvalin ortasına 1,22 kat büyütülerek yerleştirilir.
+    const KB = 1.22, TX = 80 - 64.5 * KB, TY = 62 - 58.4 * KB;
+    const g = svg('g', { transform: `translate(${f(TX)},${f(TY)}) scale(${KB})` }, g0);
+    const parts = {};
+    const W = 15.3, xA = 49.1, xB = 64.6, TEMAS = 49, MGJ = 24;
+    const disYol = (x0) => `M${f(x0 + 7.65)},15.6 C${f(x0 + 4)},18 ${f(x0 + 2.2)},32 ${f(x0 + 1.7)},44.4 C${f(x0 + 0.6)},48 ${f(x0 + 0.2)},52 ${f(x0 + 0.5)},56 Q${f(x0 + 0.8)},58.4 ${f(x0 + 2.4)},58.4 ` +
+      `L${f(x0 + 12.9)},58.4 Q${f(x0 + 14.5)},58.4 ${f(x0 + 14.8)},56 C${f(x0 + 15.1)},52 ${f(x0 + 14.7)},48 ${f(x0 + 13.6)},44.4 C${f(x0 + 13.1)},32 ${f(x0 + 11.3)},18 ${f(x0 + 7.65)},15.6 Z`;
+    const kuron = (x0) => `M${f(x0 + 1.7)},44.4 Q${f(x0 + 7.65)},34.2 ${f(x0 + 13.6)},44.4 C${f(x0 + 14.7)},48 ${f(x0 + 15.1)},52 ${f(x0 + 14.8)},56 Q${f(x0 + 14.5)},58.4 ${f(x0 + 12.9)},58.4 ` +
+      `L${f(x0 + 2.4)},58.4 Q${f(x0 + 0.8)},58.4 ${f(x0 + 0.5)},56 C${f(x0 + 0.2)},52 ${f(x0 + 0.6)},48 ${f(x0 + 1.7)},44.4 Z`;
+    // Siyah üçgen için arka plan (ağız boşluğu) zaten koyu; dişler.
+    for (const x0 of [xA, xB]) {
+      tagger(svg('path', { d: disYol(x0), class: 'an-kok-yuzey' }, g), 'kok');
+      tagger(svg('path', { d: kuron(x0), class: 'an-mine' }, g), 'kuron');
+      tagger(svg('path', { d: `M${f(x0 + 1.7)},44.4 Q${f(x0 + 7.65)},34.2 ${f(x0 + 13.6)},44.4`, class: 'an-mse' }, g), 'mine-sement');
+    }
+    // Kemik düzeyleri (sondalama/radyografi ile; kesikli): bukkal kret MSS'den ~2 mm, ara yüz kreti.
+    const araKret = 40.8 - p.ara * C, bukKret = 35.4 - Math.max(0, p.rec - 1) * C * 0.8;
+    const d = (TEMAS - araKret) / C, dolu = papillaDolu(d);
+    const tepe = araKret + Math.max(3.4, dolu * (TEMAS - araKret));
+    const zA = 40.8, zB = 40.8 - p.rec * C;
+    const kenar = [[49.1, 47.6], [51.4, 43.6], [56.75, zA], [62.2, 43.6], [64.5, tepe], [66.8, 43.6 - p.rec * C * 0.7], [72.25, zB], [77.6, 43.6 - p.rec * C * 0.25], [79.9, 47.6]];
+    const de = smooth(kenar) + ' L79.9,4 L49.1,4 Z';
+    tagger(svg('path', { d: de, class: 'an-dis-eti' }, g), 'dis-eti');
+    const clipM = svg('clipPath', { id: id + 'mk' }, defs);
+    svg('rect', { x: 40, y: 0, width: 50, height: MGJ }, clipM);
+    tagger(svg('path', { d: de, class: 'an-mukoza', 'clip-path': `url(#${id}mk)` }, g), 'alveol-mukozasi');
+    tagger(svg('path', { d: `M49.6,${MGJ} L79.4,${MGJ}`, class: 'an-mgj' }, g), 'mgj');
+    tagger(svg('path', { d: smooth(kenar), class: 'an-keratin' }, g), 'dis-eti-kenari');
+    tagger(svg('path', { d: `M52,${f(bukKret)} Q56.75,${f(bukKret - 2)} 61.5,${f(bukKret + 1.2)} Q64.5,${f(araKret - 0.4)} 67.5,${f(bukKret + 1.2)} Q72.25,${f(bukKret - 2)} 77,${f(bukKret)}`, class: 'an-kemik-hat' }, g), 'kemik-duzeyi');
+    if (dolu < 0.97) tagger(svg('path', { d: `M64.5,${f(tepe + 0.2)} L${f(64.5 - 0.15)},${f(TEMAS)} L${f(64.5 + 0.15)},${f(TEMAS)} Z`, class: 'an-siyah-ucgen' }, g), 'siyah-ucgen');
+    nokta(g, 64.5, TEMAS, 0.55, 'an-temas', 'temas');
+
+    const sinif = p.rec < 0.3 ? '' : p.ara < 0.3 ? 'RT1' : p.ara <= p.rec ? 'RT2' : 'RT3';
+    Object.assign(parts, {
+      kuron:            { ad: 'Orta kesici kuronu', at: [56.75, 52] },
+      'mine-sement':    { ad: 'Mine-sement sınırı', at: [72.25, 39.3] },
+      'dis-eti':        { ad: 'Keratinize dişeti', at: [56.75, 33] },
+      mgj:              { ad: 'Mukogingival sınır', at: [77, MGJ] },
+      'alveol-mukozasi': { ad: 'Alveol mukozası', at: [56, 14] },
+      papilla:          { ad: `Papilla (doluluk ≈ %${Math.round(dolu * 100)})`, at: [64.5, tepe - 1.2] },
+      temas:            { ad: 'Temas noktası', at: [64.5, TEMAS] },
+      'kemik-duzeyi':   { ad: 'Kemik düzeyi (kesikli)', at: [56.75, bukKret - 1.5] },
+      'kret-temas':     { ad: `Kret–temas ≈ ${mm2(d)} mm`, at: [64.5, (araKret + TEMAS) / 2], ayrinti: true }
+    });
+    if (p.rec > 0.3) {
+      parts.cekilme = { ad: `Bukkal çekilme ≈ ${mm2(p.rec)} mm`, at: [72.25, (zB + 39.3) / 2] };
+      parts['acik-kok'] = { ad: 'Açığa çıkmış kök yüzeyi', at: [74.2, zB + 1.6] };
+      parts.sinif = { ad: `Cairo ${sinif}`, at: [72.25, zB - 1] };
+    }
+    if (dolu < 0.97) parts['siyah-ucgen'] = { ad: 'Siyah üçgen', at: [64.5, (tepe + TEMAS) / 2] };
+    if (p.ara > 0.3) parts['ara-kayip'] = { ad: `Ara yüz kaybı ≈ ${mm2(p.ara)} mm`, at: [64.5, araKret] };
+    for (const k in parts) parts[k].at = [TX + parts[k].at[0] * KB, TY + parts[k].at[1] * KB];
+    return parts;
+  }
+
   Object.assign(AT.anatomi.SABLONLAR, {
     sinus: { ad: 'Maksiller sinüs ve üst azı bölgesi (koronal)', varyantlar: Object.keys(SINUS_DURUM), durumlar: SINUS_DURUM, ciz: sinusCiz, varsayilan: {} },
     mandibula: { ad: 'Mandibula, mandibular kanal ve komşuluklar (koronal)', varyantlar: Object.keys(MAND_DURUM), durumlar: MAND_DURUM, ciz: mandCiz, varsayilan: {} },
     furkasyon: { ad: 'Furkasyon (alt birinci büyük azı)', varyantlar: Object.keys(FUR_DURUM), durumlar: FUR_DURUM, ciz: furCiz, varsayilan: {} },
-    'furkasyon-ust': { ad: 'Furkasyon (üst birinci büyük azı)', varyantlar: Object.keys(FURU_DURUM), durumlar: FURU_DURUM, ciz: furUstCiz, varsayilan: {} }
+    'furkasyon-ust': { ad: 'Furkasyon (üst birinci büyük azı)', varyantlar: Object.keys(FURU_DURUM), durumlar: FURU_DURUM, ciz: furUstCiz, varsayilan: {} },
+    soket: { ad: 'Çekim soketinin iyileşmesi', varyantlar: Object.keys(SOKET_DURUM), durumlar: SOKET_DURUM, ciz: soketCiz, varsayilan: {} },
+    'kemik-ici': { ad: 'Kemik içi defektler (duvar sayısı)', varyantlar: Object.keys(KID_DURUM), durumlar: KID_DURUM, ciz: kemikIciCiz, varsayilan: {} },
+    cekilme: { ad: 'Dişeti çekilmesi (Cairo) ve papilla', varyantlar: Object.keys(CEK_DURUM), durumlar: CEK_DURUM, ciz: cekilmeCiz, varsayilan: {} }
   });
 })(window.AT = window.AT || {});
