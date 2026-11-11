@@ -578,3 +578,7 @@ strong { color: var(--accent); font-weight: 700; }
 .an-kemik-hat { fill: none; stroke: #efe2bf; stroke-width: .45; stroke-dasharray: 1 .7; }
 .an-siyah-ucgen { fill: #0c1411; stroke: none; }
 .an-temas { fill: var(--accent); stroke: none; }
+.an-olcum-kilavuz { fill: none; stroke: var(--chalk-dim); stroke-width: .22; stroke-dasharray: .5 .5; }
+.an-olcum-mss { stroke: var(--accent); }
+.an-olcum-cd { fill: none; stroke: #7fd1ff; stroke-width: .5; }
+.an-olcum-kas { fill: none; stroke: var(--accent); stroke-width: .5; }

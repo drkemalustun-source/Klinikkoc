@@ -144,7 +144,9 @@
   const DIS_DURUM = {
     saglikli:      { mY: 28, sY: 32, jY: 37, cY: 41, g: 0.5, swell: 0, inflam: 0 },
     gingivitis:    { mY: 24.5, sY: 32, jY: 37, cY: 41, g: 0.9, swell: 1.6, inflam: 1 },
-    periodontitis: { mY: 30, sY: 51, jY: 55, cY: 59.5, g: 1.7, swell: 0.8, inflam: 2 }
+    periodontitis: { mY: 30, sY: 51, jY: 55, cY: 59.5, g: 1.7, swell: 0.8, inflam: 2 },
+    // Dişeti çekilmesi: kenar mine-sement sınırının ~1,8 mm apikalinde, sığ oluk, iltihap yok.
+    cekilme:       { mY: 40, sY: 45, jY: 49, cY: 53.5, g: 0.5, swell: 0, inflam: 0 }
   };
   const MGJ0 = 53; // mukogingival sınır sabit bir işarettir; hastalıkta yer değiştirmez (keratinize dişeti ≈ 7 mm)
 
@@ -307,6 +309,18 @@
 
     // 5) Periodontal sonda (sol cepte).
     if (opt.probe) probe(g, [toothX(p.sY) - p.g * 0.45, p.sY - 0.2], [toothX(p.mY) - p.g * 0.6, p.mY], (p.sY - p.mY) / MM);
+    // Ölçüm gösterimi: cep derinliği (kenar → cep tabanı), kenarın MSS'ye göre konumu, klinik ataşman seviyesi (MSS → cep tabanı).
+    const MSS = 34, olc = {};
+    if (opt.olcum) {
+      const og = svg('g', { class: 'an-olcum' }, g);
+      const cubuk = (x, y1, y2, cls) => svg('path', { d: `M${x - 0.7},${f(y1)} L${x + 0.7},${f(y1)} M${x},${f(y1)} L${x},${f(y2)} M${x - 0.7},${f(y2)} L${x + 0.7},${f(y2)}`, class: cls }, og);
+      for (const [y, cls] of [[p.mY, 'an-olcum-kilavuz'], [p.sY, 'an-olcum-kilavuz'], [MSS, 'an-olcum-kilavuz an-olcum-mss']]) {
+        svg('path', { d: `M50,${f(y)} L${f(toothX(y) - 0.2)},${f(y)}`, class: cls }, og);
+      }
+      cubuk(53.6, p.mY, p.sY, 'an-olcum-cd');
+      cubuk(50.6, Math.min(MSS, p.sY), Math.max(MSS, p.sY), 'an-olcum-kas');
+      olc.cd = (p.sY - p.mY) / MM; olc.gm = (MSS - p.mY) / MM; olc.kas = (p.sY - MSS) / MM;
+    }
 
     // Parçalar: varsayılan ad ve etiket noktası (sol yarıda; side 'sag' ise ayna).
     const S = (x, y) => [160 - x, y];
@@ -322,12 +336,12 @@
       pdl:             { ad: 'Periodontal ligament', at: S(toothX(73) - 0.6, 73) },
       kemik:           { ad: 'Alveol kemiği', at: S(63, 76) },
       kret:            { ad: 'Alveol kreti', at: S(G.C[0] - 0.8, p.cY + 0.5) },
-      'dis-eti':       { ad: variant === 'saglikli' ? 'Serbest dişeti' : 'Dişeti (iltihaplı)', at: [toothX(p.mY + 3) - p.g - 2.4, p.mY + 3.4] },
-      'yapisik-dis-eti': { ad: 'Yapışık dişeti', at: [(G.softX(49) + G.boneAt(49)) / 2, 49] },
+      'dis-eti':       { ad: variant === 'saglikli' || variant === 'cekilme' ? 'Serbest dişeti' : 'Dişeti (iltihaplı)', at: [toothX(p.mY + 3) - p.g - 2.4, p.mY + 3.4] },
+      'yapisik-dis-eti': { ad: 'Yapışık dişeti', at: [(G.softX(49) + Math.min(G.boneAt(49), G.softX(49) + 4)) / 2, 49] },
       mgj:             { ad: 'Mukogingival sınır', at: S(G.softX(MGJ) + 0.6, MGJ) },
       mukoza:          { ad: 'Alveol mukozası', at: S((G.softX(70) + G.boneAt(70)) / 2, 70) },
       'dis-eti-epiteli': { ad: 'Ağız dişeti epiteli', at: [G.softX(40), 40] },
-      cep:             { ad: variant === 'saglikli' ? 'Dişeti oluğu (sulkus)' : variant === 'gingivitis' ? 'Yalancı cep' : 'Periodontal cep', at: [toothX(Gm) - p.g / 2, Gm] },
+      cep:             { ad: variant === 'saglikli' || variant === 'cekilme' ? 'Dişeti oluğu (sulkus)' : variant === 'gingivitis' ? 'Yalancı cep' : 'Periodontal cep', at: [toothX(Gm) - p.g / 2, Gm] },
       ba:              { ad: 'Birleşim epiteli', at: [toothX((p.sY + p.jY) / 2) - 0.4, (p.sY + p.jY) / 2] },
       bd:              { ad: 'Bağ dokusu ataşmanı', at: [toothX((p.jY + p.cY) / 2) - 1.2, (p.jY + p.cY) / 2] },
       dis:             { ad: 'Diş', at: S(78, 40) },
@@ -352,6 +366,13 @@
       parts['kemik-kaybi'] = { ad: 'Kemik kaybı', at: S(66, 50) };
     }
     if (opt.probe) parts.sonda = { ad: `Sondalama derinliği ≈ ${Math.round((p.sY - p.mY) / MM)} mm`, at: [toothX(p.mY) - p.g - 1.4, p.mY - 4] };
+    if (opt.olcum) {
+      const r1 = (v) => Math.round(v * 10) / 10;
+      parts['olcum-cd'] = { ad: `CD (cep derinliği) ≈ ${r1(olc.cd)} mm`, at: [53.6, (p.mY + p.sY) / 2] };
+      parts['olcum-kas'] = { ad: `KAS (klinik ataşman) ≈ ${r1(Math.max(0, olc.kas))} mm`, at: [50.6, (MSS + p.sY) / 2 + 0.8] };
+      parts['olcum-gm'] = { ad: olc.gm >= 0 ? `Kenar MSS'nin ${r1(olc.gm)} mm koronalinde` : `Çekilme ≈ ${r1(-olc.gm)} mm (kenar MSS apikalinde)`, at: [52, MSS] };
+      parts['olcum-formul'] = { ad: 'KAS = CD − (kenar–MSS mesafesi)', at: [toothX(p.sY), p.sY + 0.4] };
+    }
     return parts;
   }
 
@@ -562,6 +583,9 @@
 
   const SABLONLAR = {
     dis: { ad: 'Diş ve periodonsiyum', varyantlar: Object.keys(DIS_DURUM), durumlar: DIS_DURUM, ciz: disCiz, varsayilan: { mgj: MGJ0 } },
+    // Sonda ile cep derinliği ve klinik ataşman seviyesi ölçümü: dis şablonu + sonda + ölçüm çubukları.
+    sondalama: { ad: 'Cep derinliği ve klinik ataşman ölçümü', varyantlar: Object.keys(DIS_DURUM), durumlar: DIS_DURUM,
+      ciz: (g, v, opt) => disCiz(g, v, Object.assign({}, opt, { probe: true, olcum: true })), varsayilan: { mgj: MGJ0 } },
     implant: { ad: 'İmplant ve peri-implant dokular', varyantlar: Object.keys(IMP_DURUM), durumlar: IMP_DURUM, ciz: implantCiz, varsayilan: {} }
   };
 
