@@ -9,6 +9,7 @@
     "js/core.js",
     "js/speech.js",
     "js/anatomi.js",
+    "js/anatomi-bolge.js",
     "js/board.js",
     "js/player.js",
     "js/karne.js",

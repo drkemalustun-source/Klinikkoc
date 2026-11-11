@@ -650,5 +650,7 @@
     return out;
   }
 
-  AT.anatomi = { ciz, liste, durum, araDurum, SABLONLAR, MM };
+  AT.anatomi = { ciz, liste, durum, araDurum, SABLONLAR, MM,
+    // Başka şablon dosyalarının (anatomi-bolge.js) kullandığı çizim yardımcıları.
+    _y: { svg, smooth, poly, ornekle, bant, rete, trabekul, range, clamp, f, etiRengi, uid: () => 'an' + (++uid) } };
 })(window.AT = window.AT || {});

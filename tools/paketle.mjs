@@ -248,7 +248,7 @@ writeFileSync(join(LESSONS, 'katalog.json'), JSON.stringify(cat, null, 2) + '\n'
 writeFileSync(join(LESSONS, 'katalog.js'), `/* Otomatik üretildi: tools/paketle.mjs */\nAT.registerCatalog(${JSON.stringify(cat)});\n`);
 
 const shell = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'css/tahta.css',
-  'js/core.js', 'js/speech.js', 'js/anatomi.js', 'js/board.js', 'js/player.js', 'js/karne.js', 'js/vaka.js', 'js/sozlu.js', 'js/qa/qa.js', 'js/qa/bilgi.js', 'js/qa/saglayici-anthropic.js', 'js/qa/saglayici-ollama.js', 'js/qa/saglayici-openai.js', 'js/app.js',
+  'js/core.js', 'js/speech.js', 'js/anatomi.js', 'js/anatomi-bolge.js', 'js/board.js', 'js/player.js', 'js/karne.js', 'js/vaka.js', 'js/sozlu.js', 'js/qa/qa.js', 'js/qa/bilgi.js', 'js/qa/saglayici-anthropic.js', 'js/qa/saglayici-ollama.js', 'js/qa/saglayici-openai.js', 'js/app.js',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'lessons/katalog.json', 'lessons/katalog.js'];
 const files = [...new Set([...shell, ...cacheFiles])];
 const hash = createHash('sha256');

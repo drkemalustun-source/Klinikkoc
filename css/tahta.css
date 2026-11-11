@@ -538,3 +538,32 @@ strong { color: var(--accent); font-weight: 700; }
 .today-review { max-width: 1100px; margin: 0 auto 1em; padding: .8em 1em; border-radius: 14px; background: var(--board-2); border: 2px solid var(--accent); }
 .today-review h2 { margin: 0 0 .2em; font-size: 1em; color: var(--accent); }
 .today-review p, .today-review ul { margin: .2em 0 .6em; font-size: .8em; }
+/* Bölgesel şablonlar (anatomi-bolge.js): sinüs, mandibula */
+.an-hava { fill: #0c1411; stroke: none; }
+.an-membran { fill: none; stroke: #f0a7ae; stroke-width: .75; stroke-linejoin: round; }
+.an-greft-zemin { fill: #d9c79a; } .an-greft-tane { fill: #f3ead0; stroke: #b59f6a; stroke-width: .12; }
+.an-greft { stroke: none; }
+.an-pencere { fill: #0c1411; stroke: var(--accent); stroke-width: .3; stroke-dasharray: .7 .5; }
+.an-orbita { fill: #4f4630; stroke: none; }
+.an-konka { fill: #d98790; stroke: #f2b8bd; stroke-width: .35; }
+.an-burun-mukoza { fill: none; stroke: #d98790; stroke-width: .6; }
+.an-mukoza-cizgi { fill: none; stroke: #f2b8bd; stroke-width: .5; }
+.an-yanak { fill: #9e4a55; stroke: none; }
+.an-arter { fill: #e0293b; stroke: #ffd0d0; stroke-width: .15; }
+.an-ven { fill: #3f63c8; stroke: #c9d6ff; stroke-width: .15; }
+.an-sinir { fill: #f2d35b; stroke: #fff2b8; stroke-width: .15; }
+.an-pdl-cizgi { fill: none; stroke: #5a3b3f; stroke-width: .9; stroke-linejoin: round; }
+.an-kortikal-kalin { fill: none; stroke: #efe2bf; stroke-width: 1.6; stroke-linejoin: round; }
+.an-kanal { fill: #3a2a22; stroke: #f3e7c8; stroke-width: .5; }
+.an-dil { fill: #c65d68; stroke: none; }
+.an-kas { fill: #8e3a44; stroke: none; }
+.an-bez { fill: #d8a070; stroke: #b57e4f; stroke-width: .2; }
+.an-sublingual { fill: #d8a070; stroke: #b57e4f; stroke-width: .2; }
+.an-guvenlik { stroke: var(--accent); stroke-width: .5; stroke-dasharray: .6 .4; }
+.an-soket { fill: #6e1b25; stroke: #3a1015; stroke-width: .3; }
+.an-furkasyon-acik { fill: #0c1411; stroke: none; }
+.an-dis-eti-kenari { fill: none; stroke: #f2b8bd; stroke-width: .45; stroke-dasharray: 1 .6; }
+.an-kesit-duzlemi { fill: none; stroke: var(--accent); stroke-width: .3; stroke-dasharray: .5 .8; opacity: .7; }
+.an-sement-cizgi { fill: none; stroke: #c99a4a; stroke-width: .45; }
+.an-panel-yazi { fill: var(--chalk-dim); stroke: none; font-family: inherit; }
+.an-yon { fill: var(--accent); stroke: none; font-family: inherit; font-size: 2.6px; font-weight: 600; }
