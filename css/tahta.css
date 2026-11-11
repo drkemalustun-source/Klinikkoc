@@ -431,7 +431,7 @@ strong { color: var(--accent); font-weight: 700; }
 .an-mine { fill: #f4f1e6; stroke: #cfc8b4; stroke-width: .25; }
 .an-dentin { fill: #e8d29c; stroke: none; }
 .an-pulpa { fill: #c9576a; stroke: #e58a97; stroke-width: .25; }
-.an-sement { fill: none; stroke: #b98d3d; stroke-width: .9; }
+.an-sement { fill: #c99a4a; stroke: none; }
 .an-dis-cizgi { fill: none; stroke: #fffaf0; stroke-width: .35; }
 .an-pdl { fill: #5a3b3f; stroke: none; }
 .an-pdl-lif { fill: none; stroke: #c99aa0; stroke-width: .22; }
@@ -439,7 +439,7 @@ strong { color: var(--accent); font-weight: 700; }
 .an-kemik-zemin { fill: #cdb688; stroke: none; }
 .an-trabekul { fill: #b9a273; stroke: #a58d5e; stroke-width: .25; }
 .an-kortikal { fill: none; stroke: #efe2bf; stroke-width: 1.3; stroke-linecap: round; }
-.an-lamina { fill: none; stroke: #f3e7c8; stroke-width: .55; }
+.an-lamina { fill: none; stroke: #f3e7c8; stroke-width: .8; } /* alveol kemiği özü (demet kemiği) */
 .an-eski-kemik { fill: none; stroke: var(--chalk); stroke-width: .5; stroke-dasharray: 1.2 1; opacity: .75; }
 .an-dis-eti { fill: #e7979b; stroke: none; }
 .an-dis-eti.an-iltihapli { fill: #d75a64; }
@@ -448,7 +448,11 @@ strong { color: var(--accent); font-weight: 700; }
 .an-oluk-epitel { fill: none; stroke: #f6c3c3; stroke-width: .45; }
 .an-oluk-epitel.an-ulser { stroke: #8f1d2c; stroke-dasharray: .9 .6; stroke-width: .6; }
 .an-ba { fill: #f7d2df; stroke: none; }
-.an-lif { fill: none; stroke: #f8dada; stroke-width: .22; opacity: .8; }
+.an-epitel-bant { fill: #f2b8bd; stroke: none; }
+.an-keratin { fill: none; stroke: #fff1ee; stroke-width: .35; stroke-linejoin: round; }
+.an-oluk-bant { fill: #f2b8bd; stroke: none; }
+.an-lif-kesit { fill: #f8dada; stroke: none; }
+.an-lif { fill: none; stroke: #f8dada; stroke-width: .22; }
 .an-mgj { fill: none; stroke: var(--chalk); stroke-width: .35; stroke-dasharray: .8 .6; }
 .an-infiltrat { fill: #7d1424; stroke: none; }
 .an-plak { fill: #d8cf6a; stroke: #a99f3a; stroke-width: .15; }
@@ -534,3 +538,79 @@ strong { color: var(--accent); font-weight: 700; }
 .today-review { max-width: 1100px; margin: 0 auto 1em; padding: .8em 1em; border-radius: 14px; background: var(--board-2); border: 2px solid var(--accent); }
 .today-review h2 { margin: 0 0 .2em; font-size: 1em; color: var(--accent); }
 .today-review p, .today-review ul { margin: .2em 0 .6em; font-size: .8em; }
+/* Bölgesel şablonlar (anatomi-bolge.js): sinüs, mandibula */
+.an-hava { fill: #0c1411; stroke: none; }
+.an-membran { fill: none; stroke: #f0a7ae; stroke-width: .75; stroke-linejoin: round; }
+.an-greft-zemin { fill: #d9c79a; } .an-greft-tane { fill: #f3ead0; stroke: #b59f6a; stroke-width: .12; }
+.an-greft { stroke: none; }
+.an-pencere { fill: #0c1411; stroke: var(--accent); stroke-width: .3; stroke-dasharray: .7 .5; }
+.an-orbita { fill: #4f4630; stroke: none; }
+.an-konka { fill: #d98790; stroke: #f2b8bd; stroke-width: .35; }
+.an-burun-mukoza { fill: none; stroke: #d98790; stroke-width: .6; }
+.an-mukoza-cizgi { fill: none; stroke: #f2b8bd; stroke-width: .5; }
+.an-yanak { fill: #9e4a55; stroke: none; }
+.an-arter { fill: #e0293b; stroke: #ffd0d0; stroke-width: .15; }
+.an-ven { fill: #3f63c8; stroke: #c9d6ff; stroke-width: .15; }
+.an-sinir { fill: #f2d35b; stroke: #fff2b8; stroke-width: .15; }
+.an-pdl-cizgi { fill: none; stroke: #5a3b3f; stroke-width: .9; stroke-linejoin: round; }
+.an-kortikal-kalin { fill: none; stroke: #efe2bf; stroke-width: 1.6; stroke-linejoin: round; }
+.an-kanal { fill: #3a2a22; stroke: #f3e7c8; stroke-width: .5; }
+.an-dil { fill: #c65d68; stroke: none; }
+.an-kas { fill: #8e3a44; stroke: none; }
+.an-bez { fill: #d8a070; stroke: #b57e4f; stroke-width: .2; }
+.an-sublingual { fill: #d8a070; stroke: #b57e4f; stroke-width: .2; }
+.an-guvenlik { stroke: var(--accent); stroke-width: .5; stroke-dasharray: .6 .4; }
+.an-soket { fill: #6e1b25; stroke: #3a1015; stroke-width: .3; }
+.an-furkasyon-acik { fill: #0c1411; stroke: none; }
+.an-dis-eti-kenari { fill: none; stroke: #f2b8bd; stroke-width: .45; stroke-dasharray: 1 .6; }
+.an-kesit-duzlemi { fill: none; stroke: var(--accent); stroke-width: .3; stroke-dasharray: .5 .8; opacity: .7; }
+.an-sement-cizgi { fill: none; stroke: #c99a4a; stroke-width: .45; }
+.an-panel-yazi { fill: var(--chalk-dim); stroke: none; font-family: inherit; }
+.an-yon { fill: var(--accent); stroke: none; font-family: inherit; font-size: 2.6px; font-weight: 600; }
+.an-defekt-cizgi { fill: none; stroke: #0c1411; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.an-granulasyon { fill: #c0505e; stroke: none; }
+.an-orgu-tel { fill: none; stroke: #e8d7a8; stroke-width: .45; }
+.an-orgu { stroke: none; }
+.an-membran-kollajen { fill: none; stroke: #f6f1e4; stroke-width: .9; stroke-linecap: round; }
+.an-matris { fill: #c98d86; stroke: none; }
+.an-kok-yuzey { fill: #e4c98c; stroke: #c9a865; stroke-width: .25; }
+.an-mse { fill: none; stroke: #c9a865; stroke-width: .35; }
+.an-kemik-hat { fill: none; stroke: #efe2bf; stroke-width: .45; stroke-dasharray: 1 .7; }
+.an-siyah-ucgen { fill: #0c1411; stroke: none; }
+.an-temas { fill: var(--accent); stroke: none; }
+.an-olcum-kilavuz { fill: none; stroke: var(--chalk-dim); stroke-width: .22; stroke-dasharray: .5 .5; }
+.an-olcum-mss { stroke: var(--accent); }
+.an-olcum-cd { fill: none; stroke: #7fd1ff; stroke-width: .5; }
+.an-olcum-kas { fill: none; stroke: var(--accent); stroke-width: .5; }
+.an-plak-boyali { fill: #c2437f; stroke: none; }
+.an-cizelge-kutu { fill: #24302b; stroke: none; }
+.an-cizelge-cizgi { fill: none; stroke: var(--chalk-dim); stroke-width: .18; }
+.an-kanama-yok { fill: none; stroke: var(--chalk-dim); stroke-width: .18; }
+.an-stippling { fill: #cf7d83; stroke: none; }
+.an-dis-eti-olugu { fill: none; stroke: #c9767d; stroke-width: .3; stroke-dasharray: .8 .5; }
+.an-parlaklik { fill: none; stroke: #fff4f2; stroke-width: .4; stroke-linecap: round; }
+.an-ulser-yuzey { fill: #e8d9a8; stroke: #9b1d2e; stroke-width: .25; }
+.an-mine-oluk { fill: none; stroke: #d9d3c0; stroke-width: .3; stroke-linecap: round; opacity: .7; }
+.an-kanal-yol { fill: none; stroke: #3a2a22; stroke-width: 3.6; stroke-linecap: round; }
+.an-sinir-yol { fill: none; stroke: #f2d35b; stroke-width: .7; stroke-linecap: round; }
+.an-arter-yol { fill: none; stroke: #e0293b; stroke-width: .6; stroke-linecap: round; }
+.an-kanal-ince { fill: none; stroke: #3a2a22; stroke-width: 1.8; stroke-linecap: round; }
+.an-kafa { fill: #2b3a34; stroke: none; }
+.an-kemik-yuz { fill: #d6c69c; stroke: #f3e7c8; stroke-width: .45; stroke-linejoin: round; }
+.an-kemik-acik { fill: #c7b68b; }
+.an-foramen { fill: #3a2a22; stroke: #f3e7c8; stroke-width: .2; }
+.an-kanal-kesik { fill: none; stroke: #8b744b; stroke-width: 1.5; stroke-linecap: round; stroke-dasharray: 1.6 1; }
+.an-kesik { stroke-dasharray: 1.2 .8; }
+.an-arter-kalin { stroke-width: 1.1; }
+.an-kafa-acik { fill: #3a4a43; }
+.an-kemik-sirt { fill: none; stroke: #f3e7c8; stroke-width: .7; stroke-linecap: round; }
+.an-kenarsiz { stroke: none; }
+.an-kok-silik { fill: #bfab80; stroke: #a8926a; stroke-width: .25; opacity: .5; }
+.an-mine-ince { stroke-width: .3; }
+.an-mm.an-sinir-yol { stroke-width: 1; } .an-mm.an-arter-yol { stroke-width: .95; } .an-mm.an-arter-kalin { stroke-width: 1.7; }
+.an-mm.an-kanal-kesik { stroke-width: 2.2; stroke-dasharray: 2.4 1.5; } .an-mm.an-kesik { stroke-dasharray: 1.8 1.2; }
+.an-kas-yol { fill: none; stroke: #7a2b36; stroke-linecap: round; stroke-linejoin: round; }
+.an-cilt { fill: none; stroke: #e8b9a6; stroke-width: .8; }
+.an-apse { fill: #d9d36a; stroke: #f4efa6; stroke-width: .45; }
+.an-yayilim { fill: none; stroke: #f4efa6; stroke-width: .7; stroke-dasharray: 1.3 .9; stroke-linecap: round; }
+.an-mm-kortikal { stroke-width: 1.1; } .an-mm-pdl { stroke-width: .8; }

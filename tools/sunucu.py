@@ -882,7 +882,12 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
             if yol == "birak":
                 return self._json(200, CANLI.birak_konusmalari())
             if yol == "merhaba":
-                return self._json(200, CANLI.merhaba(veri.get("durum")))
+                m = dict(CANLI.merhaba(veri.get("durum")) or {})
+                try:  # öğretmen bilgisayarı mı: tahtadaki Sihirbaz tuşu yalnızca o zaman görünür
+                    m["ogretmen"] = ders_sonu.ayarlar().get("profil") == "ogretmen"
+                except Exception:
+                    m["ogretmen"] = False
+                return self._json(200, m)
             if yol == "duraklat":
                 return self._json(200, CANLI.duraklat(veri.get("duraklatildi"), veri.get("durum")))
             if yol == "bitti":

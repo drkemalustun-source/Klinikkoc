@@ -21,11 +21,17 @@
       </div>
       <span class="canli-ses" id="sesMotor" role="status" hidden></span>
       <span class="claude-isik" id="claudeIsik" role="status" title="Claude şu an dinlemiyor."><i></i><span>Claude dinlemiyor</span></span>
+      <button class="ctrl-btn speed canli-sihirbaz-dugme" id="sihirbazAc" aria-pressed="false" hidden
+              title="Öğretmen: ders hazırlama sihirbazını tahtadan çıkmadan açar (tahta olduğu gibi kalır)">Sihirbaz</button>
       <button class="ctrl-btn speed" id="hiz" aria-label="Anlatım hızı" title="Anlatım hızı">1,2×</button>
       <button class="icon-btn" id="tamEkran" aria-label="Tam ekran" title="Tam ekran (F)">
         <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
       </button>
     </header>
+
+    <div class="canli-sihirbaz" id="sihirbazKat" hidden>
+      <iframe id="sihirbazCerceve" title="Ders hazırlama sihirbazı"></iframe>
+    </div>
 
     <div class="board" id="board" data-layout="notes">
       <div class="board-title"></div>
@@ -131,6 +137,7 @@
   <script src="js/core.js"></script>
   <script src="js/speech.js"></script>
   <script src="js/anatomi.js"></script>
+  <script src="js/anatomi-bolge.js"></script>
   <script src="js/board.js"></script>
   <script src="js/canli.js"></script>
 </body>

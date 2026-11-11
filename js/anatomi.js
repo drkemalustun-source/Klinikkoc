@@ -39,6 +39,64 @@
   const poly = (pts, move = true) => pts.map((p, i) => (i === 0 && move ? 'M' : 'L') + f(p[0]) + ',' + f(p[1])).join(' ');
   const mirror = (pts) => pts.map(([x, y]) => [160 - x, y]);
   const range = (a, b, step) => { const r = []; for (let y = a; y < b - 1e-6; y += step) r.push(y); r.push(b); return r; };
+  const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+
+  // smooth() ile çizilen eğrinin üzerinden sık nokta örnekler (bantlar eğriye tam otursun diye).
+  function ornekle(pts, n = 8) {
+    if (pts.length < 2) return pts.slice();
+    const out = [pts[0]];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+      const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+      const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+      for (let k = 1; k <= n; k++) {
+        const t = k / n, u = 1 - t;
+        out.push([u * u * u * p1[0] + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t * t * t * p2[0],
+                  u * u * u * p1[1] + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t * t * t * p2[1]]);
+      }
+    }
+    return out;
+  }
+
+  // Bir yüzey boyunca doku bandı (epitel, sement...). yon: bandın hangi yana kalınlaştığı ([1,0] = dişe doğru).
+  // kal(s, nokta): o noktadaki kalınlık; s = yüzey boyunca yol uzunluğu.
+  function bant(pts, kal, yon) {
+    const iç = [];
+    let s = 0;
+    for (let i = 0; i < pts.length; i++) {
+      if (i) s += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+      let nx = -(b[1] - a[1]), ny = b[0] - a[0];
+      const L = Math.hypot(nx, ny) || 1;
+      nx /= L; ny /= L;
+      if (nx * yon[0] + ny * yon[1] < 0) { nx = -nx; ny = -ny; }
+      const w = kal(s, pts[i]);
+      iç.push([pts[i][0] + nx * w, pts[i][1] + ny * w]);
+    }
+    return poly(pts) + ' ' + poly(iç.reverse(), false) + ' Z';
+  }
+  // Epitel sırtları (rete peg): bağ dokusuna uzanan aralıklı çıkıntılar.
+  const rete = (s, aralik) => Math.max(0, Math.sin((2 * Math.PI * s) / aralik)) ** 1.6;
+
+  // Ağız (dişeti/mukoza) epiteli + keratin tabakası + oluk/cep epiteli. Yalnız yumuşak doku içinde görünür (clip).
+  function epitelCiz(r, G, p, MGJ, clip, tag, olukPart) {
+    const dis = ornekle(G.outer);
+    const tepe = G.outer[0][1];
+    tag(svg('path', {
+      d: bant(dis, (s, q) => {
+        const uc = clamp((q[1] - tepe) / 1.6); // kenarda incelir
+        return q[1] < MGJ ? uc * (0.75 + 1.05 * rete(s, 1.7)) : 0.5 + 0.35 * rete(s, 2.4);
+      }, [1, 0]), class: 'an-epitel-bant', 'clip-path': clip
+    }, r), 'dis-eti-epiteli');
+    const ker = dis.filter((q) => q[1] <= MGJ);
+    if (ker.length > 1) tag(svg('path', { d: poly(ker), class: 'an-keratin' }, r), 'keratin');
+    const ol = ornekle(G.pocket);
+    const derin = 0.45 * (p.inflam || 0); // iltihapta cep epiteli sırt yapar, incelir, ülserleşir
+    tag(svg('path', {
+      d: bant(ol, (s, q) => clamp((q[1] - tepe) / 1) * (0.45 + derin * rete(s + 0.4, 1.5)), [-1, 0]),
+      class: 'an-oluk-bant', 'clip-path': clip
+    }, r), olukPart);
+  }
 
   // Kübik Bézier üzerinde verilen y için x (eğri y yönünde tekdüze olmalı).
   function bezX(p0, p1, p2, p3, y) {
@@ -55,7 +113,7 @@
 
   // Süngerimsi kemik: düzensiz ilmekli ağ deseni.
   function trabekul(defs, id) {
-    const pat = svg('pattern', { id: id + 'tr', width: 9, height: 7, patternUnits: 'userSpaceOnUse' }, defs);
+    const pat = svg('pattern', { id: id + 'tr', width: 9, height: 7, patternUnits: 'userSpaceOnUse', patternTransform: 'scale(0.55)' }, defs);
     svg('path', { d: 'M0.4,1.2 c1,-0.8 2.2,0.1 2.4,1.1 c0.2,1 -0.9,1.7 -1.8,1.3 c-0.9,-0.4 -1.2,-1.6 -0.6,-2.4 Z' +
       ' M4.6,0.6 c1.3,-0.3 2.6,0.5 2.5,1.6 c-0.1,0.9 -1.4,1.2 -2.2,0.7 c-0.7,-0.5 -0.9,-1.7 -0.3,-2.3 Z' +
       ' M3.2,4 c0.9,-0.5 2,0 2.1,0.9 c0.1,1 -1,1.6 -1.8,1.2 c-0.6,-0.4 -0.8,-1.5 -0.3,-2.1 Z' +
@@ -68,10 +126,13 @@
   /* ---------------- Diş ve periodonsiyum (alt küçük azı, bukkolingual kesit) ---------------- */
 
   // Kuron ve kök dış çizgisi (sol = bukkal yüz). Sağ yüz kole altında simetriktir.
-  const CROWN = 'M69,34 C66.5,30 65.5,26 66,22 C66.5,15 69,9 72,7 C74.5,8 77,11 80,12 C83,11 85.5,9 88,8.5 C91,10.5 93.5,15 94,21 C94.3,26 93,31 91,34';
-  const DEJ = 'M69,34 C68.4,29.5 68.6,25 69.2,22 C70,16.5 71.7,12.5 73.2,10.6 C75.5,12.4 77.6,14.2 80,15 C82.4,14.2 84.6,12.6 87,11.6 C89.4,13.8 91,17.5 91.3,21.5 C91.5,26 91.2,30.5 91,34';
+  // Alt küçük azı: bukkal tüberkül yüksek, lingual tüberkül belirgin biçimde kısa; mine tüberküllerde ~2 mm, mine-sement sınırında sıfıra iner.
+  const CROWN = 'M69,34 C66.5,30 65.5,26 66,22 C66.6,14.5 70,8 74,6.5 C76.5,7.5 78.5,11 81,13 C83.5,12.5 85.5,11.2 87.5,11.3 C90.5,12.8 93.6,16.5 94,21 C94.3,26 93,31 91,34';
+  const DEJ = 'M69,34 C68.4,29.5 68.6,25 69.2,22 C69.9,17 72.2,13 74.6,12.3 C76.8,13.6 78.8,16.6 81,17.8 C83.2,17.2 85,16.2 86.8,16.3 C89.3,17.4 91,19.5 91.3,22.5 C91.5,26 91.2,30.5 91,34';
   const ROOT = 'M69,34 C69.5,50 73,72 77.5,82.5 Q80,85.5 82.5,82.5 C87,72 90.5,50 91,34';
-  const PULP = 'M74.5,20 C74,24 74.5,30 75.5,36 C77,55 78.6,72 79.6,82.6 L80.4,82.6 C81.4,72 83,55 84.5,36 C85.5,30 86,24 85.5,19.5 C84.5,21 83,22 80,22 C77,22 75.8,21.5 74.5,20 Z';
+  const PULP = 'M75.5,19 C74.6,23 75,30 76,36 C77.3,55 78.8,72 79.7,82.6 L80.3,82.6 C81.2,72 82.7,55 84,36 C85,30 85.3,25 84.5,22 C83.6,23 82.3,23.6 80.5,23.4 C78.5,23.2 76.8,21.5 75.5,19 Z';
+
+  const pdlW = (y, cY) => { const t = clamp((y - cY) / (82 - cY)); return 1.2 - 0.95 * t + 1.05 * t * t; };
 
   function toothX(y) {
     if (y <= 22) return 66;
@@ -83,9 +144,11 @@
   const DIS_DURUM = {
     saglikli:      { mY: 28, sY: 32, jY: 37, cY: 41, g: 0.5, swell: 0, inflam: 0 },
     gingivitis:    { mY: 24.5, sY: 32, jY: 37, cY: 41, g: 0.9, swell: 1.6, inflam: 1 },
-    periodontitis: { mY: 30, sY: 51, jY: 55, cY: 59.5, g: 1.7, swell: 0.8, inflam: 2, mgj: 66 }
+    periodontitis: { mY: 30, sY: 51, jY: 55, cY: 59.5, g: 1.7, swell: 0.8, inflam: 2 },
+    // Dişeti çekilmesi: kenar mine-sement sınırının ~1,8 mm apikalinde, sığ oluk, iltihap yok.
+    cekilme:       { mY: 40, sY: 45, jY: 49, cY: 53.5, g: 0.5, swell: 0, inflam: 0 }
   };
-  const MGJ0 = 57;
+  const MGJ0 = 53; // mukogingival sınır sabit bir işarettir; hastalıkta yer değiştirmez (keratinize dişeti ≈ 7 mm)
 
   // Sol yarının (bukkal) yumuşak doku ve kemik geometrisi; sağ yarı aynası.
   function disGeo(p) {
@@ -93,7 +156,8 @@
     const boneOuter = [C, [C[0] - 2.2, p.cY + 0.9], [(C[0] - 2.2 + boneOuterX(p.cY + 4)) / 2 - 0.6, p.cY + 2.8]];
     for (const y of range(p.cY + 6, 90, 6)) boneOuter.push([boneOuterX(y), y]);
     const socket = [];
-    for (const y of range(p.cY, 81, 3)) socket.push([toothX(y) - 1.2, y]);
+    // PDL kum saati biçimli: kret ve apekste geniş, orta üçlüde dar (~0,2–0,35 mm).
+    for (const y of range(p.cY, 81, 3)) socket.push([toothX(y) - pdlW(y, p.cY), y]);
     socket.push([78.3, 85.6], [80, 86.7]);
     const boneAt = (y) => (y < p.cY + 2 ? Infinity : y < p.cY + 6 ? C[0] - 2.2 - (y - p.cY) * 0.9 : boneOuterX(y));
 
@@ -108,13 +172,15 @@
     const outer = [tip];
     let run = Infinity;
     const bump = (y) => p.swell * 1.9 * Math.exp(-(((y - (p.mY + 3.2)) / 3.2) ** 2));
-    for (const y of [p.mY + 0.9, p.mY + 2.4].concat(range(p.mY + 4.5, 90, 3))) {
-      const want = Math.min(toothX(Math.min(y, 40)) - 4.3 - (y < p.mY + 2 ? 2.3 - (y - p.mY) * 0.9 : 0), boneAt(y) - 3);
+    // Sağlıklı serbest dişeti kenarı bıçak sırtı gibi incedir, ~1,5 mm'de tam kalınlığa (~1,3 mm) ulaşır;
+    // iltihapta kenar yuvarlaklaşır (swell).
+    const kal = (y) => { const d = Math.max(0, y - p.mY); return 0.45 + 4.6 * Math.min(1, d / 4) ** 0.7 + p.swell * 1.1 * Math.exp(-(((d - 0.8) / 1.6) ** 2)); };
+    for (const y of [p.mY + 0.5, p.mY + 1.3, p.mY + 2.4].concat(range(p.mY + 4.5, 90, 3))) {
+      const want = Math.min(toothX(Math.min(y, 40)) - kal(y), boneAt(y) - 3);
       run = Math.min(run, want);
-      const groove = Math.abs(y - (p.mY + 6.5)) < 1.6 && !p.inflam ? 0.5 : 0;
+      const groove = Math.abs(y - (p.mY + 6.5)) < 1.6 ? 0.3 * clamp(1 - p.inflam) : 0;
       outer.push([run - bump(y) + groove, y]);
     }
-    outer[1][0] = tip[0] - 1.1 - bump(p.mY + 0.9) * 0.6;
     const softX = (y) => { // dış yüzün y'deki x'i (etiketler için)
       for (let i = 1; i < outer.length; i++) if (outer[i][1] >= y) return outer[i][0];
       return outer[outer.length - 1][0];
@@ -147,45 +213,71 @@
       tag(svg('path', { d: smooth(G.socket), class: 'an-lamina' }, r), 'kemik');
     });
     tag(svg('path', { d: smooth(G.socket) + ' ' + smooth(sR, false) + ' Z', class: 'an-pdl' }, g), 'pdl');
-    if (variant === 'periodontitis') { // eski kemik düzeyi (kesikli)
-      const old = disGeo(DIS_DURUM.saglikli);
-      both((r) => tag(svg('path', { d: smooth(old.boneOuter.slice(0, 5)) + ' M' + f(old.C[0]) + ',' + f(old.C[1]) + ' ' + smooth(old.socket.slice(0, 7), false).replace(/^L/, 'L'), class: 'an-eski-kemik' }, r), 'kemik-kaybi'));
+    if (variant === 'periodontitis') { // eski (sağlıklı) kemik düzeyi: kökten dişeti dış yüzüne kesikli çizgi
+      const oy = DIS_DURUM.saglikli.cY;
+      both((r) => tag(svg('path', { d: `M${f(toothX(oy) - 0.2)},${oy} L${f(G.softX(oy) + 0.2)},${oy}`, class: 'an-eski-kemik' }, r), 'kemik-kaybi'));
     }
 
     // 2) Diş: dentin, mine, pulpa, sement.
     tag(svg('path', { d: DEJ + ' C90.5,50 87,72 82.5,82.5 Q80,85.5 77.5,82.5 C73,72 69.5,50 69,34 Z', class: 'an-dentin' }, g), 'dentin');
     tag(svg('path', { d: CROWN + ' ' + revDEJ(), class: 'an-mine' }, g), 'mine');
     tag(svg('path', { d: PULP, class: 'an-pulpa' }, g), 'pulpa');
-    tag(svg('path', { d: ROOT, class: 'an-sement' }, g), 'sement');
+    // Sement: kole bölgesinde ince (hücresiz), apekse doğru kalınlaşır (hücreli).
+    both((r) => {
+      const kok = [];
+      for (const y of range(34, 82.5, 0.8)) kok.push([toothX(y), y]);
+      tag(svg('path', { d: bant(kok, (s0, q) => 0.22 + 0.75 * clamp((q[1] - 45) / 37) ** 1.5, [1, 0]), class: 'an-sement' }, r), 'sement');
+    });
     tag(svg('path', { d: CROWN, class: 'an-dis-cizgi' }, g), 'dis');
 
     // 3) Yumuşak doku: dişeti (MGJ'ye kadar) ve alveol mukozası.
     const soft = smooth(G.outer.slice().reverse()) + ' ' + smooth(G.pocket, false) + ' ' + smooth(G.attach, false) +
                  ` L${f(G.C[0])},${f(G.C[1])} ` + smooth(G.boneOuter.slice(1), false) + ' Z';
+    const clipY = svg('clipPath', { id: id + 'yd' }, defs); // yumuşak doku (+ kemik) alanı: iç ayrıntılar taşmasın
+    svg('path', { d: soft }, clipY);
+    svg('path', { d: soft, transform: 'translate(160,0) scale(-1,1)' }, clipY);
+    svg('path', { d: bone }, clipY);
+    const clip = `url(#${id}yd)`;
     const inflamCls = p.inflam ? ' an-iltihapli' : '';
+    const lifOp = f(clamp(0.85 - 0.3 * p.inflam, 0.2, 0.85)); // iltihapta kollajen yıkımı: lifler seyrelir
     both((r) => {
       const de = tag(svg('path', { d: soft, class: 'an-dis-eti' + inflamCls }, r), 'dis-eti');
       if (opt.p) de.style.fill = etiRengi(p.inflam);
       tag(svg('path', { d: soft, class: 'an-mukoza', 'clip-path': `url(#${id}mk)` }, r), 'mukoza');
-      tag(svg('path', { d: smooth(G.outer), class: 'an-epitel' }, r), 'dis-eti-epiteli');
+      // Ağız dişeti epiteli (keratinize, epitel sırtlı), alveol mukozası epiteli (ince, keratinsiz), oluk/cep epiteli.
+      epitelCiz(r, G, p, MGJ, clip, tag, 'cep');
       tag(svg('path', { d: smooth(G.pocket), class: 'an-oluk-epitel' + (p.inflam > 1 ? ' an-ulser' : '') }, r), 'cep');
-      // Birleşim epiteli: oluk tabanında geniş, apikale doğru incelir.
+      // Birleşim epiteli: oluk tabanında geniş, apikale doğru incelir; sırt yapmaz.
       const je = [];
       for (const y of range(p.sY, p.jY, 1)) je.push([toothX(y), y]);
       const back = range(p.sY, p.jY, 1).reverse().map((y) => [toothX(y) - 1.1 * (1 - (y - p.sY) / (p.jY - p.sY)) - 0.1, y]);
       tag(svg('path', { d: poly(je) + ' ' + smooth(back, false) + ' Z', class: 'an-ba' }, r), 'ba');
-      // Dentogingival ve kret lifleri.
-      let d = '';
-      for (const y of [p.jY + 0.8, p.jY + 2, (p.jY + p.cY) / 2 + 1]) {
-        const x = toothX(y);
-        d += `M${f(x - 0.3)},${f(y)} l${-4.2},${-2.2} `;
+      // Dişeti lif grupları (bağ dokusu ataşmanı).
+      const lg = svg('g', { 'clip-path': clip, opacity: lifOp }, r);
+      let dg = '';
+      [0.5, 1.3, 2.1].forEach((dy, k) => { // dentogingival: sementten yelpaze gibi serbest dişetine
+        const y0 = p.jY + dy, x0 = toothX(y0) - 0.15;
+        dg += `M${f(x0)},${f(y0)} Q${f(x0 - 1.6 - k * 0.5)},${f(y0 - 1.2)} ${f(toothX(p.mY + 3) - 2.8 - k * 0.9)},${f(p.mY + 2.6 + k * 1.3)} `;
+      });
+      tag(svg('path', { d: dg, class: 'an-lif' }, lg), 'dentogingival-lif');
+      const ya = p.jY + 1.2, xa = toothX(ya) - 0.15; // dentoperiostal: kretin üzerinden kemik dış yüzüne
+      tag(svg('path', { d: `M${f(xa)},${f(ya)} Q${f(G.C[0] - 3.2)},${f(p.cY - 1.8)} ${f(boneOuterX(p.cY + 4.5) - 0.3)},${f(p.cY + 4.5)}`, class: 'an-lif' }, lg), 'dentoperiostal-lif');
+      tag(svg('path', { d: `M${f(G.C[0] - 0.6)},${f(p.cY - 0.2)} Q${f(G.C[0] - 1.4)},${f(p.cY - 3)} ${f(G.C[0] - 2.4)},${f(p.cY - 5.4)}`, class: 'an-lif' }, lg), 'alveolojingival-lif');
+      let ci = ''; // sirküler lifler: kesitte nokta kümeleri
+      for (const [dx, y] of [[1.5, p.jY - 1.2], [2.3, p.jY - 0.2], [1.9, p.jY + 0.9], [2.9, p.jY - 1.6]]) {
+        const x = toothX(y) - dx; ci += `M${f(x + 0.28)},${f(y)} a0.28,0.28 0 1,0 -0.56,0 a0.28,0.28 0 1,0 0.56,0 `;
       }
-      d += `M${f(toothX(p.cY - 0.6) - 0.3)},${f(p.cY - 0.6)} L${f(G.C[0] - 1.4)},${f(p.cY + 0.4)}`;
-      tag(svg('path', { d, class: 'an-lif' }, r), 'bd');
-      // PDL lifleri (eğik).
-      let pd = '';
-      for (const y of range(p.cY + 3, 78, 4.5)) { const x = toothX(y); pd += `M${f(x - 0.15)},${f(y)} L${f(x - 1.1)},${f(y - 0.8)} `; }
-      tag(svg('path', { d: pd, class: 'an-pdl-lif' }, r), 'pdl');
+      tag(svg('path', { d: ci, class: 'an-lif-kesit' }, lg), 'sirkuler-lif');
+      // PDL lif grupları: kret, yatay, oblik (en çok; sement ucu kemik ucundan apikalde), apikal.
+      let kr = '', yt = '', ob = '', ap = '';
+      for (const dy of [0.5, 1.4]) { const y = p.cY + dy, x = toothX(y); kr += `M${f(x - 0.1)},${f(y - 0.7)} L${f(x - pdlW(y, p.cY) - 0.1)},${f(y + 0.5)} `; }
+      for (const dy of [2.6, 3.8]) { const y = p.cY + dy, x = toothX(y); yt += `M${f(x - 0.1)},${f(y)} L${f(x - pdlW(y, p.cY))},${f(y)} `; }
+      for (const y of range(p.cY + 6, 77, 3)) { const x = toothX(y), w = pdlW(y, p.cY); ob += `M${f(x - 0.1)},${f(y)} L${f(x - w)},${f(y - w * 0.85)} `; }
+      for (const [y, dx, dy] of [[79.5, -1.2, 0.4], [81.6, -1, 1.1], [82.6, -0.5, 1.4]]) { const x = toothX(y); ap += `M${f(x - 0.05)},${f(y)} l${dx},${dy} `; }
+      tag(svg('path', { d: kr, class: 'an-pdl-lif' }, r), 'krestal-lif');
+      tag(svg('path', { d: yt, class: 'an-pdl-lif' }, r), 'yatay-lif');
+      tag(svg('path', { d: ob, class: 'an-pdl-lif' }, r), 'oblik-lif');
+      tag(svg('path', { d: ap, class: 'an-pdl-lif' }, r), 'apikal-lif');
       // MGJ çizgisi.
       tag(svg('path', { d: `M${f(G.softX(MGJ) - 0.3)},${MGJ} L${f(Math.min(G.boneAt(MGJ), G.softX(MGJ) + 3.2))},${MGJ}`, class: 'an-mgj' }, r), 'mgj');
     });
@@ -217,6 +309,18 @@
 
     // 5) Periodontal sonda (sol cepte).
     if (opt.probe) probe(g, [toothX(p.sY) - p.g * 0.45, p.sY - 0.2], [toothX(p.mY) - p.g * 0.6, p.mY], (p.sY - p.mY) / MM);
+    // Ölçüm gösterimi: cep derinliği (kenar → cep tabanı), kenarın MSS'ye göre konumu, klinik ataşman seviyesi (MSS → cep tabanı).
+    const MSS = 34, olc = {};
+    if (opt.olcum) {
+      const og = svg('g', { class: 'an-olcum' }, g);
+      const cubuk = (x, y1, y2, cls) => svg('path', { d: `M${x - 0.7},${f(y1)} L${x + 0.7},${f(y1)} M${x},${f(y1)} L${x},${f(y2)} M${x - 0.7},${f(y2)} L${x + 0.7},${f(y2)}`, class: cls }, og);
+      for (const [y, cls] of [[p.mY, 'an-olcum-kilavuz'], [p.sY, 'an-olcum-kilavuz'], [MSS, 'an-olcum-kilavuz an-olcum-mss']]) {
+        svg('path', { d: `M50,${f(y)} L${f(toothX(y) - 0.2)},${f(y)}`, class: cls }, og);
+      }
+      cubuk(53.6, p.mY, p.sY, 'an-olcum-cd');
+      cubuk(50.6, Math.min(MSS, p.sY), Math.max(MSS, p.sY), 'an-olcum-kas');
+      olc.cd = (p.sY - p.mY) / MM; olc.gm = (MSS - p.mY) / MM; olc.kas = (p.sY - MSS) / MM;
+    }
 
     // Parçalar: varsayılan ad ve etiket noktası (sol yarıda; side 'sag' ise ayna).
     const S = (x, y) => [160 - x, y];
@@ -232,15 +336,25 @@
       pdl:             { ad: 'Periodontal ligament', at: S(toothX(73) - 0.6, 73) },
       kemik:           { ad: 'Alveol kemiği', at: S(63, 76) },
       kret:            { ad: 'Alveol kreti', at: S(G.C[0] - 0.8, p.cY + 0.5) },
-      'dis-eti':       { ad: variant === 'saglikli' ? 'Serbest dişeti' : 'Dişeti (iltihaplı)', at: [toothX(p.mY + 3) - p.g - 2.4, p.mY + 3.4] },
-      'yapisik-dis-eti': { ad: 'Yapışık dişeti', at: [(G.softX(49) + G.boneAt(49)) / 2, 49] },
+      'dis-eti':       { ad: variant === 'saglikli' || variant === 'cekilme' ? 'Serbest dişeti' : 'Dişeti (iltihaplı)', at: [toothX(p.mY + 3) - p.g - 2.4, p.mY + 3.4] },
+      'yapisik-dis-eti': { ad: 'Yapışık dişeti', at: [(G.softX(49) + Math.min(G.boneAt(49), G.softX(49) + 4)) / 2, 49] },
       mgj:             { ad: 'Mukogingival sınır', at: S(G.softX(MGJ) + 0.6, MGJ) },
       mukoza:          { ad: 'Alveol mukozası', at: S((G.softX(70) + G.boneAt(70)) / 2, 70) },
       'dis-eti-epiteli': { ad: 'Ağız dişeti epiteli', at: [G.softX(40), 40] },
-      cep:             { ad: variant === 'saglikli' ? 'Dişeti oluğu (sulkus)' : variant === 'gingivitis' ? 'Yalancı cep' : 'Periodontal cep', at: [toothX(Gm) - p.g / 2, Gm] },
+      cep:             { ad: variant === 'saglikli' || variant === 'cekilme' ? 'Dişeti oluğu (sulkus)' : variant === 'gingivitis' ? 'Yalancı cep' : 'Periodontal cep', at: [toothX(Gm) - p.g / 2, Gm] },
       ba:              { ad: 'Birleşim epiteli', at: [toothX((p.sY + p.jY) / 2) - 0.4, (p.sY + p.jY) / 2] },
       bd:              { ad: 'Bağ dokusu ataşmanı', at: [toothX((p.jY + p.cY) / 2) - 1.2, (p.jY + p.cY) / 2] },
-      dis:             { ad: 'Diş', at: S(78, 40) }
+      dis:             { ad: 'Diş', at: S(78, 40) },
+      keratin:         { ad: 'Keratin tabakası', at: [G.softX(p.mY + 6) + 0.1, p.mY + 6] , ayrinti: true },
+      'oluk-epiteli':  { ad: variant === 'saglikli' ? 'Oluk epiteli' : 'Cep epiteli', at: [toothX(Gm) - p.g - 0.5, Gm + 0.8] , ayrinti: true },
+      'dentogingival-lif': { ad: 'Dentogingival lifler', at: [toothX(p.jY + 0.5) - 1.3, p.jY - 0.2] , ayrinti: true },
+      'sirkuler-lif':  { ad: 'Sirküler lifler (kesit)', at: [toothX(p.jY - 0.2) - 2.3, p.jY - 0.2] , ayrinti: true },
+      'dentoperiostal-lif': { ad: 'Dentoperiostal lifler', at: [G.C[0] - 2.6, p.cY - 1.1] , ayrinti: true },
+      'krestal-lif':   { ad: 'Alveol kreti lifleri', at: S(toothX(p.cY + 1) - 0.6, p.cY + 1) , ayrinti: true },
+      'yatay-lif':     { ad: 'Yatay lifler', at: S(toothX(p.cY + 3.2) - 0.6, p.cY + 3.2) , ayrinti: true },
+      'oblik-lif':     { ad: 'Oblik lifler', at: S(toothX(60) - 0.6, 59.5) , ayrinti: true },
+      'apikal-lif':    { ad: 'Apikal lifler', at: S(toothX(81.6) - 0.8, 82.2) , ayrinti: true },
+      'demet-kemigi':  { ad: 'Demet kemiği (lamina dura)', at: S(toothX(68) - pdlW(68, p.cY) - 0.3, 68) , ayrinti: true }
     });
     if (p.inflam) {
       parts.iltihap = { ad: 'İltihabi hücre sızıntısı', at: [toothX(p.sY - 2) - p.g - 2.2, p.sY - 2] };
@@ -252,12 +366,19 @@
       parts['kemik-kaybi'] = { ad: 'Kemik kaybı', at: S(66, 50) };
     }
     if (opt.probe) parts.sonda = { ad: `Sondalama derinliği ≈ ${Math.round((p.sY - p.mY) / MM)} mm`, at: [toothX(p.mY) - p.g - 1.4, p.mY - 4] };
+    if (opt.olcum) {
+      const r1 = (v) => Math.round(v * 10) / 10;
+      parts['olcum-cd'] = { ad: `CD (cep derinliği) ≈ ${r1(olc.cd)} mm`, at: [53.6, (p.mY + p.sY) / 2] };
+      parts['olcum-kas'] = { ad: `KAS (klinik ataşman) ≈ ${r1(Math.max(0, olc.kas))} mm`, at: [50.6, (MSS + p.sY) / 2 + 0.8] };
+      parts['olcum-gm'] = { ad: olc.gm >= 0 ? `Kenar MSS'nin ${r1(olc.gm)} mm koronalinde` : `Çekilme ≈ ${r1(-olc.gm)} mm (kenar MSS apikalinde)`, at: [52, MSS] };
+      parts['olcum-formul'] = { ad: 'KAS = CD − (kenar–MSS mesafesi)', at: [toothX(p.sY), p.sY + 0.4] };
+    }
     return parts;
   }
 
   function revDEJ() {
     // Mine bölgesi: kuron dış çizgisi + DEJ ters yönde.
-    return 'C91.2,30.5 91.5,26 91.3,21.5 C91,17.5 89.4,13.8 87,11.6 C84.6,12.6 82.4,14.2 80,15 C77.6,14.2 75.5,12.4 73.2,10.6 C71.7,12.5 70,16.5 69.2,22 C68.6,25 68.4,29.5 69,34 Z';
+    return 'C91.2,30.5 91.5,26 91.3,22.5 C91,19.5 89.3,17.4 86.8,16.3 C85,16.2 83.2,17.2 81,17.8 C78.8,16.6 76.8,13.6 74.6,12.3 C72.2,13 69.9,17 69.2,22 C68.6,25 68.4,29.5 69,34 Z';
   }
 
   // Periodontal sonda: uç cep tabanında, 1 mm aralıklı çizgiler.
@@ -346,7 +467,7 @@
     tag(svg('path', { d: poly(ab) + ' ' + poly(mirror(ab).reverse(), false) + ' Z', class: 'an-dayanak' }, g), 'dayanak');
     svg('path', { d: 'M78.6,20 L78.6,48 M81.4,20 L81.4,48', class: 'an-vida-kanal' }, g);
     // Kuron (protez).
-    const kron = 'M74,33 C70,31 65.6,26 66,21 C66.5,15 69,9 72,7 C74.5,8 77,11 80,12 C83,11 85.5,9 88,8.5 C91,10.5 93.5,15 94,21 C94.4,26 90,31 86,33 Z';
+    const kron = 'M74,33 C70,31 65.6,26 66,21 C66.6,14.5 70,8 74,6.5 C76.5,7.5 78.5,11 81,13 C83.5,12.5 85.5,11.2 87.5,11.3 C90.5,12.8 93.6,16.5 94,21 C94.4,26 90,31 86,33 Z';
     tag(svg('path', { d: kron, class: 'an-kron' }, g), 'kron');
 
     // Peri-implant mukoza.
@@ -364,31 +485,47 @@
     const outer = [tip];
     let run = Infinity;
     const bump = (yy) => p.swell * 1.9 * Math.exp(-(((yy - (p.mY + 3.2)) / 3.2) ** 2));
-    for (const yy of [p.mY + 0.9, p.mY + 2.4].concat(range(p.mY + 4.5, 90, 3))) {
-      const want = Math.min(implantX(Math.min(yy, 33)) - 4.6 - (yy < p.mY + 2 ? 2.3 - (yy - p.mY) * 0.9 : 0), boneAt(yy) - 3, 66);
+    // Peri-implant mukoza: kenarda ince, kısa mesafede kalınlaşır (diş çevresinden biraz daha kalın ve yüksek).
+    const kal = (yy) => { const d = Math.max(0, yy - p.mY); return 0.5 + 4.6 * Math.min(1, d / 4) ** 0.7 + p.swell * 1.1 * Math.exp(-(((d - 0.8) / 1.6) ** 2)); };
+    for (const yy of [p.mY + 0.5, p.mY + 1.3, p.mY + 2.4].concat(range(p.mY + 4.5, 90, 3))) {
+      const want = Math.min(toothX(Math.min(yy, 40)) - kal(yy) - 0.3, boneAt(yy) - 3, 66); // dış hat doğal diş çevresine benzer
       run = Math.min(run, want);
       outer.push([run - bump(yy), yy]);
     }
-    outer[1][0] = tip[0] - 1.1 - bump(p.mY + 0.9) * 0.6;
     const softX = (yy) => { for (let i = 1; i < outer.length; i++) if (outer[i][1] >= yy) return outer[i][0]; return outer[outer.length - 1][0]; };
     const boneSurf = (p.crater ? top.slice().reverse().concat([[61.2, 47.5]], outerTop.slice().reverse().slice(1)) : top.slice().reverse().concat(outerTop.slice().reverse().slice(1)));
     const boneSurfFull = boneSurf.concat(boneOuter.slice().reverse());
     const soft = smooth(outer.slice().reverse()) + ' ' + smooth(pocket, false) + ' ' + smooth(attach, false) + ' ' + smooth(boneSurfFull, false) + ' Z';
+    const clipY = svg('clipPath', { id: id + 'yd' }, defs);
+    svg('path', { d: soft }, clipY);
+    svg('path', { d: soft, transform: 'translate(160,0) scale(-1,1)' }, clipY);
+    const clip = `url(#${id}yd)`;
     const inflamCls = p.inflam ? ' an-iltihapli' : '';
+    const lifOp = f(clamp(0.85 - 0.3 * p.inflam, 0.2, 0.85));
+    const yuzey = (yy) => (yy < 42 ? implantX(yy) : 73);
     both((r) => {
       const de = tag(svg('path', { d: soft, class: 'an-dis-eti' + inflamCls }, r), 'mukoza');
       if (opt.p) de.style.fill = etiRengi(p.inflam);
       tag(svg('path', { d: soft, class: 'an-mukoza', 'clip-path': `url(#${id}mk)` }, r), 'alveol-mukozasi');
-      tag(svg('path', { d: smooth(outer), class: 'an-epitel' }, r), 'mukoza');
+      epitelCiz(r, { outer, pocket }, p, MGJ, clip, tag, 'cep');
       tag(svg('path', { d: smooth(pocket), class: 'an-oluk-epitel' + (p.inflam > 1 ? ' an-ulser' : '') }, r), 'cep');
       const je = [], back = [];
-      for (const yy of range(p.sY, p.jY, 1)) { const x = yy < 42 ? implantX(yy) : 73; je.push([x, yy]); back.unshift([x - 1.1 * (1 - (yy - p.sY) / (p.jY - p.sY)) - 0.1, yy]); }
+      for (const yy of range(p.sY, p.jY, 1)) { const x = yuzey(yy); je.push([x, yy]); back.unshift([x - 1.1 * (1 - (yy - p.sY) / (p.jY - p.sY)) - 0.1, yy]); }
       tag(svg('path', { d: poly(je) + ' ' + smooth(back, false) + ' Z', class: 'an-ba' }, r), 'bariyer-epiteli');
-      if (!p.crater) { // implanta paralel/çevresel lifler (sement yok, lifler yüzeye girmez)
-        let d = '';
-        for (const yy of [p.jY + 1, p.jY + 2.4, p.jY + 3.6]) { const x = implantX(Math.min(yy, 42)); d += `M${f(x - 0.6)},${f(yy)} l-0.6,-4.5 `; }
-        tag(svg('path', { d, class: 'an-lif' }, r), 'bd');
+      // Bağ dokusu: sement olmadığından lifler yüzeye girmez; yüzeye paralel ve çevresel (kesitte nokta) seyreder.
+      // Yüzeye bitişik iç bölge hücre ve damardan fakir, kollajenden zengin (yara dokusu benzeri).
+      const lg = svg('g', { 'clip-path': clip, opacity: lifOp }, r);
+      let pa = '';
+      for (const off of [0.6, 1.3, 2.0]) {
+        const pts = range(p.jY + 0.3, p.jY < 42 ? Math.min(p.cY - 0.2, 41.8) : p.cY - 0.2, 0.8).map((yy) => [yuzey(yy) - off, yy]);
+        pa += smooth(pts) + ' ';
       }
+      tag(svg('path', { d: pa, class: 'an-lif' }, lg), 'bd');
+      let ci = '';
+      for (const [dx, yy] of [[2.9, p.jY + 0.8], [3.6, p.jY + 2.2], [2.8, p.jY + 3.4], [4.2, p.jY + 1.2], [3.9, p.jY + 3.6]]) {
+        const x = yuzey(yy) - dx; ci += `M${f(x + 0.28)},${f(yy)} a0.28,0.28 0 1,0 -0.56,0 a0.28,0.28 0 1,0 0.56,0 `;
+      }
+      tag(svg('path', { d: ci, class: 'an-lif-kesit' }, lg), 'sirkuler-lif');
     });
     const bx = implantX(p.mY) - p.g * 0.7 - 0.6;
     if (p.inflam) {
@@ -420,7 +557,11 @@
       mukoza:            { ad: variant === 'saglikli' ? 'Peri-implant mukoza' : 'Mukoza (iltihaplı)', at: [implantX(p.mY + 3) - p.g - 2.4, p.mY + 3.4] },
       cep:               { ad: variant === 'saglikli' ? 'Peri-implant oluk' : variant === 'mukozitis' ? 'Derinleşmiş oluk' : 'Peri-implant cep', at: [((Gm < 42 ? implantX(Gm) : 73)) - p.g / 2, Gm] },
       'bariyer-epiteli': { ad: 'Bariyer epiteli', at: [((p.sY + p.jY) / 2 < 42 ? implantX((p.sY + p.jY) / 2) : 73) - 0.4, (p.sY + p.jY) / 2] },
-      bd:                { ad: 'Bağ dokusu (paralel lifler)', at: [implantX(Math.min(p.jY + 2.4, 42)) - 1.4, p.jY + 2.2] },
+      bd:                { ad: 'Bağ dokusu (paralel lifler)', at: [yuzey(p.jY + 2.2) - 1.3, p.jY + 2.2] },
+      'sirkuler-lif':    { ad: 'Çevresel lifler (kesit)', at: [yuzey(p.jY + 2.2) - 3.6, p.jY + 2.2] , ayrinti: true },
+      keratin:           { ad: 'Keratin tabakası', at: [softX(p.mY + 6) + 0.1, p.mY + 6] , ayrinti: true },
+      'dis-eti-epiteli': { ad: 'Ağız epiteli', at: [softX(p.mY + 9), p.mY + 9] },
+      'oluk-epiteli':    { ad: variant === 'saglikli' ? 'Oluk epiteli' : 'Cep epiteli', at: [yuzey(Gm) - p.g - 0.5, Gm + 0.8] , ayrinti: true },
       kemik:             { ad: 'Alveol kemiği', at: S(64, 72) },
       osseo:             { ad: 'Kemik teması (PDL yok)', at: S(CORE - 0.4, 64.6) },
       kret:              { ad: 'Kemik kreti', at: S(p.crater ? 62.6 : 70, p.crater ? 46.8 : 43.6) },
@@ -442,6 +583,9 @@
 
   const SABLONLAR = {
     dis: { ad: 'Diş ve periodonsiyum', varyantlar: Object.keys(DIS_DURUM), durumlar: DIS_DURUM, ciz: disCiz, varsayilan: { mgj: MGJ0 } },
+    // Sonda ile cep derinliği ve klinik ataşman seviyesi ölçümü: dis şablonu + sonda + ölçüm çubukları.
+    sondalama: { ad: 'Cep derinliği ve klinik ataşman ölçümü', varyantlar: Object.keys(DIS_DURUM), durumlar: DIS_DURUM,
+      ciz: (g, v, opt) => disCiz(g, v, Object.assign({}, opt, { probe: true, olcum: true })), varsayilan: { mgj: MGJ0 } },
     implant: { ad: 'İmplant ve peri-implant dokular', varyantlar: Object.keys(IMP_DURUM), durumlar: IMP_DURUM, ciz: implantCiz, varsayilan: {} }
   };
 
@@ -493,7 +637,9 @@
       const lg = svg('g', { class: 'an-etiket ' + (a.color || '') }, g);
       svg('path', { d: `M${tx + (side === 'sol' ? 0.8 : -0.8)},${f(a.y - 1.1)} L${f(a.at[0])},${f(a.at[1])}`, class: 'an-kilavuz' }, lg);
       svg('circle', { cx: f(a.at[0]), cy: f(a.at[1]), r: 0.65, class: 'an-nokta' }, lg);
-      const t = svg('text', { x: tx, y: f(a.y), 'text-anchor': side === 'sol' ? 'end' : 'start', 'font-size': 3.4, class: 'an-yazi' }, lg);
+      // Uzun etiket kenar sütununa (≈ 45 birim) sığsın diye küçülür.
+      const fs = Math.min(3.4, 45 / (String(a.text).length * 0.56));
+      const t = svg('text', { x: tx, y: f(a.y), 'text-anchor': side === 'sol' ? 'end' : 'start', 'font-size': f(fs), class: 'an-yazi' }, lg);
       t.textContent = a.text;
       if (a.yeni) { lg.style.animationDelay = delay + 's'; lg.classList.add('fade-in'); delay += 0.35; }
     };
@@ -511,7 +657,9 @@
       g.querySelectorAll(`[data-part="${h}"]`).forEach((n) => n.classList.add('an-vurgu'));
     }
     let labels = c.labels || [];
-    if (labels === 'hepsi' || labels === 'all') labels = Object.keys(parts);
+    // 'hepsi' temel parçaları adlandırır; histolojik ayrıntılar (lif grupları, epitel katları) ayrıca istenir.
+    if (labels === 'hepsi' || labels === 'all') labels = Object.keys(parts).filter((k) => !parts[k].ayrinti);
+    if (labels === 'ayrinti') labels = Object.keys(parts).filter((k) => parts[k].ayrinti);
     const lg = svg('g', { class: 'an-etiketler' }, svgEl);
     etiketle(lg, parts, labels, instant, eski);
     return parts;
@@ -528,5 +676,7 @@
     return out;
   }
 
-  AT.anatomi = { ciz, liste, durum, araDurum, SABLONLAR, MM };
+  AT.anatomi = { ciz, liste, durum, araDurum, SABLONLAR, MM,
+    // Başka şablon dosyalarının (anatomi-bolge.js) kullandığı çizim yardımcıları.
+    _y: { svg, smooth, poly, ornekle, bant, rete, trabekul, range, clamp, f, etiRengi, uid: () => 'an' + (++uid) } };
 })(window.AT = window.AT || {});

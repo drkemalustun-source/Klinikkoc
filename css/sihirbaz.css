@@ -33,3 +33,5 @@
 .sh details.sh-bolumler summary { cursor: pointer; color: var(--info); font-size: .85em; }
 .sh details.sh-bolumler ol { font-size: .85em; color: var(--chalk-dim); margin: .3em 0; }
 @media (max-width: 640px) { .sh-iki { grid-template-columns: minmax(0, 1fr); } }
+
+.sh-tahta { font-weight: 600; color: var(--accent); }
