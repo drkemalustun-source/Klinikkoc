@@ -8,6 +8,19 @@
   let BLOOM = Object.keys(BLOOM_AD);
   let ders = new URLSearchParams(location.search).get('ders') || '';
   let T = null;
+  // Tahtanın içinde (katman olarak) açıldıysa "Tahtaya dön" sayfayı değiştirmez, yalnızca katmanı kapatır.
+  const GOMULU = window.parent !== window && new URLSearchParams(location.search).get('gomulu') === '1';
+  document.addEventListener('DOMContentLoaded', () => {
+    const don = $('#tahtayaDon');
+    if (!don || !GOMULU) return;
+    don.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.parent.postMessage({ klinikkoc: 'tahtaya-don' }, location.origin);
+    });
+    const d = $('#derslereDon'); if (d) d.hidden = true;
+    const k = $('#kilavuzBag'); if (k) k.target = '_blank';
+  });
+  try { localStorage.setItem('klinikkoc-ogretmen', '1'); } catch (e) { /* depolama kapalı */ }
   if (location.protocol === 'file:') {
     // Dosyaya çift tıklanarak açıldı: bu sayfa yerel sunucu olmadan çalışmaz.
     const u = document.createElement('div');

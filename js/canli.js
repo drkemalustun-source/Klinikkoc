@@ -1195,6 +1195,7 @@
       const j = await r.json();
       son = j.sayac || 0;
       sesGoster(j.ses);
+      if (j.ogretmen && AT.sihirbazDugmesiGoster) AT.sihirbazDugmesiGoster();
       if (j.uyandirma) uyandirmaGoster(j.uyandirma);
     } catch (e) {
       baglanti(false);
@@ -1295,6 +1296,33 @@
     '"Şekil 2\'yi göster ve Sınıf Ib\'yi işaretle."',
     '"Bana bu konudan iki soru sor."'
   ] }, true);
+  // ---------- Sihirbaz katmanı ----------
+  // Sihirbaz tahtanın üstünde bir katmanda açılır; tahta sayfası kapanmadığı için çizim, ses ve
+  // Claude bağlantısı olduğu gibi kalır. Aynı tuş (ya da sihirbazdaki "Tahtaya dön") geri getirir.
+  (function () {
+    const dugme = $('#sihirbazAc'), kat = $('#sihirbazKat'), cerceve = $('#sihirbazCerceve');
+    if (!dugme || !kat || !cerceve) return;
+    function goster(ac) {
+      if (ac && !cerceve.getAttribute('src')) cerceve.setAttribute('src', 'sihirbaz.html?gomulu=1');
+      const ust = document.querySelector('.canli .topbar');
+      if (ust) kat.style.top = ust.offsetHeight + 'px';
+      kat.hidden = !ac;
+      dugme.setAttribute('aria-pressed', ac ? 'true' : 'false');
+      dugme.textContent = ac ? 'Tahta' : 'Sihirbaz';
+      if (ac) cerceve.focus(); else dugme.blur();
+    }
+    // Tuş yalnızca öğretmenin bilgisayarında görünür: sihirbaz bir kez açılmış ya da taslak varsa.
+    let ogretmen = false;
+    try { ogretmen = localStorage.getItem('klinikkoc-ogretmen') === '1'; } catch (e) { /* depolama kapalı */ }
+    if (ogretmen) dugme.hidden = false;
+    AT.sihirbazDugmesiGoster = () => { dugme.hidden = false; };
+    dugme.addEventListener('click', () => goster(kat.hidden));
+    window.addEventListener('message', (e) => {
+      if (e.origin !== location.origin || !e.data) return;
+      if (e.data.klinikkoc === 'tahtaya-don') goster(false);
+    });
+  })();
+
   // ---------- Tek sekme ----------
   // Aynı tahta ikinci bir sekmede açılınca eski sekme bağlantıyı bırakır ve bunu söyler.
   try {
