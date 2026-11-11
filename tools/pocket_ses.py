@@ -9,6 +9,7 @@ Ses ortamını kurmak (bir kez):  python tools/ses-uret.py --kur-pocket
 import base64
 import json
 import os
+import queue
 import subprocess
 import sys
 import threading
@@ -43,6 +44,7 @@ def ortam_python():
     return None
 
 
+CUMLE_SINIR_SN = float(os.environ.get("KLINIK_KOC_SES_SINIR_SN") or 20)  # bir cümle bundan uzun sürerse işçi takıldı sayılır
 YENIDEN_DENE_SN = 60  # işçi açılamadıysa bu kadar saniye sonra (bir sonraki istekte) yeniden denenir
 
 
@@ -93,16 +95,33 @@ class PocketIsci:
             isci_komutu(py), cwd=KOK,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
             encoding="utf-8", bufsize=1, creationflags=bayrak)
+        # Çıktıyı ayrı bir iş parçacığı okur: cevap gelmezse beklemeyi süreyle kesebilelim (işçi takılırsa ses donmasın).
+        self.surec.gelen = queue.Queue()
+        threading.Thread(target=self._okuyucu, args=(self.surec,), daemon=True).start()
         threading.Thread(target=self._ilk_yanit, args=(self.surec,), daemon=True).start()
 
-    def _oku(self, surec=None):
+    @staticmethod
+    def _okuyucu(surec):
+        try:
+            for satir in surec.stdout:
+                if satir.startswith("@@"):
+                    try:
+                        surec.gelen.put(json.loads(satir[2:]))
+                    except ValueError:
+                        pass
+        except Exception:
+            pass
+        surec.gelen.put(None)  # işçi kapandı
+
+    def _oku(self, surec=None, sure=None):
         surec = surec or self.surec
-        while True:
-            satir = surec.stdout.readline()
-            if not satir:
-                raise RuntimeError("Pocket işçisi kapandı")
-            if satir.startswith("@@"):
-                return json.loads(satir[2:])
+        try:
+            y = surec.gelen.get(timeout=sure)
+        except queue.Empty:
+            raise TimeoutError("Pocket %d sn içinde ses üretmedi" % int(sure))
+        if y is None:
+            raise RuntimeError("Pocket işçisi kapandı")
+        return y
 
     def _ilk_yanit(self, surec):
         try:
@@ -125,11 +144,27 @@ class PocketIsci:
                 self.durum = "Pocket işçisi kapandı"
                 raise RuntimeError(self.durum)
             self.sayac += 1
+            no = self.sayac
             try:
                 # ensure_ascii: boruda yalnız ASCII gider, kod sayfası farkı Türkçe harfleri bozamaz.
-                self.surec.stdin.write(json.dumps({"no": self.sayac, "metin": metin, "ses": ses, "tohum": tohum}) + "\n")
+                self.surec.stdin.write(json.dumps({"no": no, "metin": metin, "ses": ses, "tohum": tohum}) + "\n")
                 self.surec.stdin.flush()
-                y = self._oku()
+                # Uzun cümleye biraz pay: her 100 harf için +5 sn. Eski (geç kalmış) cevaplar atlanır.
+                sinir = CUMLE_SINIR_SN + 5 * (len(metin) // 100)
+                while True:
+                    y = self._oku(sure=sinir)
+                    if y.get("no") in (None, no):
+                        break
+            except TimeoutError as e:
+                # İşçi takıldı: kapatıp hemen yeniden açarız; bu cümle (ve model yüklenene kadar sonrakiler) yedek sesle.
+                self.durum = "Pocket takıldı, yeniden başlatılıyor: %s" % e
+                surec = self.surec
+                try:
+                    surec.kill()
+                except Exception:
+                    pass
+                threading.Thread(target=self.baslat, kwargs={"zorla": True}, daemon=True).start()
+                raise RuntimeError(self.durum)
             except Exception as e:
                 self.durum = "Pocket işçisi kapandı: %s" % e
                 raise RuntimeError(self.durum)

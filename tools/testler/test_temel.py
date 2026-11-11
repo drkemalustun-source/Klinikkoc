@@ -1192,6 +1192,7 @@ class IkiKurulum(unittest.TestCase):
 
     def test_uzun_sessizlikte_birak(self):
         self.m.istek = lambda *a, **k: {"durum": "sessiz"}
+        self.m.VARSAYILAN_BEKLEME_SN = 3
         y = json.loads(self.m.ar_dinle({"bekle": 40})["content"][0]["text"])
         self.assertTrue(y["devam"])
         self.m._sessizlik["bas"] -= self.m.SESSIZ_SINIR_SN

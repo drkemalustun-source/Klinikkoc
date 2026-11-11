@@ -634,12 +634,111 @@ ARACLAR = [
 
 
 # ---------- Yerel sunucuyla konuşma ----------
-def istek(yol, govde=None, zaman=60):
+# Her araç çağrısının bir bağlamı vardır (iş parçacığına özel): bekleme kimliği (Claude çağrıyı iptal ederse sunucudaki
+# bekleme hemen biter), teslim edilecek söz numaraları (söz ancak Claude'a yazıldıktan sonra sunucudan silinir),
+# bitiş zamanı (bekleme bütçesi) ve iptal işareti.
+_BAGLAM = threading.local()
+
+
+def _baglam():
+    return getattr(_BAGLAM, "c", None)
+
+
+def _ham_istek(yol, govde=None, zaman=60):
     veri = None if govde is None else json.dumps(govde, ensure_ascii=False).encode("utf-8")
     r = urllib.request.Request(ADRES + "/api/canli/" + yol, data=veri,
-                               headers={"Content-Type": "application/json"})
+                               headers={"Content-Type": "application/json", "X-KlinikKoc-Arac": "1"})
     with urllib.request.urlopen(r, timeout=zaman) as y:
         return json.loads(y.read().decode("utf-8"))
+
+
+def istek(yol, govde=None, zaman=60):
+    c = _baglam()
+    if c is not None:
+        yol += ("&" if "?" in yol else "?") + "bekleme=%s&teslim=1" % c["bekleme"]
+    y = _ham_istek(yol, govde, zaman)
+    if c is not None and isinstance(y, dict) and y.get("teslim"):
+        c["teslimler"].append(y.pop("teslim"))
+    return y
+
+
+def _arka_planda(yol, zaman=3):
+    """Sonucu beklenmeyen kısa bildirim (teslim onayı, iptal, etkinlik)."""
+    def git():
+        try:
+            _ham_istek(yol, zaman=zaman)
+        except Exception:
+            pass
+    threading.Thread(target=git, daemon=True).start()
+
+
+# ---- Bekleme bütçesi: bir araç çağrısı en çok ne kadar açık kalabilir? ----
+# Claude masaüstü bir araç çağrısını belli bir süre sonra (çoğu sürümde ~60 sn) zaman aşımıyla keser. Çağrı açıkken
+# "ilerleme" bildirimi gönderilirse bazı sürümler süreyi uzatır. Bu yüzden: ilerleme jetonu varsa ilk denemede
+# DENEME_SN beklenir; Claude zaman aşımıyla keserse kesildiği süre öğrenilir ve ayarlar.json'a yazılır
+# (arac_bekleme_sn); sonraki çağrılar o sınırın biraz altında kalır. Söz bu arada kaybolmaz (teslim onayı).
+VARSAYILAN_BEKLEME_SN = 50
+DENEME_BEKLEME_SN = 170
+NABIZ_SN = float(os.environ.get("KLINIK_KOC_NABIZ_SN") or 10)  # ilerleme bildirimi aralığı
+PARCA_SN = 25  # sunucuya tek istekte en çok bu kadar beklenir; aralarda iptal ve bütçe denetlenir
+
+
+def _ayar(anahtar, varsayilan=None):
+    try:
+        return ders_sonu.ayarlar().get(anahtar, varsayilan)
+    except Exception:
+        return varsayilan
+
+
+def _ayar_yaz(anahtar, deger):
+    try:
+        a = ders_sonu.ayarlar()
+        a[anahtar] = deger
+        ders_sonu._json_yaz(ders_sonu.ayar_yolu(), a)
+    except Exception:
+        pass
+
+
+def bekleme_butcesi(ilerleme_var):
+    try:
+        ogrenilen = int(_ayar("arac_bekleme_sn") or 0)
+    except (TypeError, ValueError):
+        ogrenilen = 0
+    if ogrenilen >= 20:
+        return min(ogrenilen, 600)
+    return DENEME_BEKLEME_SN if ilerleme_var else VARSAYILAN_BEKLEME_SN
+
+
+def _kalan():
+    c = _baglam()
+    return (c["bitis"] - time.time()) if c else float(VARSAYILAN_BEKLEME_SN)
+
+
+def _iptal_edildi():
+    c = _baglam()
+    return bool(c and c["iptal"])
+
+
+def uzun_bekle(no=None, ilk=None):
+    """no verilirse o komutun (anlatım, soru) bitmesini, verilmezse kullanıcının sözünü bekler. Sunucuya kısa
+    parçalarla sorar; bütçe dolana, Claude iptal edene ya da bir şey olana dek sürer. ilk: elde zaten bir ara sonuç
+    varsa (ör. gonder 'sürüyor' döndüyse) o."""
+    y = ilk
+    bitis = time.time() + _kalan()
+    while True:
+        if y is not None:
+            durum = y.get("durum") if isinstance(y, dict) else None
+            if durum not in ("sürüyor", "sessiz", "duraklatildi") or _iptal_edildi():
+                return y
+        kalan = bitis - time.time()
+        if kalan < 4 and y is not None:
+            return y
+        parca = int(max(3, min(PARCA_SN, kalan - 2)))
+        yol = ("sonuc?no=%d&bekle=%d" % (int(no), parca)) if no is not None else ("dinle?bekle=%d" % parca)
+        once = time.time()
+        y = istek(yol, zaman=parca + 20)
+        if time.time() - once < 1 and isinstance(y, dict) and y.get("durum") in ("sürüyor", "sessiz", "duraklatildi"):
+            time.sleep(1)  # sunucu beklemeden döndüyse (eski sürüm vb.) boşuna dönüp durmayalım
 
 
 def sunucu_acik():
@@ -663,9 +762,23 @@ def sunucuyu_baslat():
 
 def gonder(komut, bekle=True):
     try:
-        return istek("gonder", {"komut": komut, "bekle": 40 if bekle else 0.5}, zaman=70)
+        if not bekle:
+            return istek("gonder", {"komut": komut, "bekle": 0.5}, zaman=30)
+        ilk = istek("gonder", {"komut": komut, "bekle": int(max(1, min(PARCA_SN, _kalan() - 2)))}, zaman=PARCA_SN + 20)
+        no = ilk.get("no") if isinstance(ilk, dict) else None
+        if no is None:
+            return ilk
+        y = uzun_bekle(no, ilk)
+        return _suruyor_notu(y)
     except urllib.error.URLError:
         return {"durum": "bağlı değil", "hata": "Yerel tahta sunucusu kapalı. Önce tahtayi_ac aracını çağır."}
+
+
+def _suruyor_notu(y):
+    if isinstance(y, dict) and y.get("durum") == "sürüyor" and y.get("no"):
+        y["not"] = ("Anlatım hâlâ sürüyor (hata değil). Sohbete yazma; bekle(no=%d) çağırarak bitişini bekle. "
+                    "Kullanıcı konuşursa hemen döner." % y["no"])
+    return y
 
 
 # ---------- Ders dosyaları ----------
@@ -1833,7 +1946,7 @@ def ar_soru_sor(a):
 def ar_tahta_durumu(a):
     if a.get("no"):
         try:
-            return metin(istek("sonuc?no=%d&bekle=40" % int(a["no"]), zaman=70))
+            return metin(_suruyor_notu(uzun_bekle(int(a["no"]))))
         except urllib.error.URLError:
             return metin({"durum": "bağlı değil"})
     try:
@@ -1928,7 +2041,7 @@ def ar_anlatima_devam(a):
         return metin(r)
     # Anlatım sürüyor: bitişini tahta aracındaki gibi bekle (kullanıcı yine konuşursa hemen döner).
     try:
-        s = istek("sonuc?no=%d&bekle=40" % int(no), zaman=70)
+        s = _suruyor_notu(uzun_bekle(int(no)))
     except urllib.error.URLError:
         return metin(r)
     s["devam"] = r.get("durum")
@@ -1936,31 +2049,45 @@ def ar_anlatima_devam(a):
 
 
 SESSIZ_SINIR_SN = 600  # kullanıcı bu kadar süre hiç konuşmazsa dinleme döngüsü bırakılır
+UYANDIRMALI_SINIR_SN = 180  # otomatik uyandırma açıksa Claude dinlemeyi daha erken bırakabilir: söz sohbete düşer
 _sessizlik = {"bas": None}
 
 
+def ar_bekle(a):
+    """Tek bekleme aracı: no verilirse anlatımın/sorunun bitmesini, verilmezse öğrencinin sözünü bekler."""
+    if a.get("no"):
+        return ar_tahta_durumu({"no": a["no"]})
+    return ar_dinle(a)
+
+
 def ar_dinle(a):
+    bas = time.time()
     try:
-        sure = max(5, min(int(a.get("bekle") or 40), 50))
-    except (TypeError, ValueError):
-        sure = 40
-    try:
-        y = istek("dinle?bekle=%d" % sure, zaman=sure + 20)
+        y = uzun_bekle(None)
         if isinstance(y, dict) and y.get("durum") == "sessiz":
             simdi = time.time()
             if _sessizlik["bas"] is None:
-                _sessizlik["bas"] = simdi - sure
+                _sessizlik["bas"] = bas
             gecen = int(simdi - _sessizlik["bas"])
+            uyandirmali = bool(y.pop("uyandirma", False))
+            sinir = UYANDIRMALI_SINIR_SN if uyandirmali else SESSIZ_SINIR_SN
             y["sessiz_sn"] = gecen
-            y["devam"] = gecen < SESSIZ_SINIR_SN
+            y["devam"] = gecen < sinir
             if y["devam"]:
-                y["not"] = "Kullanıcı ara vermiş olabilir; hemen yeniden dinle çağır."
+                y["not"] = "Kullanıcı ara vermiş olabilir; hemen yeniden bekle çağır."
             else:
                 _sessizlik["bas"] = None
-                y["not"] = ("Uzun sessizlik: dinlemeyi bırak. Sohbete kısa not yaz: tahtaya dönünce mikrofona basıp "
-                            "konuşsun ya da buraya 'tahtaya bak' yazsın.")
+                if uyandirmali:
+                    y["not"] = ("Uzun sessizlik: beklemeyi bırak, sohbete tek cümlelik kısa bir not yaz. Otomatik uyandırma "
+                                "açık: öğrenci tahtada konuşunca sözü bu sohbete 'Tahtadan sesli soru: ...' diye kendiliğinden "
+                                "düşer; ona tahtada cevap ver.")
+                else:
+                    y["not"] = ("Uzun sessizlik: beklemeyi bırak. Sohbete kısa not yaz: tahtaya dönünce mikrofona basıp "
+                                "konuşsun ya da buraya 'tahtaya bak' yazsın.")
         else:
             _sessizlik["bas"] = None
+            if isinstance(y, dict):
+                y.pop("uyandirma", None)
         return metin(y)
     except urllib.error.URLError:
         return metin({"durum": "bağlı değil", "hata": "Yerel tahta sunucusu kapalı. Önce tahtayi_ac aracını çağır."})
@@ -2217,7 +2344,7 @@ ISLEYICILER = {"egitmen_hazirla": ar_egitmen_hazirla, "kayit_oku": ar_kayit_oku,
                "rapor_yaz": ar_rapor_yaz, "olcme_testi": ar_olcme_testi, "olcme_kaydet": ar_olcme_kaydet,
                "tahtayi_ac": ar_tahtayi_ac, "dersler": ar_dersler, "ders_oku": ar_ders_oku,
                "gorsel_bak": ar_gorsel_bak, "tahta": ar_tahta, "soru_sor": ar_soru_sor,
-               "tahta_durumu": ar_tahta_durumu, "dinle": ar_dinle, "durdur": ar_durdur,
+               "tahta_durumu": ar_tahta_durumu, "dinle": ar_dinle, "bekle": ar_bekle, "durdur": ar_durdur,
                "anlatima_devam": ar_anlatima_devam, "videolar": ar_videolar,
                "bilgi_ara": ar_bilgi_ara, "vakalar": ar_vakalar, "vaka_oku": ar_vaka_oku, "karne": ar_karne,
                "sozlu_prova": ar_sozlu_prova, "tekrar_listesi": ar_tekrar_listesi,
@@ -2282,11 +2409,93 @@ def kanali_baslat():
         threading.Thread(target=kanal_dongusu, daemon=True).start()
 
 
+# Beklemeli araçlar ayrı iş parçacığında, ötekiler eskisi gibi sırayla çalışır (kayıt dosyaları aynı anda yazılmasın).
+BEKLEMELI = {"tahta", "soru_sor", "tahta_durumu", "dinle", "bekle", "anlatima_devam", "durdur", "tahtayi_ac"}
+_SIRALI = threading.Lock()
+_ISTEKLER = {}  # JSON-RPC id → çağrı bağlamı (iptal için)
+_ISTEK_KILIT = threading.Lock()
+
+
+def iptal_et(istek_no, neden=""):
+    """Claude bir çağrıyı iptal etti (kullanıcı durdurdu ya da zaman aşımı): sunucudaki beklemesi hemen biter,
+    o çağrıya verilmiş söz kuyruğa geri döner."""
+    with _ISTEK_KILIT:
+        c = _ISTEKLER.get(istek_no)
+    if not c:
+        return
+    c["iptal"] = True
+    c["neden"] = str(neden or "")
+    _arka_planda("iptal?bekleme=%s" % c["bekleme"])
+
+
+def _ogren(c, gecen):
+    """Zaman aşımıyla kesilen bekleme: Claude'un bu bilgisayardaki araç süresi sınırını öğren."""
+    neden = c.get("neden", "").lower()
+    if c.get("araci") in BEKLEMELI and ("timed out" in neden or "timeout" in neden or "zaman" in neden) and gecen >= 25:
+        _ayar_yaz("arac_bekleme_sn", max(20, int(gecen) - 12))
+
+
+def arac_cagir(no, p):
+    """tools/call: bağlam kurar, aracı çalıştırır, yanıtı yazar; teslim onayını ya da geri koymayı yapar."""
+    ad = p.get("name")
+    ilerleme = ((p.get("_meta") or {}).get("progressToken"))
+    bas = time.time()
+    c = {"bekleme": "%x-%s" % (os.getpid(), no), "teslimler": [], "iptal": False, "araci": ad,
+         "bitis": bas + bekleme_butcesi(ilerleme is not None)}
+    with _ISTEK_KILIT:
+        _ISTEKLER[no] = c
+    dur = threading.Event()
+    if ilerleme is not None and ad in BEKLEMELI:
+        def nabiz():
+            # Çağrı uzun sürerken Claude'a "hâlâ çalışıyorum" bildirimi (zaman aşımını uzatabilir).
+            while not dur.wait(NABIZ_SN):
+                yaz({"jsonrpc": "2.0", "method": "notifications/progress",
+                     "params": {"progressToken": ilerleme, "progress": int(time.time() - bas),
+                                "message": "Tahta bekleniyor"}})
+        threading.Thread(target=nabiz, daemon=True).start()
+    _arka_planda("etkin", zaman=2)
+    _BAGLAM.c = c
+    try:
+        if ad in BEKLEMELI:
+            sonuc = isle({"jsonrpc": "2.0", "id": no, "method": "tools/call", "params": p})
+        else:
+            with _SIRALI:
+                sonuc = isle({"jsonrpc": "2.0", "id": no, "method": "tools/call", "params": p})
+        hata = None
+    except Exception as e:
+        sonuc, hata = None, e
+    finally:
+        _BAGLAM.c = None
+        dur.set()
+        with _ISTEK_KILIT:
+            _ISTEKLER.pop(no, None)
+    _arka_planda("etkin", zaman=2)
+    if c["iptal"]:
+        # İptal edilen çağrıya yanıt yazılmaz; ona verilmiş söz kaybolmasın, kuyruğa geri dönsün.
+        for t in c["teslimler"]:
+            _arka_planda("teslim?no=%d&onay=0" % int(t))
+        _ogren(c, time.time() - bas)
+        return
+    basarisiz = hata is not None or (isinstance(sonuc, dict) and sonuc.get("isError"))
+    try:
+        if hata is not None:
+            yaz({"jsonrpc": "2.0", "id": no, "error": {"code": -32603, "message": str(hata)}})
+        else:
+            yaz({"jsonrpc": "2.0", "id": no, "result": sonuc})
+        yazildi = True
+    except Exception:
+        yazildi = False
+    for t in c["teslimler"]:
+        _arka_planda("teslim?no=%d&onay=%d" % (int(t), 1 if yazildi and not basarisiz else 0))
+
+
 def isle(m):
     yontem, no, p = m.get("method"), m.get("id"), m.get("params") or {}
     if no is None:
         if yontem == "notifications/initialized":
             kanali_baslat()
+        elif yontem == "notifications/cancelled":
+            iptal_et(p.get("requestId"), p.get("reason"))
         return None  # bildirim: yanıt verilmez
     if yontem == "initialize":
         yetenek = {"tools": {}}
@@ -2342,6 +2551,10 @@ def calis():
             m = json.loads(satir.decode("utf-8"))
         except Exception:
             yaz({"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Geçersiz JSON"}})
+            continue
+        if m.get("method") == "tools/call" and m.get("id") is not None:
+            # Araç ayrı iş parçacığında çalışır: o beklerken ping, iptal ve başka çağrılar hemen işlenir.
+            threading.Thread(target=arac_cagir, args=(m["id"], m.get("params") or {}), daemon=True).start()
             continue
         try:
             sonuc = isle(m)

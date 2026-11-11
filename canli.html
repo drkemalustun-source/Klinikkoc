@@ -41,10 +41,14 @@
       <div class="canli-dok" id="dok">
         <div class="canli-bekleyen" id="bekleyenSoru" role="alert" hidden>
           <div class="canli-bekleyen-yazi">
-            <strong>Sorunuz bekliyor.</strong> Claude şu an dinlemiyor. Sohbete <b>“tahtaya bak”</b> yazın ya da sorunuzu kopyalayıp yapıştırın.
+            <strong>Sorunuz bekliyor.</strong> <span id="bekleyenAciklama">Claude şu an dinlemiyor. Sohbete <b>“tahtaya bak”</b> yazın ya da sorunuzu kopyalayıp yapıştırın.</span>
             <span class="canli-bekleyen-metin" id="bekleyenMetin"></span>
           </div>
-          <button class="btn" id="sohbeteKopyala">Sohbete kopyala</button>
+          <div class="canli-bekleyen-dugmeler">
+            <button class="btn" id="sohbeteKopyala">Sohbete kopyala</button>
+            <button class="btn ikincil" id="otomatikGonder" aria-pressed="false"
+                    title="Açıkken Claude dinlemiyorsa sorunuz Claude sohbetine kendiliğinden yazılıp gönderilir">Otomatik gönder</button>
+          </div>
         </div>
         <div class="canli-serit">
           <div class="canli-ileti eski" id="onceki" hidden></div>
