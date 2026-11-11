@@ -403,9 +403,122 @@
     return parts;
   }
 
+  /* ---------------- Üst birinci büyük azı furkasyonu ----------------
+   * Üç kök (mezyobukkal, distobukkal, palatinal), üç giriş: bukkal (MB–DB arası), mezyal (MB–P arası, palatinalden sondalanır),
+   * distal (DB–P arası). Kök gövdesi yaklaşık mezyal 3,6 / bukkal 4,2 / distal 4,8 mm. Solda bukkal görünüm (diş aşağı bakar),
+   * sağda furkasyon düzeyinde kesit (bukkal solda, mezyal üstte). yB/yM/yD: her girişten yatay kayıp (mm). */
+  const FURU_DURUM = {
+    saglikli:   { kemik: 41.6, yB: 0, yM: 0, yD: 0 },
+    'bukkal-1': { kemik: 36, yB: 2, yM: 0, yD: 0 },
+    'derece-2': { kemik: 32, yB: 3.2, yM: 2, yD: 1 },
+    'derece-3': { kemik: 28, yB: 4, yM: 3.6, yD: 3.8 }
+  };
+
+  function furUstCiz(g, variant, opt) {
+    const p = opt.p || FURU_DURUM[variant] || FURU_DURUM.saglikli;
+    const id = uid();
+    const defs = svg('defs', {}, g);
+    trabekul(defs, id);
+    const parts = {};
+    const FORNIX = 37.6, k = p.kemik;
+    const yazi = (x, y, t, cls = 'an-panel-yazi') => { const n = svg('text', { x, y, class: cls, 'font-size': 2.6, 'text-anchor': 'middle' }, g); n.textContent = t; return n; };
+    yazi(64, 4.2, 'Bukkalden görünüm');
+    yazi(96, 4.2, 'Furkasyon düzeyinde kesit');
+    yazi(50.6, 66, 'M', 'an-yon'); yazi(77.6, 66, 'D', 'an-yon');
+    yazi(80.6, 46.3, 'B', 'an-yon'); yazi(112, 46.3, 'P', 'an-yon'); yazi(96, 27.4, 'M', 'an-yon'); yazi(96, 66.6, 'D', 'an-yon');
+
+    // Sol panel: palatinal kök arkada (soluk), diş, kemik (yukarıda, yarı saydam).
+    tagger(svg('path', { d: 'M60,38 C60.5,28 62,16 64,8 Q65,6 66.4,8 C68,16 69,28 68.6,38 Z', class: 'an-dentin', opacity: 0.45 }, g), 'palatinal-kok');
+    const dis = 'M52.6,45.5 C52.2,50 51.8,55 52.8,58.6 Q54.2,61.4 57,61 C59.6,60.6 61.6,59.6 63.6,58.6 Q64.2,58.3 64.8,58.6 C66.8,59.6 68.8,60.6 71.4,61 Q74.6,61.2 75.6,58.2 C76.3,54 75.8,49.5 75.2,45.5 ' +
+      'C75,38 74.4,28 72.4,14 Q71,10.4 69.2,13 C68.4,22 67.4,31 65.6,37.6 Q64.2,39.6 62.6,37.6 C61.4,31 60.4,22 59.2,12.6 Q57.4,9.2 55.6,12 C54.2,22 53.4,36 52.6,45.5 Z';
+    tagger(svg('path', { d: dis, class: 'an-dentin' }, g), 'dis');
+    tagger(svg('path', { d: 'M52.6,45.5 C52.2,50 51.8,55 52.8,58.6 Q54.2,61.4 57,61 C59.6,60.6 61.6,59.6 63.6,58.6 Q64.2,58.3 64.8,58.6 C66.8,59.6 68.8,60.6 71.4,61 Q74.6,61.2 75.6,58.2 C76.3,54 75.8,49.5 75.2,45.5 ' +
+      'L74,46.4 C74.4,50 74.2,54 73.4,57 Q71.5,58.6 69,58 C67.2,57.4 65.6,56.4 64.2,56.4 C62.8,56.4 61.2,57.4 59.4,58 Q55.8,58.8 54.4,56.6 C53.6,53.5 53.6,49.5 53.8,46.4 Z', class: 'an-mine' }, g), 'mine');
+    tagger(svg('path', { d: 'M56.5,52 Q57,53.6 58.5,52.8 L62,52 Q64,51.6 66,52 L69.5,52.8 Q71,53.6 71.5,52 L71.6,46 C71.2,36 70.6,24 70,13.4 L69.4,13.4 C69.4,24 68.6,36 67.4,42.6 C66,43.6 62,43.6 60.6,42.6 C59.4,36 58.4,24 57.6,13 L57,13 C56.9,24 56.6,36 56.4,46 Z', class: 'an-pulpa', opacity: 0.55 }, g), 'pulpa');
+    if (k < FORNIX - 0.2) {
+      tagger(svg('path', { d: `M62.6,37.6 Q64.2,39.6 65.6,37.6 C66,${f(k + 2)} 66.4,${f(k)} 66.6,${f(k)} L61.8,${f(k)} C62,${f(k)} 62.3,${f(k + 2)} 62.6,37.6 Z`, class: 'an-furkasyon-acik', opacity: f(0.45 + 0.55 * clamp(p.yB / 3.5)) }, g), 'bukkal-giris');
+    }
+    const kemikYol = `M49,${f(k + 1.2)} C51,${f(k + 1.6)} 52.6,${f(k + 0.6)} 54,${f(k)} L74,${f(k)} C75.6,${f(k + 0.6)} 77,${f(k + 1.6)} 79,${f(k + 1.2)} L79,6 L49,6 Z`;
+    svg('path', { d: kemikYol, class: 'an-kemik-zemin', opacity: 0.72 }, g);
+    tagger(svg('path', { d: kemikYol, fill: `url(#${id}tr)`, class: 'an-kemik', opacity: 0.5 }, g), 'kemik');
+    tagger(svg('path', { d: kemikYol.split(' L79,6')[0], class: 'an-kortikal' }, g), 'kemik-duzeyi');
+    const dk = Math.max(k + 5.6, 44.4);
+    tagger(svg('path', { d: `M49.5,${f(dk)} L78.5,${f(dk)}`, class: 'an-dis-eti-kenari' }, g), 'dis-eti-kenari');
+    svg('path', { d: `M50,${FORNIX - 1.6} L78,${FORNIX - 1.6}`, class: 'an-kesit-duzlemi' }, g);
+
+    // Sağ panel: üç kök kesiti ve kökler arası kemik; girişlerden yatay defektler.
+    const cerceve = 'M83,32 C83,30 84.6,29.4 87,29.4 L106,29.4 C108.6,29.4 110,30.4 110,32.6 L110,59 C110,61.4 108.6,62 106,62 L87,62 C84.6,62 83,61.4 83,59 Z';
+    svg('path', { d: cerceve, class: 'an-kemik-zemin' }, g);
+    tagger(svg('path', { d: cerceve, fill: `url(#${id}tr)`, class: 'an-kemik' }, g), 'interradikuler-kemik');
+    svg('path', { d: cerceve, class: 'an-kortikal' }, g);
+    const MERKEZ = [95, 45.6];
+    const girisler = [
+      { ad: 'bukkal', y: p.yB, dis: [83, 45.6], giris: [87.4, 45.6] },
+      { ad: 'mezyal', y: p.yM, dis: [99.6, 29.4], giris: [98.6, 38.4] },
+      { ad: 'distal', y: p.yD, dis: [99.6, 62], giris: [98.6, 52.8] }
+    ];
+    let merkezeUlasan = 0;
+    for (const G of girisler) {
+      const dx = MERKEZ[0] - G.giris[0], dy = MERKEZ[1] - G.giris[1], L = Math.hypot(dx, dy);
+      G.uzunluk = L; G.u = [dx / L, dy / L];
+      if (G.y * F >= L - 0.3) merkezeUlasan++;
+      if (G.y > 0.05) {
+        const t = Math.min(G.y * F, L + 0.6);
+        const uc = [G.giris[0] + G.u[0] * t, G.giris[1] + G.u[1] * t];
+        tagger(svg('path', { d: `M${f(G.dis[0])},${f(G.dis[1])} L${f(G.giris[0])},${f(G.giris[1])} L${f(uc[0])},${f(uc[1])}`, class: 'an-defekt-cizgi' }, g), G.ad + '-defekt');
+        G.uc = uc;
+      }
+    }
+    const gecen = merkezeUlasan >= 2;
+    if (gecen) tagger(svg('circle', { cx: MERKEZ[0], cy: MERKEZ[1], r: 2.2, class: 'an-hava' }, g), 'gecis');
+    const kokler = [
+      ['M86,35.6 C86,33.6 87.6,33 89.6,33 C91.8,33 93.4,34 93.4,36.4 C93.4,38.8 92.6,40.6 90.6,41.6 C89.2,42.2 87.6,42 86.8,40.6 C86.2,39.4 86,37.6 86,35.6 Z', 'mb-kesit'],
+      ['M87,53.2 C87,51 88.4,49.8 90.2,49.8 C92,49.8 93,51 93,53 C93,55.2 91.8,56.6 90,56.6 C88.2,56.6 87,55.4 87,53.2 Z', 'db-kesit'],
+      ['M99.4,45.6 C99.4,42 101,40.4 103.4,40.4 C105.8,40.4 107,42.4 107,45.6 C107,49 105.6,51 103.2,51 C100.8,51 99.4,49 99.4,45.6 Z', 'p-kesit']
+    ];
+    for (const [d, part] of kokler) {
+      svg('path', { d, class: 'an-pdl-cizgi' }, g);
+      tagger(svg('path', { d, class: 'an-dentin' }, g), part);
+      svg('path', { d, class: 'an-sement-cizgi' }, g);
+    }
+    nokta(g, 89.8, 37.2, 0.7, 'an-pulpa', 'kanal-mb'); nokta(g, 90, 53.2, 0.6, 'an-pulpa', 'kanal-db'); nokta(g, 103.2, 45.6, 0.85, 'an-pulpa', 'kanal-p');
+    if (opt.probe) {
+      for (const G of girisler.slice(0, 2)) {
+        const t = Math.max(0.8, G.y) * F, uc = [G.giris[0] + G.u[0] * Math.min(t, G.uzunluk), G.giris[1] + G.u[1] * Math.min(t, G.uzunluk)];
+        const bas = G.ad === 'bukkal' ? [77.5, 41.4] : [104, 24.5];
+        const pg = svg('g', { class: 'an-sonda' }, g); pg.dataset.part = 'sonda';
+        svg('path', { d: `M${bas[0]},${bas[1]} Q${f(G.dis[0])},${f(G.dis[1])} ${f(uc[0])},${f(uc[1])}`, class: 'an-sonda-govde', fill: 'none' }, pg);
+      }
+    }
+
+    const H = (y, gec) => (gec ? 'III' : y >= 3 ? 'II' : y > 0.2 ? 'I' : '0');
+    Object.assign(parts, {
+      mine:              { ad: 'Mine', at: [55.6, 58.6] },
+      'kok-govdesi':     { ad: 'Kök gövdesi (~4 mm)', at: [64.1, 41.6] },
+      fornix:            { ad: 'Furkasyon tavanı', at: [64.1, 38.6] },
+      'mb-kok':          { ad: 'Mezyobukkal kök', at: [55.6, 24] },
+      'db-kok':          { ad: 'Distobukkal kök', at: [72.6, 24] },
+      'palatinal-kok':   { ad: 'Palatinal kök (arkada)', at: [64.6, 12] },
+      'kemik-duzeyi':    { ad: 'Kemik düzeyi', at: [76.5, k] },
+      'dis-eti-kenari':  { ad: 'Dişeti kenarı', at: [76.5, dk] },
+      'mb-kesit':        { ad: 'Mezyobukkal kök', at: [93, 35] },
+      'db-kesit':        { ad: 'Distobukkal kök', at: [92.6, 55] },
+      'p-kesit':         { ad: 'Palatinal kök', at: [106.6, 44] },
+      'interradikuler-kemik': { ad: 'Kökler arası kemik', at: [96.6, 41.6] },
+      'mezyal-giris':    { ad: 'Mezyal giriş', at: [99.2, 33.6] },
+      'distal-giris':    { ad: 'Distal giriş', at: [99.2, 57.6] }
+    });
+    if (k < FORNIX - 0.2) parts['bukkal-giris'] = { ad: 'Açığa çıkmış bukkal giriş', at: [64.1, k + 1] };
+    else parts['bukkal-giris'] = { ad: 'Bukkal giriş (kemikle kapalı)', at: [64.1, 38.4] };
+    for (const G of girisler) if (G.y > 0.2) parts[G.ad + '-defekt'] = { ad: `${G.ad[0].toUpperCase() + G.ad.slice(1)}: Hamp ${H(G.y, gecen && G.y * F >= G.uzunluk - 0.3)}`, at: G.uc };
+    if (opt.probe) parts.sonda = { ad: 'Nabers sondası', at: [79, 42.6] };
+    return parts;
+  }
+
   Object.assign(AT.anatomi.SABLONLAR, {
     sinus: { ad: 'Maksiller sinüs ve üst azı bölgesi (koronal)', varyantlar: Object.keys(SINUS_DURUM), durumlar: SINUS_DURUM, ciz: sinusCiz, varsayilan: {} },
     mandibula: { ad: 'Mandibula, mandibular kanal ve komşuluklar (koronal)', varyantlar: Object.keys(MAND_DURUM), durumlar: MAND_DURUM, ciz: mandCiz, varsayilan: {} },
-    furkasyon: { ad: 'Furkasyon (alt birinci büyük azı)', varyantlar: Object.keys(FUR_DURUM), durumlar: FUR_DURUM, ciz: furCiz, varsayilan: {} }
+    furkasyon: { ad: 'Furkasyon (alt birinci büyük azı)', varyantlar: Object.keys(FUR_DURUM), durumlar: FUR_DURUM, ciz: furCiz, varsayilan: {} },
+    'furkasyon-ust': { ad: 'Furkasyon (üst birinci büyük azı)', varyantlar: Object.keys(FURU_DURUM), durumlar: FURU_DURUM, ciz: furUstCiz, varsayilan: {} }
   });
 })(window.AT = window.AT || {});

@@ -567,3 +567,4 @@ strong { color: var(--accent); font-weight: 700; }
 .an-sement-cizgi { fill: none; stroke: #c99a4a; stroke-width: .45; }
 .an-panel-yazi { fill: var(--chalk-dim); stroke: none; font-family: inherit; }
 .an-yon { fill: var(--accent); stroke: none; font-family: inherit; font-size: 2.6px; font-weight: 600; }
+.an-defekt-cizgi { fill: none; stroke: #0c1411; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
