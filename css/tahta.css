@@ -609,3 +609,8 @@ strong { color: var(--accent); font-weight: 700; }
 .an-mine-ince { stroke-width: .3; }
 .an-mm.an-sinir-yol { stroke-width: 1; } .an-mm.an-arter-yol { stroke-width: .95; } .an-mm.an-arter-kalin { stroke-width: 1.7; }
 .an-mm.an-kanal-kesik { stroke-width: 2.2; stroke-dasharray: 2.4 1.5; } .an-mm.an-kesik { stroke-dasharray: 1.8 1.2; }
+.an-kas-yol { fill: none; stroke: #7a2b36; stroke-linecap: round; stroke-linejoin: round; }
+.an-cilt { fill: none; stroke: #e8b9a6; stroke-width: .8; }
+.an-apse { fill: #d9d36a; stroke: #f4efa6; stroke-width: .45; }
+.an-yayilim { fill: none; stroke: #f4efa6; stroke-width: .7; stroke-dasharray: 1.3 .9; stroke-linecap: round; }
+.an-mm-kortikal { stroke-width: 1.1; } .an-mm-pdl { stroke-width: .8; }

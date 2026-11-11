@@ -1496,6 +1496,145 @@
     return parts;
   }
 
+
+  /* ---------------- Fasiyal boşluklar: odontojenik enfeksiyonun yayılımı ----------------
+   * Büyük azılar hizasında koronal kesit, tek taraf; yanak solda, orta hat sağda. 1,15 birim = 1 mm.
+   * Kural: kök ucu m. buccinator yapışmasının ağız tarafındaysa vestibüler apse, dışındaysa bukkal boşluk;
+   * m. mylohyoideus çizgisinin üstündeyse sublingual, altındaysa submandibüler boşluk. kok: alt azı kök boyu (mm);
+   * ves, buk, sl, sm, pal, bukU, sin: ilgili boşluktaki apsenin belirginliği (0–1). */
+  const FB_TEMEL = { kok: 13, ves: 0, buk: 0, sl: 0, sm: 0, pal: 0, bukU: 0, sin: 0 };
+  const FB_DURUM = {
+    saglikli:         { ...FB_TEMEL },
+    'vestibuler-apse': { ...FB_TEMEL, kok: 11.5, ves: 1 },
+    bukkal:           { ...FB_TEMEL, kok: 15.5, buk: 1 },
+    sublingual:       { ...FB_TEMEL, kok: 11.5, sl: 1 },
+    submandibuler:    { ...FB_TEMEL, kok: 16.5, sm: 1 },
+    palatinal:        { ...FB_TEMEL, pal: 1 },
+    'bukkal-ust':     { ...FB_TEMEL, bukU: 1 },
+    sinus:            { ...FB_TEMEL, sin: 1 }
+  };
+  const FS = 1.15, FX = 108, FY = 34;
+  const fm = (x, y) => [FX + FS * x, FY + FS * y];
+
+  function fasiyalCiz(g0, variant, opt) {
+    const p = { ...FB_TEMEL, ...(opt.p || FB_DURUM[variant] || FB_DURUM.saglikli) };
+    const id = uid();
+    const defs = svg('defs', {}, g0);
+    const kes = svg('clipPath', { id: id + 'c' }, defs);
+    svg('rect', { x: 49.5, y: 3, width: 58.5, height: 84, rx: 3 }, kes);
+    const gk = svg('g', { 'clip-path': `url(#${id}c)` }, g0);
+    const g = svg('g', { transform: `translate(${FX},${FY}) scale(${FS})` }, gk);
+    // Kemik deseni mm koordinatlarında küçük kalmasın diye ayrı tanımlanır.
+    const pat = svg('pattern', { id: id + 'tr', width: 3.2, height: 3.2, patternUnits: 'userSpaceOnUse' }, defs);
+    svg('rect', { width: 3.2, height: 3.2, class: 'an-kemik-zemin' }, pat);
+    svg('ellipse', { cx: 0.9, cy: 1, rx: 0.75, ry: 0.55, class: 'an-trabekul' }, pat);
+    svg('ellipse', { cx: 2.4, cy: 2.4, rx: 0.6, ry: 0.7, class: 'an-trabekul' }, pat);
+    const parts = {};
+    const yol = (pts, kapali = true) => smooth(pts) + (kapali ? ' Z' : '');
+    const BUC = 21, MYL = 22; // m. buccinator ve m. mylohyoideus'un mandibulaya yapışma düzeyleri (mm, okluzal düzlemden)
+
+    // Yumuşak doku bloğu ve cilt.
+    const cilt = [[-45, -30], [-47.6, -12], [-48.4, 8], [-45.4, 26], [-39, 39], [-29, 45.6], [-14, 47.6], [0, 48]];
+    svg('path', { d: yol(cilt, false) + ' L0,-30 Z', class: 'an-yanak' }, g);
+    tagger(svg('path', { d: yol(cilt, false), class: 'an-cilt' }, g), 'cilt');
+    tagger(svg('path', { d: yol([[-38, 37], [-28.6, 43.2], [-14, 45.2], [0, 45.6]], false), class: 'an-kas-yol', 'stroke-width': 0.9 }, g), 'platisma');
+    // Ağız boşluğu: vestibül ve dil yanı oluk.
+    tagger(svg('path', { d: yol([[-33.8, -13], [-36, -3], [-35.8, 8], [-34, 15.6], [-32.2, 11], [-30.8, 3], [-32.2, -3], [-32.8, -9]]), class: 'an-hava' }, g), 'vestibul');
+    // Dil, ağız tabanı kasları ve bezler.
+    tagger(svg('path', { d: yol([[-14, 12.6], [-16.8, 8], [-17.6, 1], [-17.2, -6], [-14.6, -12], [-8, -15.8], [0, -17], [0, 13], [-8, 13.2]]), class: 'an-dil' }, g), 'dil');
+    svg('path', { d: yol([[-18.8, 1.6], [-17.6, 5.4], [-16.6, 9], [-15.8, 5.6], [-16.8, 0.4]]), class: 'an-hava' }, g);
+    tagger(svg('path', { d: yol([[-4.8, 13.4], [0, 13.2], [0, 26.6], [-4.6, 26.4]]), class: 'an-kas' }, g), 'genioglossus');
+    tagger(svg('path', { d: yol([[-5.4, 27], [0, 27.2], [0, 30], [-4.8, 29.4]]), class: 'an-kas', opacity: 0.8 }, g), 'geniohyoid');
+    tagger(svg('ellipse', { cx: -10.6, cy: 17.4, rx: 4.6, ry: 3.3, class: 'an-sublingual' }, g), 'sublingual-bez');
+    nokta(g, -14.8, 15, 0.8, 'an-sinir', 'lingual-sinir');
+    tagger(svg('path', { d: `M-15.2,${MYL} L0,31.2`, class: 'an-kas-yol', 'stroke-width': 2 }, g), 'milohiyoid');
+    tagger(svg('ellipse', { cx: -13.4, cy: 31.4, rx: 6.4, ry: 4.8, transform: 'rotate(24,-13.4,31.4)', class: 'an-bez' }, g), 'submandibular-bez');
+    tagger(svg('circle', { cx: -6.2, cy: 38, r: 3.2, class: 'an-kas' }, g), 'digastrik');
+    nokta(g, -33.6, 32.6, 0.9, 'an-arter', 'fasiyal-arter');
+    nokta(g, -35.2, 31.4, 0.9, 'an-ven', 'fasiyal-ven');
+    // M. buccinator: maksilladan mandibulaya, yanağın iç duvarı.
+    tagger(svg('path', { d: yol([[-33.8, -15.4], [-37.6, -5], [-37.4, 8], [-35.4, 16], [-32.8, BUC]], false), class: 'an-kas-yol', 'stroke-width': 2.2 }, g), 'buccinator');
+
+    // Maksilla: alveol çıkıntısı, sert damak, sinüs ve burun boşluğu.
+    const maks = [[-32, -8.6], [-33.6, -17], [-36.6, -23.6], [-41, -30], [0, -30], [0, -20.4], [-8, -19.4], [-14.6, -15.6], [-18.4, -11], [-19.8, -8.6], [-25, -7.6]];
+    svg('path', { d: yol(maks), class: 'an-kemik-zemin' }, g);
+    tagger(svg('path', { d: yol(maks), fill: `url(#${id}tr)`, class: 'an-kemik' }, g), 'maksilla');
+    svg('path', { d: yol(maks.slice(0, 4), false), class: 'an-kortikal an-mm-kortikal' }, g);
+    svg('path', { d: yol(maks.slice(5), false), class: 'an-kortikal an-mm-kortikal' }, g);
+    tagger(svg('path', { d: yol([[-35.4, -30], [-34, -25.6], [-28, -21.4], [-20, -21.6], [-14.6, -25], [-13.6, -30]]), class: 'an-hava' }, g), 'sinus');
+    tagger(svg('path', { d: yol([[-10.6, -30], [-10, -25.4], [-5, -24.4], [0, -24.4], [0, -30]]), class: 'an-hava' }, g), 'burun');
+    tagger(svg('path', { d: yol([[-19.8, -8.4], [-18.4, -11], [-14.6, -15.6], [-8, -19.4], [0, -20.4], [0, -17.6], [-7.6, -16.4], [-13, -12.6], [-16.6, -7.6], [-18.6, -6]]), class: 'an-dis-eti' }, g), 'damak-mukozasi');
+
+    // Mandibula gövdesi: dış oblik sırt, milohiyoid çizgi, submandibüler çukur.
+    const mand = [[-29.8, 9.4], [-32.4, 16], [-32.8, 26], [-30.6, 34], [-25.8, 38.4], [-20.4, 36.8], [-18, 32], [-17, 27], [-15, MYL], [-16.4, 14], [-18.6, 9.4], [-24, 8.6]];
+    svg('path', { d: yol(mand), class: 'an-kemik-zemin' }, g);
+    tagger(svg('path', { d: yol(mand), fill: `url(#${id}tr)`, class: 'an-kemik' }, g), 'mandibula');
+    tagger(svg('path', { d: yol(mand), class: 'an-kortikal an-mm-kortikal' }, g), 'kortikal');
+    nokta(g, -23.6, 29, 1.5, 'an-kanal', 'kanal');
+
+    // Dişler: üst büyük azı (bukkal ve palatinal kök), alt büyük azı (kök boyu değişken).
+    const apA = 7.5 + p.kok;
+    svg('path', { d: `M-28.6,7.4 C-28.4,${f(7.5 + p.kok * 0.6)} -26.8,${f(apA - 1)} -25.6,${f(apA)} C-24.4,${f(apA - 1)} -22.4,${f(7.5 + p.kok * 0.6)} -20.2,7.4 Z`, class: 'an-pdl-cizgi an-mm-pdl' }, g);
+    tagger(svg('path', { d: `M-28.6,7.4 C-28.4,${f(7.5 + p.kok * 0.6)} -26.8,${f(apA - 1)} -25.6,${f(apA)} C-24.4,${f(apA - 1)} -22.4,${f(7.5 + p.kok * 0.6)} -20.2,7.4 Z`, class: 'an-dentin' }, g), 'alt-kok');
+    tagger(svg('path', { d: 'M-28.6,7.6 C-30.4,5 -30.2,1.6 -28.4,0.2 Q-26.6,-1 -24.6,0.8 Q-22.2,-0.8 -20.4,0.6 C-18.8,2 -18.8,5.2 -20.2,7.6 Q-24.4,8.6 -28.6,7.6 Z', class: 'an-mine' }, g), 'alt-azi');
+    svg('path', { d: 'M-31.2,-7.8 C-31.6,-13 -31,-17.6 -29.6,-19.6 C-28.4,-17 -27.4,-13 -26.6,-9 Z', class: 'an-dentin' }, g).dataset.part = 'bukkal-kok';
+    svg('path', { d: 'M-25,-9 C-24,-14 -21.4,-18.4 -19.6,-19.4 C-19.4,-16 -20,-12 -20.6,-7.8 Z', class: 'an-dentin' }, g).dataset.part = 'palatinal-kok';
+    tagger(svg('path', { d: 'M-31.4,-7.6 C-33,-5 -32.8,-1.4 -31,0.4 Q-28.8,1.6 -26.6,-0.6 Q-24,1.2 -21.6,0 C-19.8,-1.6 -19.6,-5 -20.6,-7.6 Q-26,-9 -31.4,-7.6 Z', class: 'an-mine' }, g), 'ust-azi');
+
+    // Apseler ve yayılım yolları (kök ucundan korteksi delerek boşluğa).
+    const apse = (deger, part, d, yolD) => {
+      if (deger < 0.04) return;
+      tagger(svg('path', { d, class: 'an-apse', opacity: f(clamp(deger) * 0.9) }, g), part);
+      svg('path', { d: yolD, class: 'an-yayilim', opacity: f(clamp(deger)) }, g);
+    };
+    const el = (cx, cy, rx, ry) => `M${cx - rx},${cy} a${rx},${ry} 0 1,0 ${2 * rx},0 a${rx},${ry} 0 1,0 ${-2 * rx},0 Z`;
+    apse(p.ves, 'vestibuler-apse', el(-34.6, 13.6, 2.4, 3.8), `M-25.6,${f(apA)} Q-29.6,${f(apA - 1)} -33,15.6`);
+    apse(p.buk, 'bukkal-bosluk', yol([[-40, 10], [-44.4, 14], [-45, 24], [-41.4, 32], [-36.4, 30.6], [-34.6, 25], [-37, 18]]), `M-25.6,${f(apA)} Q-30,${f(apA + 1.4)} -35.4,${f(apA + 1)}`);
+    apse(p.sl, 'sublingual-bosluk', yol([[-15.6, 13.6], [-10, 12.6], [-5.6, 15], [-5.4, 20.6], [-9, 23.4], [-14.6, 20.6]]), `M-25.6,${f(apA)} Q-20,${f(apA - 0.6)} -14,${f(apA - 1.6)}`);
+    apse(p.sm, 'submandibuler-bosluk', yol([[-17, 26], [-10, 27.4], [-5, 31.6], [-6.6, 38.4], [-14, 41.4], [-21.6, 39.6], [-19.4, 33]]), `M-25.6,${f(apA)} Q-20,${f(apA + 1.6)} -14.6,${f(apA + 3)}`);
+    apse(p.pal, 'palatinal-apse', yol([[-17.6, -9], [-14.6, -14], [-10, -16.4], [-8.6, -13.6], [-12.4, -10], [-15.6, -6.6]]), 'M-19.6,-19.2 Q-17,-17 -14.4,-13.4');
+    apse(p.bukU, 'bukkal-bosluk', yol([[-38.6, -20], [-43.6, -14], [-45, -2], [-42, 8], [-38.6, 4], [-39, -6], [-36.4, -15]]), 'M-29.6,-19.4 Q-33,-20.4 -37,-17.6');
+    apse(p.sin, 'sinus-enfeksiyonu', yol([[-33.4, -25], [-28, -21.6], [-20, -21.8], [-15.2, -25], [-24, -25.8]]), 'M-29.6,-19.4 L-28.6,-22.6');
+
+    const P = (ad, x, y, ek) => ({ ad, at: fm(x, y), ...(ek || {}) });
+    Object.assign(parts, {
+      cilt:        P('Cilt', -48, 0, { ayrinti: true }),
+      buccinator:  P('M. buccinator', -37.5, 2),
+      milohiyoid:  P('M. mylohyoideus', -8, 26.6),
+      'bukkal-alan': P('Bukkal boşluk', -42.6, 18, { ayrinti: p.buk > 0.5 || p.bukU > 0.5 }),
+      vestibul:    P('Vestibül', -34.6, 4),
+      mandibula:   P('Mandibula', -27, 32),
+      kanal:       P('Mandibular kanal', -23.6, 29, { ayrinti: true }),
+      'alt-azi':   P('Alt büyük azı', -24.6, 4),
+      'ust-azi':   P('Üst büyük azı', -26, -4),
+      maksilla:    P('Maksilla', -35.4, -24),
+      sinus:       P('Maksiller sinüs', -24, -26.6),
+      burun:       P('Burun boşluğu', -5, -27.4, { ayrinti: true }),
+      'damak-mukozasi': P('Damak mukozası', -6, -18.6),
+      dil:         P('Dil', -7, 0),
+      genioglossus: P('M. genioglossus', -2.4, 20, { ayrinti: true }),
+      'sublingual-bez': P('Sublingual bez', -10.6, 17.4),
+      'lingual-sinir': P('N. lingualis', -14.8, 15, { ayrinti: true }),
+      'submandibular-bez': P('Submandibüler bez', -13.4, 31.4),
+      digastrik:   P('M. digastricus (ön karın)', -6.2, 38),
+      platisma:    P('Platisma', -22, 44.4, { ayrinti: true }),
+      'fasiyal-arter': P('A. ve v. facialis', -34.4, 32, { ayrinti: true }),
+      'buccinator-yapisma': P('Buccinator yapışması', -32.8, BUC),
+      'milohiyoid-cizgi': P('Milohiyoid çizgi', -15.1, MYL)
+    });
+    const apeksAd = apA > MYL && p.sm > 0.5 ? 'Apeks milohiyoid çizgi altında' : apA <= MYL && p.sl > 0.5 ? 'Apeks milohiyoid çizgi üstünde'
+      : apA > BUC && p.buk > 0.5 ? 'Apeks buccinator altında' : apA <= BUC && p.ves > 0.5 ? 'Apeks buccinator üstünde' : 'Kök ucu (apeks)';
+    parts['alt-kok'] = P(apeksAd, -25.6, apA - 0.6);
+    if (p.ves > 0.5) parts['vestibuler-apse'] = P('Vestibüler apse', -34.6, 13.6);
+    if (p.buk > 0.5) parts['bukkal-bosluk'] = P('Bukkal boşluk apsesi', -40, 24);
+    if (p.sl > 0.5) parts['sublingual-bosluk'] = P('Sublingual boşluk apsesi', -8, 16);
+    if (p.sm > 0.5) parts['submandibuler-bosluk'] = P('Submandibüler boşluk apsesi', -12, 37);
+    if (p.pal > 0.5) parts['palatinal-apse'] = P('Palatinal apse', -13, -12.6);
+    if (p.bukU > 0.5) { parts['bukkal-bosluk'] = P('Bukkal apse (üst azıdan)', -42.6, -6); parts['ust-kok'] = P('Apeks buccinator üstünde', -29.6, -19); }
+    if (p.sin > 0.5) parts['sinus-enfeksiyonu'] = P('Odontojenik sinüzit', -24, -23.4);
+    return parts;
+  }
+
   Object.assign(AT.anatomi.SABLONLAR, {
     sinus: { ad: 'Maksiller sinüs ve üst azı bölgesi (koronal)', varyantlar: Object.keys(SINUS_DURUM), durumlar: SINUS_DURUM, ciz: sinusCiz, varsayilan: {} },
     mandibula: { ad: 'Mandibula, mandibular kanal ve komşuluklar (koronal)', varyantlar: Object.keys(MAND_DURUM), durumlar: MAND_DURUM, ciz: mandCiz, varsayilan: {} },
@@ -1509,6 +1648,7 @@
     'kayit-cizelgesi': { ad: 'Plak (O’Leary) ve kanama (BOP) kayıt çizelgesi', varyantlar: Object.keys(KAYIT_DURUM), durumlar: KAYIT_DURUM, ciz: kayitCiz, varsayilan: {} },
     'on-maksilla': { ad: 'Ön maksilla ve dişeti fenotipi (sagital)', varyantlar: Object.keys(OM_DURUM), durumlar: OM_DURUM, ciz: onMaksillaCiz, varsayilan: {} },
     'on-mandibula': { ad: 'Ön mandibula, simfiz ve ağız tabanı (sagital)', varyantlar: Object.keys(AM_DURUM), durumlar: AM_DURUM, ciz: onMandibulaCiz, varsayilan: {} },
-    'yan-gorunum': { ad: 'Çeneler yandan: trigeminal dallar ve arterler', varyantlar: Object.keys(YG_DURUM), durumlar: YG_DURUM, ciz: yanCiz, varsayilan: {} }
+    'yan-gorunum': { ad: 'Çeneler yandan: trigeminal dallar ve arterler', varyantlar: Object.keys(YG_DURUM), durumlar: YG_DURUM, ciz: yanCiz, varsayilan: {} },
+    'fasiyal-bosluk': { ad: 'Fasiyal boşluklar ve odontojenik enfeksiyonun yayılımı', varyantlar: Object.keys(FB_DURUM), durumlar: FB_DURUM, ciz: fasiyalCiz, varsayilan: {} }
   });
 })(window.AT = window.AT || {});
