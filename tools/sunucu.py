@@ -610,7 +610,7 @@ class Canli:
             self.son_gorulme = time.time()
             self.kosul.notify_all()
             return {"sayac": self.sayac, "ses": self.ses_bilgisi(),
-                    "uyandirma": dict(self.uyandirma, acik=self.uyandirma_acik())}
+                    "uyandirma": dict(self.uyandirma, acik=self.uyandirma_acik(), destek=uyandirma.destekleniyor())}
 
     def bitti(self, no, sonuc, durum):
         with self.kosul:

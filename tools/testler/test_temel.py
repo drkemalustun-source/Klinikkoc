@@ -991,20 +991,20 @@ class ClaudeAyarDosyasi(unittest.TestCase):
     def test_yazma_oteki_alanlari_korur_ve_tekrar_yazilabilir(self):
         yol = os.path.join(self.g, "ayar.json")
         asil = {"preferences": {"a": 1}, "coworkUserFilesPath": "C:/x",
-                "mcpServers": {"akilli-tahta": {"command": "py", "args": ["t.py"]}}}
+                "mcpServers": {"baska": {"command": "py", "args": ["t.py"]}}}
         _metin_yaz(yol, "\ufeff" + json.dumps(asil))  # Not Defteri BOM ekleyebilir
         self.m.ayara_yaz(yol)
         self.m.ayara_yaz(yol)
         d = _json_oku(yol)
         self.assertEqual(d["preferences"], {"a": 1})
         self.assertEqual(d["coworkUserFilesPath"], "C:/x")
-        self.assertIn("akilli-tahta", d["mcpServers"])
+        self.assertIn("baska", d["mcpServers"])  # başka programların girdileri kalır
         self.assertIn(self.m.AD, d["mcpServers"])
         self.assertTrue(os.path.exists(yol + ".yedek"))
         self.m.ayara_yaz(yol, kaldir=True)
         d = _json_oku(yol)
         self.assertNotIn(self.m.AD, d["mcpServers"])
-        self.assertIn("akilli-tahta", d["mcpServers"])
+        self.assertIn("baska", d["mcpServers"])
 
     def test_kur_ayar_secenegi(self):
         yol = os.path.join(self.g, "elle", "claude_desktop_config.json")

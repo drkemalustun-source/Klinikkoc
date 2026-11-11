@@ -1116,6 +1116,7 @@
   const uyDugme = $('#otomatikGonder');
   function uyandirmaGoster(u) {
     uyandirmaAcik = !!u.acik;
+    if (uyDugme && u.destek === false) uyDugme.hidden = true; // bu sistemde otomatik gönderme yok
     if (uyDugme) {
       uyDugme.setAttribute('aria-pressed', uyandirmaAcik ? 'true' : 'false');
       uyDugme.textContent = 'Otomatik gönder: ' + (uyandirmaAcik ? 'açık' : 'kapalı');
