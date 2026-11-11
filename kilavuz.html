@@ -102,7 +102,17 @@
             <h3>Mac</h3>
             <ol class="kl-adim">
               <li>KlinikKoç klasöründeki <b>KUR-Mac</b> dosyasına çift tıklayın.</li>
-              <li>macOS "geliştiricisi doğrulanamadı" derse dosyaya sağ tıklayıp <b>Aç → Aç</b> deyin.</li>
+              <li>macOS <b>"KUR-Mac.command" Açılmadı</b> ("Apple doğrulayamadı") derse bu bir hata değil,
+                internetten inen dosyalara konan güvenlik uyarısıdır. <b>Bitti</b>'ye basın
+                (Çöp Sepeti'ne taşımayın), sonra şu iki yoldan birini izleyin:
+                <ul>
+                  <li><b>Kolay yol:</b> Sistem Ayarları → Gizlilik ve Güvenlik sayfasının en altında
+                    "KUR-Mac.command engellendi" satırının yanındaki <b>Yine de Aç</b>'a basın.
+                    (Eski macOS sürümlerinde dosyaya sağ tıklayıp <b>Aç → Aç</b> demek yeterlidir.)</li>
+                  <li><b>Tek seferde tüm klasör için:</b> Terminal'i açın, <code>xattr -dr com.apple.quarantine </code>
+                    yazın (sonunda bir boşluk olsun), KlinikKoç klasörünü Terminal penceresine sürükleyip bırakın
+                    ve Enter'a basın. Bundan sonra KUR-Mac ve BASLAT-Mac uyarı vermeden açılır.</li>
+                </ul></li>
               <li>Python 3 yoksa kurulum bunu söyler; python.org'dan kurup KUR-Mac'i yeniden çalıştırın.
                 "SSL: CERTIFICATE_VERIFY_FAILED" hatası görürseniz Uygulamalar → Python 3.x klasöründeki
                 <b>Install Certificates</b> dosyasına çift tıklayın.</li>

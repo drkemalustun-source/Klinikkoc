@@ -53,8 +53,10 @@ vakaya geri döner. Sorular not için değildir; karne yalnız öğrencinin kend
   Başarıyı denetlemek için: Claude'da **Ayarlar › Geliştirici** ekranında "klinik-koc" **Çalışıyor** görünmeli.
 - Ses: KUR, doğal Türkçe kadın sesini (~1 GB) isteğe bağlı kurar; kurulmazsa daha basit bir yedek ses kullanılır.
   Hangi sesin çaldığı tahtanın üst çubuğunda yazar.
-- Mac'te `KUR-Windows` yerine `KUR-Mac` dosyasına çift tıklayın. macOS ilk açılışta "geliştiricisi doğrulanamadı"
-  derse dosyaya sağ tıklayıp **Aç → Aç** deyin. Python 3 yoksa kurulum bunu söyler
+- Mac'te `KUR-Windows` yerine `KUR-Mac` dosyasına çift tıklayın. macOS "Açılmadı / Apple doğrulayamadı" derse
+  bu bir hata değil, güvenlik uyarısıdır: **Bitti**'ye basın, sonra Sistem Ayarları → Gizlilik ve Güvenlik sayfasının
+  altındaki **Yine de Aç**'a basın; ya da Terminal'e `xattr -dr com.apple.quarantine ` yazıp KlinikKoç klasörünü
+  pencereye sürükleyin ve Enter'a basın (eski macOS'ta sağ tık → **Aç → Aç** yeter). Python 3 yoksa kurulum bunu söyler
   ([python.org](https://www.python.org/downloads/macos/)). Claude'u kapatmak için Cmd+Q.
 
 **Öğretmen:** Dersi ekrandan adım adım hazırlamak için ders hazırlama sihirbazı: [belgeler/sihirbaz.md](belgeler/sihirbaz.md).
