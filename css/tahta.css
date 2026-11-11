@@ -594,3 +594,4 @@ strong { color: var(--accent); font-weight: 700; }
 .an-kanal-yol { fill: none; stroke: #3a2a22; stroke-width: 3.6; stroke-linecap: round; }
 .an-sinir-yol { fill: none; stroke: #f2d35b; stroke-width: .7; stroke-linecap: round; }
 .an-arter-yol { fill: none; stroke: #e0293b; stroke-width: .6; stroke-linecap: round; }
+.an-kanal-ince { fill: none; stroke: #3a2a22; stroke-width: 1.8; stroke-linecap: round; }
