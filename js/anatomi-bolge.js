@@ -1038,7 +1038,9 @@
     const parts = {};
     const dis = clamp(p.dis), cok = clamp(p.cok), fen = clamp(p.fen), imp = clamp(p.imp);
     const rootLab = (y) => 65.5 + (56 - y) * 0.45;
-    const crownLab = (y) => 65.5 - 2.6 * Math.pow(Math.sin(Math.PI * clamp((y - 56) / 24.5)), 0.8) - (y - 56) * 0.04;
+    // Kuronun labial profili: servikal üçlüde dış bükey (en geniş yer), kesici kenara doğru düzleşir.
+    const KL = [[56, 65.5], [58.5, 64.3], [61, 63.5], [64.5, 62.8], [68, 62.5], [72, 62.5], [75, 62.8], [78, 63.2], [80.3, 63.8]];
+    const crownLab = (y) => { const yy = clamp(y, 56, 80.3); for (let i = 1; i < KL.length; i++) if (yy <= KL[i][0]) { const t = (yy - KL[i - 1][0]) / (KL[i][0] - KL[i - 1][0]); return KL[i - 1][1] + (KL[i][1] - KL[i - 1][1]) * t; } return 63.8; };
     const LB = (y) => rootLab(y) - (p.tB + Math.max(0, 52 - y) * 0.12) + cok * 5 * clamp((y - 30) / 22);
     const cL = 51 - p.deh * S2 - cok * 4, pcY = 54 - cok * 1.5, PCX = 81.8;
     const PB = [[PCX, pcY], [87, 49], [94, 41], [103, 33.5], [112, 29.3]];
@@ -1095,8 +1097,9 @@
     if (fen > 0.05) tagger(svg('path', { d: poly([[LB(39.5) - 0.7, 39.5], [LB(33) - 0.7, 33], [rootLab(33), 33], [rootLab(39.5), 39.5]]) + ' Z', class: 'an-dis-eti', opacity: f(fen) }, g), 'fenestrasyon');
 
     // Diş.
-    const kuronLab = adim(56, 80.5, 2).map((y) => [crownLab(y), y]);
-    const kuronPal = [[65.3, 81.3], [68, 77.5], [73, 70.5], [78.5, 65.5], [81, 62.3], [80, 58.5]];
+    // Künt kesici kenar (~1 mm), palatinalde fossa (iç bükey) ve singulum (dış bükey).
+    const kuronLab = KL.map(([y, x]) => [x, y]);
+    const kuronPal = [[64.4, 81.3], [65.8, 81.6], [66.8, 80.6], [68.6, 77.6], [72, 73.4], [75.8, 68.6], [79.2, 64.4], [80.5, 61.2], [80, 58.5]];
     const kokPal = [[82, 50], [82.6, 42], [81.8, 33], [80.8, 28], [80, 25.6], [79, 26.2]];
     const kokLab = adim(28, 56, 4).map((y) => [rootLab(y), y]);
     const kok = [[80, 58.5]].concat(kokPal, kokLab);
@@ -1106,8 +1109,8 @@
       tagger(svg('path', { d: smooth(kok) + ' Z', class: 'an-dentin' }, dg), 'kok');
       svg('path', { d: smooth(kok), class: 'an-sement-cizgi' }, dg);
       tagger(svg('path', { d: smooth(kuronLab.concat(kuronPal)) + ' Z', class: 'an-mine' }, dg), 'mine');
-      svg('path', { d: smooth([[67.2, 57.2], [65.4, 66], [65.6, 75], [66.5, 78.4], [70.5, 71.5], [75, 66], [78.3, 62], [78.7, 59]]) + ' Z', class: 'an-dentin' }, dg);
-      tagger(svg('path', { d: smooth([[72.3, 66], [71.2, 60], [73.6, 50], [77, 38], [79.5, 28.4], [80.2, 28.6], [79, 38], [76.6, 50], [75.2, 60], [74.3, 66.5]]) + ' Z', class: 'an-pulpa' }, dg), 'pulpa');
+      svg('path', { d: smooth([[67.2, 57.4], [65.2, 62], [64.3, 68], [64.5, 75], [65.1, 78.4], [66.6, 78.2], [70.4, 73.2], [74, 68.8], [77.3, 64.6], [78.6, 61.2], [78.6, 59]]) + ' Z', class: 'an-dentin' }, dg);
+      tagger(svg('path', { d: smooth([[69.3, 68.6], [70.3, 62], [72.9, 52], [77.2, 38], [79.6, 28.4], [80.2, 28.6], [78.9, 38], [75.6, 50], [73.4, 59], [71.8, 64.4], [70.4, 68.8]]) + ' Z', class: 'an-pulpa' }, dg), 'pulpa');
     }
     // İmplant: palatinal konumda, labialinde en az 2 mm kemik.
     const IX = 75.2, IY = 51.5 - cok * 3;
@@ -1141,8 +1144,10 @@
     });
     if (dis > 0.5) {
       Object.assign(parts, {
-        mine:  { ad: 'Mine', at: [65.2, 70] },
-        pulpa: { ad: 'Pulpa', at: [75.6, 50] },
+        mine:  { ad: 'Mine', at: [63.2, 70] },
+        'kesici-kenar': { ad: 'Kesici kenar', at: [65.2, 81], ayrinti: true },
+        singulum: { ad: 'Singulum', at: [79.6, 63.4] },
+        pulpa: { ad: 'Pulpa', at: [74.6, 52] },
         kok:   { ad: 'Kök (dentin)', at: [81.8, 40] },
         kret:  { ad: 'Labial kret', at: [LB(cL) + 0.4, cL + 0.4], ayrinti: p.deh < 0.5 },
         fenotip: { ad: p.tG > 2.5 ? 'Kalın fenotip' : 'İnce fenotip', at: [taban(yM - 3) - kalin(yM - 3) * 0.6, yM - 3] }
