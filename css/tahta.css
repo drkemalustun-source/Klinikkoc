@@ -431,7 +431,7 @@ strong { color: var(--accent); font-weight: 700; }
 .an-mine { fill: #f4f1e6; stroke: #cfc8b4; stroke-width: .25; }
 .an-dentin { fill: #e8d29c; stroke: none; }
 .an-pulpa { fill: #c9576a; stroke: #e58a97; stroke-width: .25; }
-.an-sement { fill: none; stroke: #b98d3d; stroke-width: .9; }
+.an-sement { fill: #c99a4a; stroke: none; }
 .an-dis-cizgi { fill: none; stroke: #fffaf0; stroke-width: .35; }
 .an-pdl { fill: #5a3b3f; stroke: none; }
 .an-pdl-lif { fill: none; stroke: #c99aa0; stroke-width: .22; }
@@ -439,7 +439,7 @@ strong { color: var(--accent); font-weight: 700; }
 .an-kemik-zemin { fill: #cdb688; stroke: none; }
 .an-trabekul { fill: #b9a273; stroke: #a58d5e; stroke-width: .25; }
 .an-kortikal { fill: none; stroke: #efe2bf; stroke-width: 1.3; stroke-linecap: round; }
-.an-lamina { fill: none; stroke: #f3e7c8; stroke-width: .55; }
+.an-lamina { fill: none; stroke: #f3e7c8; stroke-width: .8; } /* alveol kemiği özü (demet kemiği) */
 .an-eski-kemik { fill: none; stroke: var(--chalk); stroke-width: .5; stroke-dasharray: 1.2 1; opacity: .75; }
 .an-dis-eti { fill: #e7979b; stroke: none; }
 .an-dis-eti.an-iltihapli { fill: #d75a64; }
@@ -448,7 +448,11 @@ strong { color: var(--accent); font-weight: 700; }
 .an-oluk-epitel { fill: none; stroke: #f6c3c3; stroke-width: .45; }
 .an-oluk-epitel.an-ulser { stroke: #8f1d2c; stroke-dasharray: .9 .6; stroke-width: .6; }
 .an-ba { fill: #f7d2df; stroke: none; }
-.an-lif { fill: none; stroke: #f8dada; stroke-width: .22; opacity: .8; }
+.an-epitel-bant { fill: #f2b8bd; stroke: none; }
+.an-keratin { fill: none; stroke: #fff1ee; stroke-width: .35; stroke-linejoin: round; }
+.an-oluk-bant { fill: #f2b8bd; stroke: none; }
+.an-lif-kesit { fill: #f8dada; stroke: none; }
+.an-lif { fill: none; stroke: #f8dada; stroke-width: .22; }
 .an-mgj { fill: none; stroke: var(--chalk); stroke-width: .35; stroke-dasharray: .8 .6; }
 .an-infiltrat { fill: #7d1424; stroke: none; }
 .an-plak { fill: #d8cf6a; stroke: #a99f3a; stroke-width: .15; }
