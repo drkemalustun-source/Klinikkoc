@@ -763,6 +763,223 @@
     return parts;
   }
 
+
+  /* ---------------- Plak ve gingival indeksler (vestibülden görünüm) ----------------
+   * Üst orta kesici ve komşuları, kuron aşağı bakar; ≈ 3,85 birim = 1 mm (kuron ≈ 11 mm).
+   * Silness–Löe plak indeksi (PlI 0–3, boyasız), Quigley–Hein (Turesky modifikasyonu, 0–5, plak boyası ile),
+   * Löe–Silness gingival indeks (GI 0–3). Puanlanan diş ortadaki. Tüm alanlar sayısaldır, durumlar arası akar. */
+  const dizi = (n) => Array.from({ length: n }, (_, i) => i);
+  const OY_TEMEL = { sis: 0, skor: 0, h: 0, gor: 0, leke: 0, ara: 0, sonda: 0, boya: 0, gi: 0, s: 0, kanama: 0, spontan: 0 };
+  const PLAK_DURUM = {
+    'pli-0': { ...OY_TEMEL },
+    'pli-1': { ...OY_TEMEL, skor: 1, h: 1.1, gor: 0.3, sonda: 1 },
+    'pli-2': { ...OY_TEMEL, skor: 2, h: 3.4, gor: 0.9 },
+    'pli-3': { ...OY_TEMEL, skor: 3, h: 7.5, gor: 1, ara: 1, gi: 1.2, s: 0.8 },
+    'qh-0':  { ...OY_TEMEL, sis: 1, boya: 1 },
+    'qh-1':  { ...OY_TEMEL, sis: 1, boya: 1, skor: 1, leke: 1, gor: 1 },
+    'qh-2':  { ...OY_TEMEL, sis: 1, boya: 1, skor: 2, h: 3, gor: 1 },
+    'qh-3':  { ...OY_TEMEL, sis: 1, boya: 1, skor: 3, h: 9.5, gor: 1 },
+    'qh-4':  { ...OY_TEMEL, sis: 1, boya: 1, skor: 4, h: 20, gor: 1 },
+    'qh-5':  { ...OY_TEMEL, sis: 1, boya: 1, skor: 5, h: 32, gor: 1 }
+  };
+  const GI_DURUM = {
+    'gi-0': { ...OY_TEMEL, sis: 2 },
+    'gi-1': { ...OY_TEMEL, sis: 2, skor: 1, gi: 1, s: 0.8, sonda: 1 },
+    'gi-2': { ...OY_TEMEL, sis: 2, skor: 2, gi: 2, s: 2, sonda: 1, kanama: 1 },
+    'gi-3': { ...OY_TEMEL, sis: 2, skor: 3, gi: 3, s: 3.2, kanama: 1, spontan: 1 }
+  };
+  const PLI_OLCUT = ['Dişeti bölgesinde plak yok', 'İnce plak; yalnız sonda ile görülür', 'Gözle görülen orta miktarda plak',
+    'Cepte ve kenarda bol birikinti'];
+  const QH_OLCUT = ['Plak yok', 'Servikalde ayrı plak lekeleri', 'Servikalde ≤ 1 mm kesintisiz ince bant', '1 mm’den geniş, kuronun 1/3’ünden az',
+    'Kuronun 1/3–2/3’ü', 'Kuronun 2/3’ü ve fazlası'];
+  const GI_OLCUT = ['Normal dişeti', 'Hafif iltihap, kanama yok', 'Orta iltihap, sondalamada kanama', 'Şiddetli iltihap, kendiliğinden kanama'];
+
+  function onYuzCiz(g0, variant, opt, tablo) {
+    const p = { ...OY_TEMEL, ...(opt.p || tablo[variant] || tablo[Object.keys(tablo)[0]]) };
+    const id = uid();
+    const defs = svg('defs', {}, g0);
+    const kes = svg('clipPath', { id: id + 'c' }, defs);
+    svg('rect', { x: 53, y: 3, width: 54, height: 74, rx: 3 }, kes);
+    const g = svg('g', { 'clip-path': `url(#${id}c)` }, g0);
+    const parts = {};
+    const W = 17, X = [54.5, 71.5, 88.5], ORTA = 71.5, MGJ = 11;
+    const gi = clamp(p.gi / 3), s = p.s;
+    const Z = 28 + s, P = 41 + s * 0.5, us = 0.6 - 0.25 * clamp(s / 3);
+    const kenarY = (x) => {
+      const x0 = X.reduce((a, b) => (x >= b ? b : a), X[0]);
+      const t = clamp((x - x0) / W);
+      return P + (Z - P) * Math.pow(Math.sin(Math.PI * t), us);
+    };
+    const kuron = (x0) => `M${x0 + 1.4},18 C${x0 + 0.5},34 ${x0},48 ${x0 + 0.3},63 Q${x0 + 0.7},70.2 ${x0 + 2.8},70.6 L${x0 + W - 2.8},70.6 ` +
+      `Q${x0 + W - 0.7},70.2 ${x0 + W - 0.3},63 C${x0 + W},48 ${x0 + W - 0.5},34 ${x0 + W - 1.4},18 Z`;
+    for (const x0 of X) tagger(svg('path', { d: kuron(x0), class: 'an-mine' }, g), x0 === ORTA ? 'dis' : 'komsu');
+    const kc = svg('clipPath', { id: id + 'k' }, defs);
+    svg('path', { d: kuron(ORTA) }, kc);
+
+    // Plak: dişeti kenarından kurona doğru bant (ara yüzlerde kalınlaşır); boya ile pembeleşir.
+    const xs = dizi(41).map((i) => ORTA + (W * i) / 40);
+    const plakH = (x) => { const t = (x - ORTA) / W; return p.h + p.ara * 7 * Math.pow(Math.abs(2 * t - 1), 4); };
+    const plakCls = p.boya > 0.5 ? 'an-plak-boyali' : 'an-plak';
+    if (p.h > 0.05 || p.ara > 0.05) {
+      const ust = xs.map((x) => [x, kenarY(x) - 1.2]);
+      const duz = Math.max(0.2, 1 - p.h / 10);
+      const alt = xs.slice().reverse().map((x) => [x, Z + (kenarY(x) - Z) * duz + plakH(x)]);
+      tagger(svg('path', { d: poly(ust.concat(alt)), class: plakCls, opacity: f(clamp(p.gor)), 'clip-path': `url(#${id}k)` }, g), 'plak');
+    }
+    if (p.leke > 0.05) for (const t of [0.12, 0.27, 0.41, 0.58, 0.72, 0.87]) {
+      const x = ORTA + W * t;
+      tagger(svg('ellipse', { cx: f(x), cy: f(kenarY(x) + 1.1), rx: 0.9, ry: 0.6, class: plakCls, opacity: f(clamp(p.leke)) }, g), 'plak');
+    }
+
+    // Sonda (GI'de cebe girer, PlI 1'de kenarı sıyırır): dişetinden önce çizilir, ucu dişeti altında kalır.
+    if (p.sonda > 0.05 && p.sis > 1.5) {
+      svg('path', { d: `M104,76 L80.6,${f(Z - 3.5)}`, class: 'an-sonda-govde', opacity: f(clamp(p.sonda)) }, g);
+    }
+
+    // Dişeti: yapışık dişeti + papilla; MGJ üstü alveol mukozası.
+    const kenarNok = dizi(57).map((i) => { const x = 52 + i; return [x, kenarY(Math.min(105.5, Math.max(54.5, x)))]; });
+    const de = smooth(kenarNok) + ' L108,2 L52,2 Z';
+    tagger(svg('path', { d: de, class: 'an-dis-eti' }, g), 'dis-eti');
+    const mk = svg('clipPath', { id: id + 'm' }, defs);
+    svg('rect', { x: 40, y: 0, width: 80, height: MGJ }, mk);
+    tagger(svg('path', { d: de, class: 'an-mukoza', 'clip-path': `url(#${id}m)` }, g), 'alveol-mukozasi');
+    tagger(svg('path', { d: `M52,${MGJ} L108,${MGJ}`, class: 'an-mgj' }, g), 'mgj');
+    // Portakal kabuğu (stippling): iltihapta ödemle kaybolur.
+    const stOp = 1 - clamp((p.gi - 0.6) / 1.2);
+    if (stOp > 0.05) {
+      const st = svg('g', { opacity: f(stOp * 0.8) }, g);
+      for (let yy = MGJ + 2; yy < 36; yy += 1.6) for (let xx = 53 + ((yy * 7) % 1.6); xx < 107; xx += 1.7) {
+        if (yy < kenarY(Math.min(105.5, Math.max(54.5, xx))) - 5.5) svg('circle', { cx: f(xx + Math.sin(xx * 3.1 + yy) * 0.35), cy: f(yy), r: 0.22, class: 'an-stippling' }, st);
+      }
+      st.dataset.part = 'stippling';
+    }
+    // Serbest dişeti oluğu.
+    tagger(svg('path', { d: smooth(kenarNok.map(([x, y]) => [x, y - 5.8])), class: 'an-dis-eti-olugu', opacity: f(1 - clamp(p.gi / 1.6)) }, g), 'serbest-oluk');
+    // İltihap: kenar ve papillada kızarıklık (GI ile koyulaşır ve genişler).
+    if (p.gi > 0.05) {
+      const bandH = 4 + 4 * gi;
+      const ic = kenarNok.map(([x, y]) => [x, y - bandH]).reverse();
+      const yol = poly(kenarNok.concat(ic));
+      tagger(svg('path', { d: yol, class: 'an-dis-eti an-iltihapli', opacity: f(clamp(p.gi / 2) * 0.9) }, g), 'renk');
+      if (p.gi > 2) svg('path', { d: yol, class: 'an-mukoza', opacity: f(clamp(p.gi - 2) * 0.55) }, g);
+      // Parlaklık (ödemli, gergin yüzey).
+      tagger(svg('path', { d: smooth(kenarNok.filter(([x]) => x > 55 && x < 105).map(([x, y]) => [x, y - 2])), class: 'an-parlaklik', opacity: f(clamp(p.gi - 1) * 0.6) }, g), 'parlaklik');
+    }
+    // Kanama: sondalamadan sonra kenarda noktalar; GI 3'te kendiliğinden kanama ve ülser.
+    if (p.kanama > 0.05) {
+      const kg = svg('g', { opacity: f(clamp(p.kanama)) }, g);
+      for (const t of [0.3, 0.42, 0.55, 0.68]) { const x = ORTA + W * t; svg('circle', { cx: f(x), cy: f(kenarY(x) + 0.5), r: 0.75, class: 'an-kanama' }, kg); }
+      kg.dataset.part = 'kanama';
+    }
+    if (p.spontan > 0.05) {
+      const xd = ORTA + W * 0.36, yd = kenarY(xd);
+      tagger(svg('path', { d: `M${f(xd - 0.9)},${f(yd)} C${f(xd - 1)},${f(yd + 4)} ${f(xd - 1.6)},${f(yd + 7)} ${f(xd)},${f(yd + 8.6)} C${f(xd + 1.6)},${f(yd + 7)} ${f(xd + 1)},${f(yd + 4)} ${f(xd + 0.9)},${f(yd)} Z`, class: 'an-kanama', opacity: f(clamp(p.spontan)) }, g), 'spontan');
+      tagger(svg('ellipse', { cx: f(ORTA + 0.4), cy: f(P - 2.2), rx: 1.4, ry: 1, class: 'an-ulser-yuzey', opacity: f(clamp(p.spontan)) }, g), 'ulser');
+    }
+    // PlI 1: sonda kenarı sıyırır, ucunda plak.
+    if (p.sonda > 0.05 && p.sis < 0.5) {
+      const xt = ORTA + W * 0.55, yt = kenarY(xt) + 0.6;
+      svg('path', { d: `M106,52 L${f(xt)},${f(yt)}`, class: 'an-sonda-govde', opacity: f(clamp(p.sonda)) }, g0);
+      tagger(svg('circle', { cx: f(xt + 0.4), cy: f(yt), r: 0.75, class: 'an-plak', opacity: f(clamp(p.sonda)) }, g0), 'sonda');
+    }
+
+    const sk = Math.round(p.skor);
+    const xm = ORTA + W / 2;
+    Object.assign(parts, {
+      dis:              { ad: 'Puanlanan diş (orta kesici)', at: [xm, 62] },
+      'dis-eti':        { ad: 'Yapışık dişeti', at: [62, 20] },
+      'alveol-mukozasi': { ad: 'Alveol mukozası', at: [96, 6] },
+      mgj:              { ad: 'Mukogingival sınır', at: [100, MGJ] },
+      papilla:          { ad: 'İnterdental papilla', at: [ORTA, P - 2] }
+    });
+    if (p.sis < 1.5) {
+      const qh = p.sis > 0.5;
+      parts.skor = { ad: qh ? `Quigley–Hein (Turesky) = ${sk}` : `Silness–Löe PlI = ${sk}`, at: [xm, 46] };
+      parts.olcut = { ad: (qh ? QH_OLCUT : PLI_OLCUT)[Math.min(sk, qh ? 5 : 3)], at: [xm + 3, 54] };
+      if (p.h > 0.3 || p.leke > 0.3 || p.ara > 0.3) parts.plak = { ad: qh ? 'Boyanmış plak (eritrozin)' : 'Dental plak (biyofilm)', at: [xm - 2, Z + Math.max(1, p.h * 0.6)] };
+      if (p.sonda > 0.3 && !qh) parts.sonda = { ad: 'Sonda ucunda plak', at: [ORTA + W * 0.55 + 0.4, kenarY(ORTA + W * 0.55) + 0.6] };
+      if (qh) parts.boya = { ad: 'Plak boyası ile değerlendirilir', at: [xm, 66], ayrinti: true };
+    } else {
+      parts.skor = { ad: `Löe–Silness GI = ${sk}`, at: [xm, 50] };
+      parts.olcut = { ad: GI_OLCUT[Math.min(sk, 3)], at: [xm + 3, 58] };
+      parts['serbest-oluk'] = { ad: 'Serbest dişeti oluğu', at: [64, kenarY(64) - 5.8], ayrinti: true };
+      if (p.gi < 1.2) parts.stippling = { ad: 'Portakal kabuğu görünümü', at: [96, 18] };
+      if (p.gi > 0.3) {
+        parts.renk = { ad: p.gi < 1.5 ? 'Hafif kızarıklık' : p.gi < 2.5 ? 'Kızarıklık' : 'Belirgin kızarıklık', at: [96, kenarY(96) - 3] };
+        parts.odem = { ad: p.gi < 1.5 ? 'Hafif ödem' : p.gi < 2.5 ? 'Ödem, kenar kalınlaşır' : 'Belirgin ödem', at: [xm, Z - 1.5] };
+      }
+      if (p.gi > 1.5) parts.parlaklik = { ad: 'Parlak, gergin yüzey', at: [60, kenarY(60) - 2] };
+      if (p.sonda > 0.3) parts.sonda = { ad: 'Sonda kenar boyunca gezdirilir', at: [95, 58] };
+      if (p.kanama > 0.3) parts.kanama = { ad: p.spontan > 0.5 ? 'Kanama' : 'Sondalamada kanama', at: [ORTA + W * 0.55, kenarY(ORTA + W * 0.55) + 0.5] };
+      if (p.spontan > 0.3) { parts.spontan = { ad: 'Kendiliğinden kanama', at: [ORTA + W * 0.36, kenarY(ORTA + W * 0.36) + 6] }; parts.ulser = { ad: 'Ülserasyon', at: [ORTA + 0.4, P - 2.2] }; }
+    }
+    return parts;
+  }
+
+  /* ---------------- Plak / kanama kayıt çizelgesi (O'Leary ve sondalamada kanama) ----------------
+   * 16 diş (14–24, 44–34). tur 0: O'Leary plak kontrol kaydı, diş başına 4 yüzey; tur 1: sondalamada kanama (BOP),
+   * diş başına 6 nokta. oran: işaretli yüzey oranı; hangi yüzeyin işaretleneceği sabit bir sırayla seçilir, böylece oran
+   * değişince çizelge yavaşça dolar/boşalır. */
+  const KAYIT_DURUM = {
+    'plak-dusuk':    { tur: 0, oran: 0.09 },
+    'plak-orta':     { tur: 0, oran: 0.38 },
+    'plak-yuksek':   { tur: 0, oran: 0.78 },
+    'kanama-saglik': { tur: 1, oran: 0.07 },
+    'kanama-lokal':  { tur: 1, oran: 0.2 },
+    'kanama-yaygin': { tur: 1, oran: 0.48 }
+  };
+  const UST = [14, 13, 12, 11, 21, 22, 23, 24], ALT = [44, 43, 42, 41, 31, 32, 33, 34];
+  const sira = (n, tohum) => { let a = tohum; const r = dizi(n).map((i) => { a = (a * 48271) % 2147483647; return [a, i]; }); r.sort((x, y) => x[0] - y[0]); const o = []; r.forEach(([, i], k) => { o[i] = k; }); return o; };
+  const SIRA4 = sira(64, 7), SIRA6 = sira(96, 11);
+
+  function kayitCiz(g, variant, opt) {
+    const p = opt.p || KAYIT_DURUM[variant] || KAYIT_DURUM['plak-orta'];
+    const parts = {};
+    const tur = clamp(p.tur), oran = clamp(p.oran);
+    const yazi = (x, y, t, fs = 2.2) => { const n = svg('text', { x: f(x), y: f(y), class: 'an-panel-yazi', 'font-size': fs, 'text-anchor': 'middle' }, g); n.textContent = t; return n; };
+    const ADIM = 7.3, X0 = 50.8, KUT = 6, satirY = [26, 52];
+    const n4 = Math.round(oran * 64), n6 = Math.round(oran * 96);
+    yazi(80, 9, tur < 0.5 ? 'O’Leary plak kontrol kaydı' : 'Sondalamada kanama (BOP) kaydı', 2.8);
+    yazi(X0 + 1.5 * ADIM, 45.4, '← Sağ', 2); yazi(X0 + 6.5 * ADIM, 45.4, 'Sol →', 2);
+    const g4 = svg('g', { opacity: f(1 - tur) }, g), g6 = svg('g', { opacity: f(tur) }, g);
+    g4.dataset.part = 'cizelge'; g6.dataset.part = 'cizelge';
+    [UST, ALT].forEach((dizi, r) => {
+      const y0 = satirY[r];
+      dizi.forEach((no, i) => {
+        const x0 = X0 + i * ADIM, cx = x0 + KUT / 2, cy = y0 + KUT / 2;
+        yazi(cx, r === 0 ? y0 - 1.6 : y0 + KUT + 3.4, String(no));
+        // 4 yüzey: üçgenler (üst, sağ, alt, sol).
+        const kose = [[x0, y0], [x0 + KUT, y0], [x0 + KUT, y0 + KUT], [x0, y0 + KUT]];
+        for (let k = 0; k < 4; k++) {
+          const idx = (r * 8 + i) * 4 + k;
+          const a = kose[k], b = kose[(k + 1) % 4];
+          svg('path', { d: `M${f(a[0])},${f(a[1])} L${f(b[0])},${f(b[1])} L${f(cx)},${f(cy)} Z`, class: SIRA4[idx] < n4 ? 'an-plak-boyali' : 'an-cizelge-kutu' }, g4);
+        }
+        svg('path', { d: `M${x0},${y0} L${x0 + KUT},${y0 + KUT} M${x0 + KUT},${y0} L${x0},${y0 + KUT}`, class: 'an-cizelge-cizgi' }, g4);
+        svg('rect', { x: x0, y: y0, width: KUT, height: KUT, class: 'an-cizelge-cizgi' }, g4);
+        // 6 nokta: vestibül (3) ve oral (3).
+        svg('rect', { x: x0, y: y0, width: KUT, height: KUT, rx: 0.8, class: 'an-cizelge-kutu' }, g6);
+        for (let k = 0; k < 6; k++) {
+          const idx = (r * 8 + i) * 6 + k;
+          const nx = x0 + 1.2 + (k % 3) * 1.8, ny = y0 + (k < 3 ? 1.4 : KUT - 1.4);
+          svg('circle', { cx: f(nx), cy: f(ny), r: 0.65, class: SIRA6[idx] < n6 ? 'an-kanama' : 'an-kanama-yok' }, g6);
+        }
+      });
+    });
+    const yuzde = Math.round(oran * 100);
+    const yorum = tur < 0.5 ? (yuzde <= 10 ? 'Hedef düzeyde (≤ %10)' : yuzde <= 20 ? 'Kabul edilebilir sınırda' : 'Yetersiz; hijyen eğitimi yinelenir')
+      : (yuzde < 10 ? 'Dişeti sağlığı (BOP < %10)' : yuzde <= 30 ? 'Lokalize gingivitis (%10–30)' : 'Yaygın gingivitis (> %30)');
+    Object.assign(parts, {
+      cizelge: { ad: tur < 0.5 ? 'Her diş 4 yüzey (M, D, V, L/P)' : 'Her diş 6 nokta (3 vestibül, 3 oral)', at: [X0 + KUT / 2, satirY[0] + KUT / 2] },
+      isaret:  { ad: tur < 0.5 ? 'Boyanan yüzey işaretlenir' : 'Kanayan nokta işaretlenir', at: [X0 + 3 * ADIM + KUT / 2, satirY[1] + KUT / 2] },
+      formul:  { ad: tur < 0.5 ? 'Skor = boyalı ÷ taranan yüzey × 100' : 'BOP = kanayan ÷ toplam nokta × 100', at: [X0 + 7 * ADIM + KUT / 2, satirY[0] + KUT / 2] },
+      sonuc:   { ad: tur < 0.5 ? `${n4} / 64 yüzey = %${Math.round((n4 / 64) * 100)}` : `${n6} / 96 nokta = %${Math.round((n6 / 96) * 100)}`, at: [X0 + 7 * ADIM + KUT / 2, satirY[1] + KUT / 2] },
+      yorum:   { ad: yorum, at: [X0 + 7 * ADIM + KUT / 2, satirY[1] + KUT] }
+    });
+    if (tur > 0.5) parts['bop-not'] = { ad: 'Sağlam periodonsiyumda (2017 sınıflaması)', at: [80, 66], ayrinti: true };
+    return parts;
+  }
+
   Object.assign(AT.anatomi.SABLONLAR, {
     sinus: { ad: 'Maksiller sinüs ve üst azı bölgesi (koronal)', varyantlar: Object.keys(SINUS_DURUM), durumlar: SINUS_DURUM, ciz: sinusCiz, varsayilan: {} },
     mandibula: { ad: 'Mandibula, mandibular kanal ve komşuluklar (koronal)', varyantlar: Object.keys(MAND_DURUM), durumlar: MAND_DURUM, ciz: mandCiz, varsayilan: {} },
@@ -770,6 +987,9 @@
     'furkasyon-ust': { ad: 'Furkasyon (üst birinci büyük azı)', varyantlar: Object.keys(FURU_DURUM), durumlar: FURU_DURUM, ciz: furUstCiz, varsayilan: {} },
     soket: { ad: 'Çekim soketinin iyileşmesi', varyantlar: Object.keys(SOKET_DURUM), durumlar: SOKET_DURUM, ciz: soketCiz, varsayilan: {} },
     'kemik-ici': { ad: 'Kemik içi defektler (duvar sayısı)', varyantlar: Object.keys(KID_DURUM), durumlar: KID_DURUM, ciz: kemikIciCiz, varsayilan: {} },
-    cekilme: { ad: 'Dişeti çekilmesi (Cairo) ve papilla', varyantlar: Object.keys(CEK_DURUM), durumlar: CEK_DURUM, ciz: cekilmeCiz, varsayilan: {} }
+    cekilme: { ad: 'Dişeti çekilmesi (Cairo) ve papilla', varyantlar: Object.keys(CEK_DURUM), durumlar: CEK_DURUM, ciz: cekilmeCiz, varsayilan: {} },
+    'plak-indeksi': { ad: 'Plak indeksleri (Silness–Löe, Quigley–Hein)', varyantlar: Object.keys(PLAK_DURUM), durumlar: PLAK_DURUM, ciz: (g, v, o) => onYuzCiz(g, v, o, PLAK_DURUM), varsayilan: {} },
+    'gingival-indeks': { ad: 'Gingival indeks (Löe–Silness)', varyantlar: Object.keys(GI_DURUM), durumlar: GI_DURUM, ciz: (g, v, o) => onYuzCiz(g, v, o, GI_DURUM), varsayilan: {} },
+    'kayit-cizelgesi': { ad: 'Plak (O’Leary) ve kanama (BOP) kayıt çizelgesi', varyantlar: Object.keys(KAYIT_DURUM), durumlar: KAYIT_DURUM, ciz: kayitCiz, varsayilan: {} }
   });
 })(window.AT = window.AT || {});

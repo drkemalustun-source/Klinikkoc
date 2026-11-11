@@ -582,3 +582,11 @@ strong { color: var(--accent); font-weight: 700; }
 .an-olcum-mss { stroke: var(--accent); }
 .an-olcum-cd { fill: none; stroke: #7fd1ff; stroke-width: .5; }
 .an-olcum-kas { fill: none; stroke: var(--accent); stroke-width: .5; }
+.an-plak-boyali { fill: #c2437f; stroke: none; }
+.an-cizelge-kutu { fill: #24302b; stroke: none; }
+.an-cizelge-cizgi { fill: none; stroke: var(--chalk-dim); stroke-width: .18; }
+.an-kanama-yok { fill: none; stroke: var(--chalk-dim); stroke-width: .18; }
+.an-stippling { fill: #cf7d83; stroke: none; }
+.an-dis-eti-olugu { fill: none; stroke: #c9767d; stroke-width: .3; stroke-dasharray: .8 .5; }
+.an-parlaklik { fill: none; stroke: #fff4f2; stroke-width: .4; stroke-linecap: round; }
+.an-ulser-yuzey { fill: #e8d9a8; stroke: #9b1d2e; stroke-width: .25; }
