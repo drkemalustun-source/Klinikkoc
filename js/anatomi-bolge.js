@@ -1010,6 +1010,157 @@
     return parts;
   }
 
+
+  /* ---------------- Ön maksilla ve dişeti fenotipi (üst orta kesiciden sagital kesit) ----------------
+   * Labial solda, damak sağda, kuron aşağıda. 2,3 birim = 1 mm. tB: labial kemik plağı kalınlığı, tG: dişeti kalınlığı
+   * (birim), deh: dehisens (mm), fen: fenestrasyon (0–1), rec: dişeti çekilmesi (mm), dis: diş var (1) / yok (0),
+   * cok: çekim sonrası labial plağın çökmesi (0–1), imp: implant (0–1). */
+  const S2 = 2.3;
+  const OM_TEMEL = { dis: 1, tB: 2.8, tG: 3.4, deh: 0, fen: 0, rec: 0, cok: 0, imp: 0 };
+  const OM_DURUM = {
+    'kalin-fenotip': { ...OM_TEMEL },
+    'ince-fenotip':  { ...OM_TEMEL, tB: 1.1, tG: 1.7 },
+    dehisens:        { ...OM_TEMEL, tB: 1.1, tG: 1.7, deh: 4.5 },
+    fenestrasyon:    { ...OM_TEMEL, tB: 1.1, tG: 1.7, fen: 1 },
+    cekilme:         { ...OM_TEMEL, tB: 1.1, tG: 1.7, deh: 5, rec: 3 },
+    'cekim-sonrasi': { ...OM_TEMEL, dis: 0, tB: 1.1, tG: 2.4, cok: 1 },
+    implant:         { ...OM_TEMEL, dis: 0, tB: 2.4, tG: 3, cok: 0.4, imp: 1 }
+  };
+
+  function onMaksillaCiz(g0, variant, opt) {
+    const p = { ...OM_TEMEL, ...(opt.p || OM_DURUM[variant] || OM_DURUM['kalin-fenotip']) };
+    const id = uid();
+    const defs = svg('defs', {}, g0);
+    trabekul(defs, id);
+    const kes = svg('clipPath', { id: id + 'c' }, defs);
+    svg('rect', { x: 49.5, y: 3, width: 62, height: 82, rx: 3 }, kes);
+    const g = svg('g', { 'clip-path': `url(#${id}c)` }, g0);
+    const parts = {};
+    const dis = clamp(p.dis), cok = clamp(p.cok), fen = clamp(p.fen), imp = clamp(p.imp);
+    const rootLab = (y) => 65.5 + (56 - y) * 0.45;
+    const crownLab = (y) => 65.5 - 2.6 * Math.pow(Math.sin(Math.PI * clamp((y - 56) / 24.5)), 0.8) - (y - 56) * 0.04;
+    const LB = (y) => rootLab(y) - (p.tB + Math.max(0, 52 - y) * 0.12) + cok * 5 * clamp((y - 30) / 22);
+    const cL = 51 - p.deh * S2 - cok * 4, pcY = 54 - cok * 1.5, PCX = 81.8;
+    const PB = [[PCX, pcY], [87, 49], [94, 41], [103, 33.5], [112, 29.3]];
+    const adim = (a, b, st) => { const r = []; if (a > b) for (let y = a; y > b + 1e-6; y -= st) r.push(y); else for (let y = a; y < b - 1e-6; y += st) r.push(y); r.push(b); return r; };
+
+    // Yumuşak doku: dudak, labial dişeti/mukoza, damak mukozası.
+    const yMt = 58.3 - p.rec * S2, yM = cL + 1 + (yMt - (cL + 1)) * dis;
+    const taban = (y) => (y > cL ? (y > 56 ? crownLab(y) : rootLab(y) + (1 - dis) * (LB(cL) - rootLab(cL))) : LB(y));
+    const kalin = (y) => p.tG * Math.pow(clamp((yM - y) / 4), 0.6);
+    const disY = adim(yM, 21, 1.5);
+    const disNok = disY.map((y) => [taban(y) - kalin(y), y]);
+    const gDis = (y) => taban(y) - kalin(y);
+    const yA = yM - 4;
+    const dudak = [[LB(22) - p.tG - 0.4, 20.5], [gDis(26) - 0.8, 26], [gDis(33) - 0.9, 33], [gDis(40) - 1, 40], [gDis(yA) - 1.1, yA],
+      [Math.min(gDis(yA) - 1.2, crownLab(62) - 1.6), 62], [crownLab(70) - 1.9, 70], [62.4, 75.4], [59.5, 78], [54.5, 78.2], [50.8, 75], [48, 60], [48, 1], [58.6, 1], [57.4, 8], [56, 11.6], [59.5, 14.8]];
+    tagger(svg('path', { d: smooth(dudak) + ' Z', class: 'an-yanak' }, g), 'dudak');
+    tagger(svg('ellipse', { cx: 54.6, cy: 52, rx: 2.3, ry: 15, class: 'an-kas' }, g), 'orbikularis');
+    nokta(g, 56.2, 69, 0.75, 'an-arter', 'ust-dudak-arteri');
+    svg('path', { d: smooth(dudak.slice(0, 9)), class: 'an-mukoza-cizgi' }, g);
+    const deYol = smooth(disNok) + ' ' + poly(disY.slice().reverse().map((y) => [taban(y) + 0.3, y]), false) + ' Z';
+    tagger(svg('path', { d: deYol, class: 'an-dis-eti' }, g), 'dis-eti');
+    const MGJ = Math.min(41, yM - 9);
+    const mk = svg('clipPath', { id: id + 'm' }, defs);
+    svg('rect', { x: 40, y: 0, width: 80, height: MGJ }, mk);
+    tagger(svg('path', { d: deYol, class: 'an-mukoza', 'clip-path': `url(#${id}m)` }, g), 'alveol-mukozasi');
+    svg('path', { d: smooth(disNok.filter(([, y]) => y >= MGJ)), class: 'an-keratin' }, g);
+    const pm0 = [80.3 + (1 - dis) * 3.2, 62 + (1 - dis) * (pcY + 4.5 - 62)];
+    const damak = [pm0, [84.6, 59.2 - (1 - dis) * 2], [90, 54], [97, 46.5], [105, 39.5], [112, 35.6]];
+    tagger(svg('path', { d: smooth(damak) + ' ' + poly(PB.slice().reverse(), false) + ' Z', class: 'an-dis-eti' }, g), 'damak-mukozasi');
+    svg('path', { d: smooth(damak), class: 'an-keratin' }, g);
+    if (dis < 0.95) {
+      const kx = LB(cL), tepe = Math.max(cL, pcY) + p.tG + 1.2;
+      const kap = [[kx - p.tG, cL - 3], [kx - p.tG * 0.8, cL + 2.6], [(kx + PCX) / 2, tepe + 2], [83.8, pcY + 4.6], [86.4, 50.6], [PCX, pcY - 0.6], [(kx + PCX) / 2, Math.min(cL, pcY) - 0.4], [kx, cL - 0.6]];
+      tagger(svg('path', { d: smooth(kap) + ' Z', class: 'an-dis-eti', opacity: f(1 - dis) }, g), 'kret-mukozasi');
+    }
+
+    // Kemik: labial plak → subnazal çukurluk (A noktası) → spina nasalis anterior → burun tabanı → sert damak.
+    const labY = adim(cL, 26, 2);
+    const kemik = labY.map((y) => [LB(y), y]).concat([[LB(26) - 0.8, 21], [61, 13.6], [56.6, 11.9], [60.5, 10.5], [75, 12], [92, 13.6], [112, 14.8]]);
+    const tepeK = [(LB(cL) + PCX) / 2 + 1, Math.max(cL, pcY) + 1.6];
+    const kemikYol = smooth(kemik) + ' ' + poly(PB.slice().reverse(), false) + ` Q${f(tepeK[0] + 3)},${f(tepeK[1] + 0.6)} ${f(tepeK[0])},${f(tepeK[1])} Q${f(LB(cL) + 0.6)},${f(cL + 2.4)} ${f(LB(cL))},${f(cL)} Z`;
+    svg('path', { d: kemikYol, class: 'an-kemik-zemin' }, g);
+    tagger(svg('path', { d: kemikYol, fill: `url(#${id}tr)`, class: 'an-kemik' }, g), 'kemik');
+    tagger(svg('path', { d: smooth(kemik.slice(0, labY.length + 3)), class: 'an-kortikal' }, g), 'bukkal-kemik');
+    svg('path', { d: smooth(kemik.slice(labY.length + 2)), class: 'an-kortikal' }, g);
+    tagger(svg('path', { d: poly(PB), class: 'an-kortikal' }, g), 'palatinal-kemik');
+    if (dis < 0.97) svg('path', { d: `M${f(PCX)},${f(pcY)} Q${f(tepeK[0] + 3)},${f(tepeK[1] + 0.6)} ${f(tepeK[0])},${f(tepeK[1])} Q${f(LB(cL) + 0.6)},${f(cL + 2.4)} ${f(LB(cL))},${f(cL)}`, class: 'an-kortikal', opacity: f(1 - dis) }, g);
+    svg('path', { d: smooth([[61, 9.4], [75, 10.9], [92, 12.5], [112, 13.7]]), class: 'an-burun-mukoza' }, g);
+    // Nazopalatin (insisiv) kanal: damaktaki insisiv foramenden burun tabanına.
+    tagger(svg('path', { d: 'M90.9,44.6 L95,14.2', class: 'an-kanal-yol' }, g), 'nazopalatin-kanal');
+    tagger(svg('path', { d: 'M90.2,49.5 Q90.2,46 90.6,44 L94.6,13.4', class: 'an-sinir-yol' }, g), 'nazopalatin-sinir');
+    tagger(svg('path', { d: 'M91.6,49 Q91.4,46 91.6,44.4 L95.6,13.6', class: 'an-arter-yol' }, g), 'nazopalatin-arter');
+    // Fenestrasyon: labial plakta, kök orta-apikal üçlüsünde pencere.
+    if (fen > 0.05) tagger(svg('path', { d: poly([[LB(39.5) - 0.7, 39.5], [LB(33) - 0.7, 33], [rootLab(33), 33], [rootLab(39.5), 39.5]]) + ' Z', class: 'an-dis-eti', opacity: f(fen) }, g), 'fenestrasyon');
+
+    // Diş.
+    const kuronLab = adim(56, 80.5, 2).map((y) => [crownLab(y), y]);
+    const kuronPal = [[65.3, 81.3], [68, 77.5], [73, 70.5], [78.5, 65.5], [81, 62.3], [80, 58.5]];
+    const kokPal = [[82, 50], [82.6, 42], [81.8, 33], [80.8, 28], [80, 25.6], [79, 26.2]];
+    const kokLab = adim(28, 56, 4).map((y) => [rootLab(y), y]);
+    const kok = [[80, 58.5]].concat(kokPal, kokLab);
+    if (dis > 0.03) {
+      const dg = svg('g', { opacity: f(dis) }, g);
+      svg('path', { d: smooth(kok) + ' Z', class: 'an-pdl-cizgi' }, dg);
+      tagger(svg('path', { d: smooth(kok) + ' Z', class: 'an-dentin' }, dg), 'kok');
+      svg('path', { d: smooth(kok), class: 'an-sement-cizgi' }, dg);
+      tagger(svg('path', { d: smooth(kuronLab.concat(kuronPal)) + ' Z', class: 'an-mine' }, dg), 'mine');
+      svg('path', { d: smooth([[67.2, 57.2], [65.4, 66], [65.6, 75], [66.5, 78.4], [70.5, 71.5], [75, 66], [78.3, 62], [78.7, 59]]) + ' Z', class: 'an-dentin' }, dg);
+      tagger(svg('path', { d: smooth([[72.3, 66], [71.2, 60], [73.6, 50], [77, 38], [79.5, 28.4], [80.2, 28.6], [79, 38], [76.6, 50], [75.2, 60], [74.3, 66.5]]) + ' Z', class: 'an-pulpa' }, dg), 'pulpa');
+    }
+    // İmplant: palatinal konumda, labialinde en az 2 mm kemik.
+    const IX = 75.2, IY = 51.5 - cok * 3;
+    if (imp > 0.03) {
+      const ig = svg('g', { transform: `rotate(17,${IX},${IY})`, opacity: f(imp) }, g);
+      implantCiz(ig, IX, IY, 24, -1, 1);
+      const ag = svg('g', { opacity: f(imp) }, g);
+      svg('path', { d: poly([[IX - 2.8, IY], [IX + 2.9, IY + 0.9], [79.4, 58.6], [67, 57]]) + ' Z', class: 'an-dayanak' }, ag);
+      tagger(svg('path', { d: smooth(kuronLab.concat(kuronPal)) + ' Z', class: 'an-kron' }, ag), 'kron');
+    }
+
+    const tBmm = mm2(p.tB / S2), tGmm = mm2(p.tG / S2);
+    Object.assign(parts, {
+      dudak:            { ad: 'Üst dudak', at: [51.5, 40] },
+      orbikularis:      { ad: 'M. orbicularis oris', at: [54.6, 52] },
+      'ust-dudak-arteri': { ad: 'A. labialis superior', at: [56.2, 69] },
+      vestibul:         { ad: 'Vestibül (forniks)', at: [LB(23) - p.tG - 0.6, 22.5] },
+      'alveol-mukozasi': { ad: 'Alveol mukozası', at: [LB(32) - p.tG * 0.5, 32] },
+      mgj:              { ad: 'Mukogingival sınır', at: [taban(MGJ) - kalin(MGJ), MGJ], ayrinti: true },
+      'dis-eti':        { ad: `Dişeti kalınlığı ≈ ${tGmm} mm`, at: [taban(yM - 6) - kalin(yM - 6) * 0.5, yM - 6] },
+      'bukkal-kemik':   { ad: `Labial kemik plağı ≈ ${tBmm} mm`, at: [LB(44) + 0.2, Math.min(44, cL - 2)] },
+      ans:              { ad: 'Spina nasalis anterior', at: [57.4, 11.9] },
+      'a-noktasi':      { ad: 'Subnazal çukurluk (A noktası)', at: [LB(26) - 0.6, 21.5], ayrinti: true },
+      'burun-tabani':   { ad: 'Burun tabanı', at: [80, 12.2] },
+      'nazopalatin-kanal': { ad: 'Nazopalatin (insisiv) kanal', at: [93.4, 26] },
+      'nazopalatin-sinir': { ad: 'N. nasopalatinus', at: [92.2, 32] },
+      'nazopalatin-arter': { ad: 'Nazopalatin damarlar', at: [92.4, 38], ayrinti: true },
+      'insisiv-papilla': { ad: 'İnsisiv papilla (foramen)', at: [90.6, 51] },
+      'palatinal-kemik': { ad: 'Palatinal kemik', at: [98, 30] },
+      'damak-mukozasi': { ad: 'Damak mukozası', at: [101, 39.5] }
+    });
+    if (dis > 0.5) {
+      Object.assign(parts, {
+        mine:  { ad: 'Mine', at: [65.2, 70] },
+        pulpa: { ad: 'Pulpa', at: [75.6, 50] },
+        kok:   { ad: 'Kök (dentin)', at: [81.8, 40] },
+        kret:  { ad: 'Labial kret', at: [LB(cL) + 0.4, cL + 0.4], ayrinti: p.deh < 0.5 },
+        fenotip: { ad: p.tG > 2.5 ? 'Kalın fenotip' : 'İnce fenotip', at: [taban(yM - 3) - kalin(yM - 3) * 0.6, yM - 3] }
+      });
+      if (p.deh > 0.5) parts.dehisens = { ad: `Dehisens ≈ ${mm2(p.deh)} mm`, at: [rootLab((cL + 51) / 2) - 0.3, (cL + 51) / 2] };
+      if (fen > 0.5) parts.fenestrasyon = { ad: 'Fenestrasyon', at: [rootLab(36) - 0.8, 36] };
+      if (p.rec > 0.3) parts.cekilme = { ad: `Dişeti çekilmesi ≈ ${mm2(p.rec)} mm`, at: [rootLab((yM + 56) / 2) - 0.2, (yM + 56) / 2] };
+    } else {
+      parts.kret = { ad: imp > 0.5 ? 'Alveol kreti' : 'Çökmüş labial duvar', at: [LB(cL + 0.01) + 0.6, cL + 1] };
+      if (imp > 0.5) {
+        parts.implant = { ad: 'İmplant (palatinal konumda)', at: [IX + 4, IY - 12] };
+        parts.kron = { ad: 'İmplant üstü kuron', at: [70, 70] };
+        parts['bukkal-kemik'].ad = 'Labialde ≥ 2 mm kemik hedeflenir';
+      } else parts.rezorpsiyon = { ad: 'Kayıp en çok labial yüzde', at: [LB(46) - 0.4, 46] };
+    }
+    return parts;
+  }
+
   Object.assign(AT.anatomi.SABLONLAR, {
     sinus: { ad: 'Maksiller sinüs ve üst azı bölgesi (koronal)', varyantlar: Object.keys(SINUS_DURUM), durumlar: SINUS_DURUM, ciz: sinusCiz, varsayilan: {} },
     mandibula: { ad: 'Mandibula, mandibular kanal ve komşuluklar (koronal)', varyantlar: Object.keys(MAND_DURUM), durumlar: MAND_DURUM, ciz: mandCiz, varsayilan: {} },
@@ -1020,6 +1171,7 @@
     cekilme: { ad: 'Dişeti çekilmesi (Cairo) ve papilla', varyantlar: Object.keys(CEK_DURUM), durumlar: CEK_DURUM, ciz: cekilmeCiz, varsayilan: {} },
     'plak-indeksi': { ad: 'Plak indeksleri (Silness–Löe, Quigley–Hein)', varyantlar: Object.keys(PLAK_DURUM), durumlar: PLAK_DURUM, ciz: (g, v, o) => onYuzCiz(g, v, o, PLAK_DURUM), varsayilan: {} },
     'gingival-indeks': { ad: 'Gingival indeks (Löe–Silness)', varyantlar: Object.keys(GI_DURUM), durumlar: GI_DURUM, ciz: (g, v, o) => onYuzCiz(g, v, o, GI_DURUM), varsayilan: {} },
-    'kayit-cizelgesi': { ad: 'Plak (O’Leary) ve kanama (BOP) kayıt çizelgesi', varyantlar: Object.keys(KAYIT_DURUM), durumlar: KAYIT_DURUM, ciz: kayitCiz, varsayilan: {} }
+    'kayit-cizelgesi': { ad: 'Plak (O’Leary) ve kanama (BOP) kayıt çizelgesi', varyantlar: Object.keys(KAYIT_DURUM), durumlar: KAYIT_DURUM, ciz: kayitCiz, varsayilan: {} },
+    'on-maksilla': { ad: 'Ön maksilla ve dişeti fenotipi (sagital)', varyantlar: Object.keys(OM_DURUM), durumlar: OM_DURUM, ciz: onMaksillaCiz, varsayilan: {} }
   });
 })(window.AT = window.AT || {});
