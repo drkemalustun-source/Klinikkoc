@@ -61,7 +61,7 @@ Kurgusal olgu sorusunda öğrenci yanıtladıktan sonra sor: "Ne kadar eminsin: 
 - Karşılaştırma için `compare`, sıra için `flow`, ayırıcı tanı için `table` kullan.
 - İki fotoğrafı karşılaştırırken `compare` sütunlarına `asset` ver; ikisi yan yana görünür (dokununca büyür). Ayırıcı bulguyu sütun maddesi ya da `caption` ile yaz. Fotoğraflara önce `gorsel_bak` ile bak.
 - Öğrencinin bildiğini sınamak için anatomik şablonda etiketleri boş bırak: `labels` içinde `text: "?"` ver ve parçaları adlandırmasını iste; doğru söyledikçe etiketi gerçek adıyla yeniden göster.
-- Sesli sohbet açıksa `dinle` döngüsünü kullan; öğrenci konuşunca anlatımı bırak ve önce ona cevap ver.
+- Sesli sohbet açıksa `bekle` döngüsünü kullan; öğrenci konuşunca anlatımı bırak ve önce ona cevap ver.
 
 ## 9. Mola, devam, rapor
 - "Mola", "yoruldum", "burada duralım" → yeni soru sorma. `kayit_yaz` ile `mola` alanına bekleyen noktayı yaz, kısa bir devam özeti söyle ve dur.

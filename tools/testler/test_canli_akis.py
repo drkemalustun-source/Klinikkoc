@@ -230,6 +230,46 @@ class Ogrenme(unittest.TestCase):
         self.assertEqual(m.bekleme_butcesi(False), m.VARSAYILAN_BEKLEME_SN)
 
 
+class ProfilVeKurulum(unittest.TestCase):
+    def setUp(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("tahta_mcp_profil", os.path.join(KOK, "tools", "tahta-mcp.py"))
+        self.m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.m)
+
+    def test_ogrenci_ogretmen_araclarini_gormez(self):
+        self.m.profil = lambda: "ogrenci"
+        adlar = {a["name"] for a in self.m.araclar()}
+        self.assertIn("bekle", adlar)
+        self.assertNotIn("dinle", adlar)
+        self.assertFalse(adlar & self.m.OGRETMEN_ARACLARI)
+        self.m.profil = lambda: "ogretmen"
+        self.assertTrue(self.m.OGRETMEN_ARACLARI <= {a["name"] for a in self.m.araclar()})
+        self.assertIn("dinle", self.m.ISLEYICILER)  # eski sohbetler çağırırsa çalışır
+
+    def test_profil_ayari(self):
+        os.environ["KLINIK_KOC_PROFIL"] = "öğretmen"
+        try:
+            self.assertEqual(self.m.profil(), "ogretmen")
+            os.environ["KLINIK_KOC_PROFIL"] = "ogrenci"
+            self.assertEqual(self.m.profil(), "ogrenci")
+        finally:
+            del os.environ["KLINIK_KOC_PROFIL"]
+
+    def test_kur_eski_tahtayi_cikarir(self):
+        with tempfile.TemporaryDirectory() as d:
+            yol = os.path.join(d, "claude_desktop_config.json")
+            with open(yol, "w", encoding="utf-8") as f:
+                json.dump({"mcpServers": {"akilli-tahta": {"command": "py", "args": ["C:/x/tools/tahta-mcp.py"]},
+                                          "baska": {"command": "npx", "args": ["x"]}}, "preferences": {"a": 1}}, f)
+            self.assertEqual(self.m.ayara_yaz(yol), ["akilli-tahta"])
+            with open(yol, encoding="utf-8") as f:
+                a = json.load(f)
+            self.assertEqual(set(a["mcpServers"]), {"klinik-koc", "baska"})
+            self.assertEqual(a["preferences"], {"a": 1})
+            self.assertTrue(os.path.exists(yol + ".yedek"))
+
+
 class Uyandirma(unittest.TestCase):
     def setUp(self):
         import sunucu

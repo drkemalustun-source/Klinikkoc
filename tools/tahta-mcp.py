@@ -117,31 +117,31 @@ yazıya çevrilip sana gelir. Tanıyıcı (Duyu-small, bu bilgisayarda; yoksa ta
 bozabilir; metin terim sözlüğünden geçer. 'ham_metin' alanı tanıyıcının ilk çıktısıdır: düzeltme yanlış
 görünüyorsa ya da cümle anlamsızsa öğrenciye ne demek istediğini kısaca sor.
 - Söz kesme: Anlatım sürerken kullanıcı konuşursa tahta anlatımı kaldığı yerde duraklatır ve bekleyen tahta /
-  tahta_durumu(no) çağrın beklemeden {"durum": "kullanici_konustu", "kullanici_konustu": "..."} döner.
+  bekle(no) çağrın beklemeden {"durum": "kullanici_konustu", "kullanici_konustu": "..."} döner.
   Önce ona cevap ver: tahtada sesli (tahta aracı; cevap araya girer, tahta sonra eski hâline döner) ya da
   sohbette. Sonra anlatima_devam ile anlatımı kaldığı yerden sürdür; konu değiştiyse anlatima_devam(birak=true).
 - Soru kartı açıkken konuşursa kart kapanır; gerekirse soruyu yeniden sor.
 - tahta ya da soru_sor 'gonderilmedi: true' ile dönerse kullanıcının cevaplanmamış sözü vardır; önce ona cevap ver.
-- Ders ya da sohbet sırasında bir bölümü/cevabı bitirince dinle aracını çağır; gelen metne tahtada sesli
-  cevap ver (gerekirse çizerek), sonra yeniden dinle. "sessiz" dönerse sonuçtaki 'devam' alanına bak:
-  devam=true ise hemen yeniden dinle (kullanıcı kısa bir ara vermiş olabilir; ~10 dakika dinlemeyi sürdür);
-  devam=false gelince döngüyü bırak ve sohbete "Tahtaya dönünce mikrofona basıp konuşun ya da buraya
-  'tahtaya bak' yazın" diye kısa bir not yaz.
-- Bir oturumda cevabını bitirmeden önce son iş olarak dinle çağır; kullanıcı sesli sohbetteyse dinleme
-  döngüsünü sürdür. Sen dinlemezken söylenenler bekler; tahta sayfası kullanıcıya sohbete "tahtaya bak"
-  yazmasını söyler. Kullanıcı "tahtaya bak" yazarsa tahta_durumu'nu (no'suz) çağır: bekleyen sözü döndürür.
-  Kullanıcı sohbete "Tahtadan sesli soru: ..." yapıştırırsa bu da tahtada söylenmiş bir sözdür.
+- Bekleme tek araçtır: bekle. Bir bölümü/cevabı bitirince bekle'yi (no'suz) çağır; gelen söze tahtada sesli
+  cevap ver (gerekirse çizerek), sonra yeniden bekle. tahta ya da soru_sor 'sürüyor' dönerse bekle(no) çağır;
+  sohbete "anlatım sürüyor" gibi bir şey yazma. bekle "sessiz" dönerse 'devam' alanına bak: devam=true ise
+  hemen yeniden bekle; devam=false gelince döngüyü bırak ve sonuçtaki 'not'taki gibi sohbete tek cümle yaz.
+- Bir oturumda cevabını bitirmeden önce son iş olarak bekle çağır. Sen beklemezken söylenenler kaybolmaz:
+  otomatik uyandırma açıksa söz bu sohbete "Tahtadan sesli soru: ..." diye kendiliğinden düşer; kapalıysa
+  tahta öğrenciye sohbete "tahtaya bak" yazmasını söyler. "Tahtadan sesli soru: ..." iletisi tahtada söylenmiş
+  bir sözdür: cevabını tahtada sesli ver (tahta aracı), sohbete uzun yazma, sonra bekle. Kullanıcı "tahtaya bak"
+  yazarsa tahta_durumu'nu (no'suz) çağır: bekleyen sözü döndürür.
 - tahta, soru_sor ve tahta_durumu sonuçlarında 'kullanici_konustu' alanı varsa kullanıcı o sırada
   konuşmuştur; önce ona cevap ver.
 - Claude Code'da kanal açıksa (tahta-mcp.py --kanal) sen dinlemezken söylenenler sohbete <channel
   source="klinik-koc"> iletisi olarak düşer; ona da tahtada cevap ver.
-- "dur", "bekle", "ara verelim" gibi isteklerde dinlemeyi de bırak.
+- Öğrenci "dur", "bekle", "ara verelim" derse beklemeyi de bırak.
 - Ders sırasında dersin kendisinde bir sorun görürsen (yanlış ya da çelişkili bilgi, kaynakta olmayan ama çok
   sorulan konu, belirsiz cevap anahtarı, anlaşılmayan adım, araç hatası, dikte hatası) degerlendirme_notu ile hemen
   not al; öğrenciye söylemen gerekmez. ders_bitir ders sonu değerlendirme formunu açar; formda bu notlar görünür.
 Duraklat: Kullanıcı tahtadaki ⏸ tuşuyla (ya da P / Boşluk) anlatımı duraklatabilir. Bu iptal değildir.
 - tahta, soru_sor ya da tahta_durumu 'duraklatildi' dönerse hata sayma, yeni komut gönderme, sohbete de
-  yazma; aynı no ile tahta_durumu çağırarak beklemeyi sürdür. Devam edince anlatım kaldığı yerden sürer
+  yazma; aynı no ile bekle(no) çağırarak beklemeyi sürdür. Devam edince anlatım kaldığı yerden sürer
   ve sonuç olağan biçimde 'bitti' gelir. Uzun süre duraklatılmış kalırsa beklemeyi bırakıp kısa bir not yaz."""
 
 KOMUT_SEMASI = {
@@ -560,9 +560,9 @@ ARACLAR = [
     {
         "name": "tahta",
         "description": "Tahtaya yazar ve sesli anlatır. adimlar sırayla uygulanır: her adımda önce komutlar "
-                       "tahtaya çizilir, sonra anlat metni okunur. Anlatım ~40 sn'den uzun sürerse araç "
-                       "'sürüyor' döner; bitişini tahta_durumu ile bekleyebilirsin. Kullanıcı tahtada duraklattıysa "
-                       "'duraklatildi' döner: hata değil, tahta_durumu ile beklemeyi sürdür. Kullanıcı konuşursa "
+                       "tahtaya çizilir, sonra anlat metni okunur. Anlatım çok uzun sürerse araç "
+                       "'sürüyor' döner; bitişini bekle(no) ile bekle. Kullanıcı tahtada duraklattıysa "
+                       "'duraklatildi' döner: hata değil, bekle(no) ile beklemeyi sürdür. Kullanıcı konuşursa "
                        "anlatım duraklar ve araç hemen 'kullanici_konustu' döner: cevap ver, sonra anlatima_devam.",
         "inputSchema": {"type": "object", "properties": {
             "ders": {"type": "string", "description": "image komutu kullanılacaksa görsellerin alınacağı ders"},
@@ -575,8 +575,8 @@ ARACLAR = [
     },
     {
         "name": "soru_sor",
-        "description": "Tahtada çoktan seçmeli bir soru kartı açar ve dokunulan cevabı döndürür (en çok ~40 sn bekler; "
-                       "cevap gelmezse tahta_durumu ile beklemeyi sürdür). dogru verilirse kart doğru/yanlışı ve "
+        "description": "Tahtada çoktan seçmeli bir soru kartı açar ve dokunulan cevabı döndürür (cevap gelmeden "
+                       "'sürüyor' dönerse bekle(no) ile beklemeyi sürdür). dogru verilirse kart doğru/yanlışı ve "
                        "aciklama'yı gösterir. Sorular not için değil, öğrenmek içindir.",
         "inputSchema": {"type": "object", "properties": {
             "soru": {"type": "string"},
@@ -589,11 +589,22 @@ ARACLAR = [
     },
     {
         "name": "tahta_durumu",
-        "description": "Tahtanın durumunu verir. no verilirse o komutun (anlatım ya da soru) bitmesini en çok ~40 sn bekler "
+        "description": "Tahtanın durumunu verir. no verilirse o komutun (anlatım ya da soru) bitmesini bekler (bekle(no) ile aynı) "
                        "ve sonucunu döndürür; kullanıcı konuşursa beklemeden 'kullanici_konustu' döner. "
                        "'duraklatildi': kullanıcı anlatımı duraklattı; aynı no ile beklemeyi sürdür. no verilmezse "
                        "kullanıcının bekleyen sözünü de 'kullanici_konustu' alanında verir (kullanıcı 'tahtaya bak' derse).",
         "inputSchema": {"type": "object", "properties": {"no": {"type": "integer"}}},
+    },
+    {
+        "name": "bekle",
+        "description": "Tek bekleme aracı. no verilmezse öğrencinin tahtada (mikrofon ya da yazı kutusu) söylediğini bekler "
+                       "ve yazı olarak döndürür; no verilirse o anlatımın ya da sorunun bitmesini bekler (öğrenci konuşursa "
+                       "hemen 'kullanici_konustu' döner). Bir çağrı birkaç dakikaya kadar açık kalabilir. Kimse konuşmazsa "
+                       "'sessiz' döner: 'devam' true ise hemen yeniden çağır. Sesli sohbet döngüsü: anlat → bekle → cevapla → "
+                       "bekle. Dikteyle gelen sözde 'metin' terim sözlüğüyle düzeltilmiştir, 'ham_metin' tanıyıcının ilk "
+                       "çıktısı, 'motor' duyu|tarayici|yazi.",
+        "inputSchema": {"type": "object", "properties": {
+            "no": {"type": "integer", "description": "beklenecek tahta komutunun numarası (yoksa söz beklenir)"}}},
     },
     {
         "name": "dinle",
@@ -631,6 +642,35 @@ ARACLAR = [
         "inputSchema": {"type": "object", "properties": {}},
     },
 ]
+
+
+# ---------- Araç profili: öğrenci / öğretmen ----------
+# Claude her sohbette bütün araç tanımlarını okur; öğrencinin kullanmadığı öğretmen araçları hem yer kaplar (abonelik
+# sınırını daha çabuk doldurur) hem Claude'u yanlış araca yöneltebilir. Öğrenci kurulumunda gizlenirler.
+# Öğretmen profili: KLINIK_KOC_PROFIL=ogretmen, ayarlar.json'da "profil": "ogretmen" ya da bu bilgisayarda ders
+# sihirbazı kullanılmışsa (veri klasöründe sihirbaz/ taslakları) kendiliğinden.
+OGRETMEN_ARACLARI = {"sihirbaz_oku", "sihirbaz_oner", "makale_sayfasi_bak", "makale_sekli_ekle", "degerlendirme_ozeti"}
+GIZLI_ARACLAR = {"dinle"}  # eski ad: bekle'ye yönlenir; eski sohbetler çağırırsa çalışır ama listede görünmez
+
+
+def profil():
+    p = (os.environ.get("KLINIK_KOC_PROFIL") or _ayar("profil") or "").strip().lower()
+    if p in ("ogretmen", "öğretmen", "ogrenci", "öğrenci"):
+        return "ogretmen" if p.startswith(("ogr", "öğr")) and "etmen" in p else "ogrenci"
+    try:
+        klasor = os.path.join(veri_yeri.veri_kok(), "sihirbaz")
+        if os.path.isdir(klasor) and any(os.scandir(klasor)):
+            return "ogretmen"
+    except OSError:
+        pass
+    return "ogrenci"
+
+
+def araclar():
+    gizli = set(GIZLI_ARACLAR)
+    if profil() != "ogretmen":
+        gizli |= OGRETMEN_ARACLARI
+    return [a for a in ARACLAR if a["name"] not in gizli]
 
 
 # ---------- Yerel sunucuyla konuşma ----------
@@ -1483,7 +1523,7 @@ def ar_karne(a):
 SOZLU_TALIMAT = """Bu bir sözlü sınav provası. Sen sınav hocasısın; sakin, saygılı ve kısa konuş. Not vermezsin.
 - Başta söyle: kaç soru soracağını, her soruda önce sesli düşünmesinin serbest olduğunu, sonunda ayrıntılı
   geri bildirim vereceğini. Sınav sırasında ders anlatma, ipucu verme, cevabı onaylama ya da düzeltme.
-- Soruyu tahtaya yaz (tahta: title + text) ve sesli sor; cevabı dinle aracıyla al. Sessiz kalırsa bir kez
+- Soruyu tahtaya yaz (tahta: title + text) ve sesli sor; cevabı bekle aracıyla al. Sessiz kalırsa bir kez
   "Acele etme, aklına gelenden başla." de; ikinci sessizlikte bir sonraki soruya geç ve bunu not al.
 - Cevap kısa kalırsa gerçek sınavdaki gibi en çok bir izleme sorusu sor ("Neden?", "Ayırıcı tanıda ne düşünürsün?",
   "Bu hastada bunu hangi bulguya dayanarak söylüyorsun?"). İzleme sorusu yeni bilgi vermemeli.
@@ -1605,9 +1645,9 @@ OLCME_TALIMAT = """Bu bir ölçme testi, ders değil. Eğitmen kurallarını tes
 - Önce öğrenciye kısaca söyle: soru sayısı, yaklaşık 15 dakika, not için değil, sonuçlar ve doğru cevaplar sonda.
 - Soruları sırayla, tek tek sor. Çoktan seçmeli soruda soru_sor'u 'dogru' ve 'aciklama' OLMADAN, verilen secenekler
   sırasıyla ve etiket ile çağır (ör. "Ön test · 3/12"). Dönen 'secim' değerini not al.
-- Kısa yazılı soruda soruyu tahtaya yaz (tahta: title + text) ve öğrencinin cevabını sohbetten ya da dinle ile al.
+- Kısa yazılı soruda soruyu tahtaya yaz (tahta: title + text) ve öğrencinin cevabını sohbetten ya da bekle ile al.
   Puanı 'olcut'e göre sessizce ver (0, 1, 2); öğrenciye söyleme. olcme_kaydet'te öğrencinin cevabını kelimesi
-  kelimesine ham_yanit olarak ver (düzeltme, özetleme yok; konuştuysa dinle'nin ham_metin'i).
+  kelimesine ham_yanit olarak ver (düzeltme, özetleme yok; konuştuysa bekle'nin ham_metin'i).
 - Her sorudan sonra güveni sor: soru_sor ile secenekler ["Tahmin", "Biraz", "Emin"], etiket "Ne kadar eminsin?".
 - Bütün sorular bitince olcme_kaydet'i çağır. Sonra puanı ve her yanlış sorunun doğru cevabını kısa, sakin bir dille
   göster; 'emin ama yanlış' olanları özellikle düzelt. Öğrenci testi yarıda bırakırsa yarim_kaldi=true ile kaydet.
@@ -2508,7 +2548,7 @@ def isle(m):
     if yontem == "ping":
         return {}
     if yontem == "tools/list":
-        return {"tools": ARACLAR}
+        return {"tools": araclar()}
     if yontem == "tools/call":
         f = ISLEYICILER.get(p.get("name"))
         if not f:
@@ -2658,8 +2698,26 @@ def sunucu_girdisi():
             "env": {"PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}}
 
 
+# Aynı araç adlarını (tahta, dinle, tahtayi_ac...) kullanan eski programlar. Claude ikisini birden görürse yanlış
+# programın aracını çağırabilir (ör. açık olmayan eski tahtayı dinler): KUR bunları ayardan çıkarır (yedek alınır).
+CAKISAN_SUNUCULAR = ("akilli-tahta",)
+
+
+def cakisanlar(sunucular):
+    """Ayar dosyasındaki, bizimle aynı araç adlarını kullanan eski tahta girdileri."""
+    out = []
+    for ad, g in (sunucular or {}).items():
+        if ad == AD or not isinstance(g, dict):
+            continue
+        hedef = " ".join(str(x) for x in (g.get("args") or []))
+        if ad in CAKISAN_SUNUCULAR or ("tahta-mcp.py" in hedef and ad != AD):
+            out.append(ad)
+    return out
+
+
 def ayara_yaz(yol, kaldir=False):
-    """Yalnız mcpServers[AD]'yi değiştirir; dosyadaki öteki alanlar (preferences vb.) olduğu gibi kalır."""
+    """Yalnız mcpServers[AD]'yi (ve kurulumda aynı araç adlarını kullanan eski tahta girdilerini) değiştirir;
+    dosyadaki öteki alanlar (preferences vb.) olduğu gibi kalır. Döner: çıkarılan eski girdilerin adları."""
     os.makedirs(os.path.dirname(yol), exist_ok=True)
     ayar = {}
     if os.path.exists(yol) and os.path.getsize(yol) > 0:
@@ -2670,14 +2728,19 @@ def ayara_yaz(yol, kaldir=False):
             sys.exit("Ayar dosyası okunamadı (bozuk JSON?): %s\nDosyayı düzeltip yeniden deneyin." % yol)
         shutil.copy2(yol, yol + ".yedek")
     sunucular = ayar.setdefault("mcpServers", {})
+    cikan = []
     if kaldir:
         sunucular.pop(AD, None)
     else:
         sunucular[AD] = sunucu_girdisi()
+        for ad in cakisanlar(sunucular):
+            sunucular.pop(ad, None)
+            cikan.append(ad)
     gecici = yol + ".yaziliyor"
     with open(gecici, "w", encoding="utf-8") as f:
         json.dump(ayar, f, ensure_ascii=False, indent=2)
     os.replace(gecici, yol)
+    return cikan
 
 
 def kur(kaldir=False):
@@ -2687,8 +2750,11 @@ def kur(kaldir=False):
         print(YOL_GOSTER)
         sys.exit(1)
     for yol in hedefler:
-        ayara_yaz(yol, kaldir)
+        cikan = ayara_yaz(yol, kaldir)
         print(("Kaldırıldı: " if kaldir else "Eklendi (Claude'un okuduğu dosya): ") + yol)
+        for ad in cikan:
+            print("Eski tahta bağlantısı çıkarıldı: '%s' (aynı araç adlarını kullanıyordu; Claude yanlış tahtayı "
+                  "dinleyebilirdi). Eski ayar yedekte: %s.yedek" % (ad, yol))
     if not elle:
         for yol, tur, aciklama in ayar_adaylari():
             if tur == "eski":
@@ -2714,7 +2780,12 @@ def ayar_raporu():
         if os.path.exists(yol):
             try:
                 with open(yol, encoding="utf-8-sig") as f:
-                    g = ((json.load(f) or {}).get("mcpServers") or {}).get(AD)
+                    tum = (json.load(f) or {}).get("mcpServers") or {}
+                g = tum.get(AD)
+                if tur == "asil":
+                    for ad in cakisanlar(tum):
+                        uyarilar.append("Claude ayarında eski '%s' tahtası da kayıtlı; araç adları aynı olduğu için Claude "
+                                        "yanlış tahtayı dinleyebilir. KUR'u yeniden çalıştırın (eskisini çıkarır)." % ad)
                 if g:
                     hedef = (g.get("args") or [""])[0]
                     durum = AD + " var" + ("" if os.path.exists(hedef) else " AMA dosyası yok: " + hedef)

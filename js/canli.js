@@ -960,7 +960,7 @@
       if (sozAlindi) {
         // Söz sunucuya ulaşmadan sonucu bildirme: Claude sözü sonuçla birlikte ya da ondan önce alsın.
         if (sozBitti) await Promise.race([sozBitti, new Promise((r) => setTimeout(r, 20000))]);
-        sonuc = Object.assign({}, sonuc, { not: 'Kullanıcı mikrofonla söz aldı; söylediğini dinle aracıyla al.' });
+        sonuc = Object.assign({}, sonuc, { not: 'Kullanıcı mikrofonla söz aldı; söylediğini bekle aracıyla al.' });
         sozAlindi = false;
         sozBitti = null;
       }
@@ -1094,7 +1094,7 @@
     if (k) api('bitti', { no: k.no, sonuc: { durum: 'durduruldu' }, durum: durum() }).catch(() => {});
   }
 
-  // Claude 'dinle' aracıyla (ya da bekleyen bir tahta çağrısıyla) beklerken mikrofon tuşunun çevresinde
+  // Claude 'bekle' aracıyla (ya da bekleyen bir tahta çağrısıyla) beklerken mikrofon tuşunun çevresinde
   // yeşil halka ve üstteki ışık yanar.
   let claudeDinliyor = false;
   const isikEl = $('#claudeIsik');
