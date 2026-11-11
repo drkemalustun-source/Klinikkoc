@@ -270,6 +270,28 @@ class ProfilVeKurulum(unittest.TestCase):
             self.assertTrue(os.path.exists(yol + ".yedek"))
 
 
+class SihirbazOgretmenYapar(unittest.TestCase):
+    def test_sihirbaz_acilinca_profil_ogretmen(self):
+        import sunucu
+        with tempfile.TemporaryDirectory() as d:
+            eski = os.environ.get("KLINIK_KOC_VERI")
+            os.environ["KLINIK_KOC_VERI"] = d
+            try:
+                sunucu.ogretmen_profili_isaretle()
+                with open(os.path.join(d, "ayarlar.json"), encoding="utf-8") as f:
+                    self.assertEqual(json.load(f)["profil"], "ogretmen")
+                with open(os.path.join(d, "ayarlar.json"), "w", encoding="utf-8") as f:
+                    json.dump({"profil": "ogrenci"}, f)
+                sunucu.ogretmen_profili_isaretle()  # elle seçilen profile dokunulmaz
+                with open(os.path.join(d, "ayarlar.json"), encoding="utf-8") as f:
+                    self.assertEqual(json.load(f)["profil"], "ogrenci")
+            finally:
+                if eski is None:
+                    del os.environ["KLINIK_KOC_VERI"]
+                else:
+                    os.environ["KLINIK_KOC_VERI"] = eski
+
+
 class Uyandirma(unittest.TestCase):
     def setUp(self):
         import sunucu

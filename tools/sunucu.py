@@ -1005,6 +1005,7 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
         if not self._yerel_mi():
             return self._json(403, {"hata": "Yalnızca bu bilgisayardan"})
         S = sihirbaz
+        ogretmen_profili_isaretle()
         try:
             if yol == "liste":
                 return self._json(200, {"taslaklar": S.liste(), "kademeler": S.KADEME_ADI, "bloom": S.BLOOM})
@@ -1158,6 +1159,18 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
         if not self.path.startswith("/api/duyu/"):
             return self._json(404, {"hata": "Bilinmeyen istek"})
         return self._api(govde)
+
+
+def ogretmen_profili_isaretle():
+    """Ders sihirbazını açan kişi öğretmendir: Claude'a öğretmen araçları da gösterilsin (ayarlar.json "profil").
+    Elle "ogrenci" yazılmışsa dokunulmaz. Claude'un yeni araç listesini görmesi için bir kez yeniden açılması gerekir."""
+    try:
+        a = ders_sonu.ayarlar()
+        if not a.get("profil"):
+            a["profil"] = "ogretmen"
+            ders_sonu._json_yaz(ders_sonu.ayar_yolu(), a)
+    except Exception:
+        pass
 
 
 def klasoru_ac(yol):

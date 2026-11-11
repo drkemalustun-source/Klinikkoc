@@ -52,7 +52,7 @@ Kaldırma: `python tools/tahta-mcp.py --kaldir` (gerekirse `--ayar "<yol>"` ile)
 **Öğrenci ve öğretmen araçları:** Claude her sohbette bütün araç tanımlarını okur. Öğrencinin kullanmadığı
 öğretmen araçları (`sihirbaz_oku`, `sihirbaz_oner`, `makale_sayfasi_bak`, `makale_sekli_ekle`,
 `degerlendirme_ozeti`) öğrenci bilgisayarında gizlenir; böylece sohbet daha az yer kaplar ve Claude yanlış araca
-yönelmez. Bu bilgisayarda ders sihirbazı kullanıldıysa öğretmen araçları kendiliğinden açılır. Elle seçmek için
+yönelmez. Bu bilgisayarda ders sihirbazı sayfası bir kez açıldıysa öğretmen araçları kendiliğinden açılır (Claude'u bir kez yeniden başlatın). Elle seçmek için
 kalıcı veri klasöründeki `ayarlar.json`'a `"profil": "ogretmen"` (ya da `"ogrenci"`) yazın ve Claude'u yeniden başlatın.
 
 | Araç | Ne yapar |
