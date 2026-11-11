@@ -20,6 +20,11 @@
   }
 
   // **kalın** ve _italik_ dışında biçim desteklenmez; metin her zaman textContent olarak kalır.
+  // draw komutundaki etiketlerin parça adları (yeniden gönderilince yalnız yeniler belirsin diye).
+  function etiketKumesi(c) {
+    return new Set([].concat(c.labels || []).map((x) => (typeof x === 'string' ? x : x && x.part)));
+  }
+
   function rich(parent, text) {
     const parts = String(text).split(/(\*\*[^*]+\*\*|_[^_]+_)/g);
     for (const p of parts) {
@@ -532,6 +537,8 @@
     }
 
     // Basit vektör çizimi; şekiller sırayla "elle çiziliyormuş" gibi belirir.
+    // Anatomik şablonda gecis (sn) verilirse ve tahtada aynı şablon varsa, çizim eski durumdan yenisine
+    // akarak geçer (ör. sağlıklı → gingivitis): dişeti şişer, cep derinleşir, kemik geriler.
     cmd_draw(c, instant) {
       const wrap = el('div', 'board-draw');
       if (c.title) wrap.appendChild(rich(el('h3'), c.title));
@@ -542,17 +549,29 @@
       defs.appendChild(marker);
       s.appendChild(defs);
       wrap.appendChild(s);
-      // Anatomik şablon: aynı şablon zaten tahtadaysa yeniden canlandırma, yalnız yeni etiketler belirsin.
-      let tplInstant = instant;
       if (c.template && AT.anatomi) {
         const key = [c.template, c.variant || '', c.probe ? 1 : 0].join('|');
         const prev = this.visual.querySelector('.board-draw');
-        if (prev && prev.dataset.tpl === key) tplInstant = true;
+        const sure = Math.min(Math.max(Number(c.gecis) || 0, 0), 10);
+        const kaynak = prev && prev.dataset.sablon === c.template && prev.dataset.probe === (c.probe ? '1' : '0');
         wrap.dataset.tpl = key;
-        const old = prev && prev.dataset.tpl === key && !instant ? prev._etiketler || new Set() : null;
-        AT.anatomi.ciz(s, c, tplInstant, old);
-        wrap._etiketler = new Set([].concat(c.labels || []).map((l) => (typeof l === 'string' ? l : l.part)));
+        wrap.dataset.sablon = c.template;
+        wrap.dataset.variant = c.variant || '';
+        wrap.dataset.probe = c.probe ? '1' : '0';
         wrap.classList.add('anatomik');
+        if (sure > 0 && !instant && kaynak && prev.dataset.tpl !== key) {
+          const kok = svg('g', {});
+          s.appendChild(kok);
+          this._anim = this._canlandir(wrap, kok, prev, c, sure);
+        } else {
+          // Aynı şablon zaten tahtadaysa yeniden canlandırma, yalnız yeni etiketler belirsin.
+          const tplInstant = instant || (prev && prev.dataset.tpl === key);
+          const old = prev && prev.dataset.tpl === key && !instant ? prev._etiketler || new Set() : null;
+          AT.anatomi.ciz(s, c, tplInstant, old);
+          wrap._p = AT.anatomi.durum(c.template, c.variant);
+          wrap._c = c;
+          wrap._etiketler = etiketKumesi(c);
+        }
       }
       this._setVisual(wrap);
 
@@ -568,6 +587,56 @@
         }
       }
       return wrap;
+    }
+
+    // Şablonu prev'in durumundan c'nin durumuna `sure` saniyede kare kare çizer. Duraklatılınca
+    // (Board.animDurdu) bekler; tahtadan kalkarsa (temizlendi, başka çizim geldi) hemen son hâline atlar.
+    _canlandir(wrap, kok, prev, c, sure) {
+      const A = AT.anatomi;
+      const c0 = prev._c || { template: c.template, variant: prev.dataset.variant, probe: c.probe };
+      const bas = prev._p || A.durum(c.template, prev.dataset.variant);
+      const hedef = A.durum(c.template, c.variant);
+      const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
+      const kare = (t) => {
+        const p = A.araDurum(c.template, bas, hedef, ease(t));
+        // İlk yarıda eski etiketler dokuyla birlikte kayar; ikinci yarıda yeni durumun ayrıntıları (diştaşı,
+        // eski kemik çizgisi) belirir, etiketler sonda gelir.
+        const k = t < 0.5 ? Object.assign({}, c0, { p }) : Object.assign({}, c, { labels: [], highlight: [], p });
+        kok.replaceChildren();
+        A.ciz(kok, k, true);
+        wrap._p = p;
+      };
+      const son = () => {
+        kok.replaceChildren();
+        A.ciz(kok, c, true, wrap.isConnected ? new Set() : null);
+        wrap._p = hedef;
+        wrap._c = c;
+        wrap._etiketler = etiketKumesi(c);
+      };
+      wrap._p = bas;
+      wrap._c = c0;
+      kare(0);
+      return new Promise((bitti) => {
+        const basla = performance.now();
+        let gecen = 0, onceki = basla, cizildi = 0, baglandi = false;
+        const adim = (simdi) => {
+          if (wrap.isConnected) baglandi = true;
+          else if (baglandi || simdi - basla > 1000) { son(); return bitti(); }
+          if (!Board.animDurdu) gecen += simdi - onceki;
+          onceki = simdi;
+          const t = Math.min(gecen / (sure * 1000), 1);
+          if (t >= 1) { son(); return bitti(); }
+          if (simdi - cizildi >= 30) { kare(t); cizildi = simdi; } // en çok ~33 kare/sn
+          requestAnimationFrame(adim);
+        };
+        requestAnimationFrame(adim);
+      });
+    }
+
+    // Sürmekte olan şablon canlandırmasının bitmesini bekler (yoksa hemen döner).
+    animBekle() {
+      const a = this._anim;
+      return a ? a.then(() => { if (this._anim === a) this._anim = null; }) : Promise.resolve();
     }
 
     _shape(sh) {
@@ -597,5 +666,6 @@
     }
   }
 
+  Board.animDurdu = false; // canlı tahtada Duraklat tuşu canlandırmayı da bekletir
   AT.Board = Board;
 })(window.AT = window.AT || {});

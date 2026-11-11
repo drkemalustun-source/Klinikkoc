@@ -218,6 +218,33 @@ düğmeleriyle de ileri-geri sarabilirsiniz.
 (`.gitignore` ve yayın denetimi bunu engeller). Hasta görüntüsü içeren videolar yalnız fakülte
 bilgisayarında kalır. Herkesle paylaşılacak bir video için YouTube bağlantısı kullanın.
 
+## Canlandırma (anatomik şablon)
+
+Diş (`template: "dis"`) ve implant (`template: "implant"`) çizimleri ölçülerle tanımlıdır (dişeti kenarı, cep
+tabanı, birleşim epiteli, kret düzeyi). Aynı şablon tahtadayken Claude yeni bir `variant` ile birlikte
+`gecis: <saniye>` gönderirse çizim bu sürede eski durumdan yenisine akarak geçer: dişeti şişer ve kızarır,
+sonda cep tabanını izleyerek derine iner, kemik geriler. Ders dosyasında da aynı komut kullanılabilir:
+
+```json
+{"adimlar": [
+  {"komutlar": [{"type": "draw", "template": "dis", "variant": "saglikli", "probe": true, "labels": ["cep", "ba", "sonda"]}],
+   "anlat": "Sağlıklı periodonsiyumda oluk sığdır."},
+  {"komutlar": [{"type": "draw", "template": "dis", "variant": "gingivitis", "probe": true, "gecis": 3,
+                 "labels": ["plak", "iltihap", "cep", "sonda"]}],
+   "anlat": "Plak birikince dişeti iltihaplanır ve şişer; bu yalancı ceptir."},
+  {"komutlar": [{"type": "draw", "template": "dis", "variant": "periodontitis", "probe": true, "gecis": 4,
+                 "labels": ["atasman-kaybi", "kemik-kaybi", "sonda"]}],
+   "anlat": "İltihap sürerse ataşman yıkılır, kemik geriler."}
+]}
+```
+
+- `gecis` 0–10 saniyedir; vermezseniz çizim eskisi gibi bir anda değişir. Geriye doğru (ör. tedaviden sonra
+  periodontitis → gingivitis) da çalışır.
+- Bir adım hem cümle hem geçiş bitince ilerler. Duraklat (⏸) canlandırmayı da durdurur.
+- Geçişin ilk yarısında eski etiketler dokuyla birlikte kayar; sonda yeni durumun etiketleri belirir.
+- Claude bütün animasyonu tek `tahta` çağrısıyla gönderir; ek bekleme ya da araç çağrısı gerekmez.
+- Şablonu olmayan yapılar (flep, alet hareketi, greft) için henüz canlandırma yoktur.
+
 ## Kullanım ipuçları
 
 - Konuyu siz seçersiniz: "Defekt morfolojisi bölümünü 10 dakikada anlat", "Şekil 4'teki farkı göster",

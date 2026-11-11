@@ -17,6 +17,11 @@
     return n;
   }
 
+  // Canlandırmada dişeti/mukoza rengi iltihapla birlikte yavaşça koyulaşır (sağlıklı → iltihaplı).
+  const etiRengi = (inflam) => {
+    const t = Math.max(0, Math.min(1, inflam)), a = [0xe7, 0x97, 0x9b], b = [0xd7, 0x5a, 0x64];
+    return 'rgb(' + a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(',') + ')';
+  };
   const f = (v) => Math.round(v * 100) / 100;
 
   // Noktalardan yumuşak eğri (Catmull-Rom → kübik Bézier).
@@ -118,7 +123,7 @@
   }
 
   function disCiz(g, variant, opt) {
-    const p = DIS_DURUM[variant] || DIS_DURUM.saglikli;
+    const p = opt.p || DIS_DURUM[variant] || DIS_DURUM.saglikli; // opt.p: canlandırmada ara durum
     const MGJ = p.mgj || MGJ0;
     const G = disGeo(p);
     const id = 'an' + (++uid);
@@ -159,7 +164,8 @@
                  ` L${f(G.C[0])},${f(G.C[1])} ` + smooth(G.boneOuter.slice(1), false) + ' Z';
     const inflamCls = p.inflam ? ' an-iltihapli' : '';
     both((r) => {
-      tag(svg('path', { d: soft, class: 'an-dis-eti' + inflamCls }, r), 'dis-eti');
+      const de = tag(svg('path', { d: soft, class: 'an-dis-eti' + inflamCls }, r), 'dis-eti');
+      if (opt.p) de.style.fill = etiRengi(p.inflam);
       tag(svg('path', { d: soft, class: 'an-mukoza', 'clip-path': `url(#${id}mk)` }, r), 'mukoza');
       tag(svg('path', { d: smooth(G.outer), class: 'an-epitel' }, r), 'dis-eti-epiteli');
       tag(svg('path', { d: smooth(G.pocket), class: 'an-oluk-epitel' + (p.inflam > 1 ? ' an-ulser' : '') }, r), 'cep');
@@ -295,7 +301,7 @@
   const CORE = 74.6;
 
   function implantCiz(g, variant, opt) {
-    const p = IMP_DURUM[variant] || IMP_DURUM.saglikli;
+    const p = opt.p || IMP_DURUM[variant] || IMP_DURUM.saglikli;
     const id = 'an' + (++uid);
     const defs = svg('defs', {}, g);
     trabekul(defs, id);
@@ -370,7 +376,8 @@
     const soft = smooth(outer.slice().reverse()) + ' ' + smooth(pocket, false) + ' ' + smooth(attach, false) + ' ' + smooth(boneSurfFull, false) + ' Z';
     const inflamCls = p.inflam ? ' an-iltihapli' : '';
     both((r) => {
-      tag(svg('path', { d: soft, class: 'an-dis-eti' + inflamCls }, r), 'mukoza');
+      const de = tag(svg('path', { d: soft, class: 'an-dis-eti' + inflamCls }, r), 'mukoza');
+      if (opt.p) de.style.fill = etiRengi(p.inflam);
       tag(svg('path', { d: soft, class: 'an-mukoza', 'clip-path': `url(#${id}mk)` }, r), 'alveol-mukozasi');
       tag(svg('path', { d: smooth(outer), class: 'an-epitel' }, r), 'mukoza');
       tag(svg('path', { d: smooth(pocket), class: 'an-oluk-epitel' + (p.inflam > 1 ? ' an-ulser' : '') }, r), 'cep');
@@ -434,9 +441,27 @@
   }
 
   const SABLONLAR = {
-    dis: { ad: 'Diş ve periodonsiyum', varyantlar: Object.keys(DIS_DURUM), ciz: disCiz },
-    implant: { ad: 'İmplant ve peri-implant dokular', varyantlar: Object.keys(IMP_DURUM), ciz: implantCiz }
+    dis: { ad: 'Diş ve periodonsiyum', varyantlar: Object.keys(DIS_DURUM), durumlar: DIS_DURUM, ciz: disCiz, varsayilan: { mgj: MGJ0 } },
+    implant: { ad: 'İmplant ve peri-implant dokular', varyantlar: Object.keys(IMP_DURUM), durumlar: IMP_DURUM, ciz: implantCiz, varsayilan: {} }
   };
+
+  // Bir şablon durumunun sayısal ölçüleri (dişeti kenarı, cep tabanı, kret düzeyi...).
+  function durum(template, variant) {
+    const s = SABLONLAR[template];
+    return s ? s.durumlar[variant] || s.durumlar[s.varyantlar[0]] : null;
+  }
+
+  // İki durum arası (t: 0–1). Canlandırma bu ara durumları kare kare çizer.
+  function araDurum(template, p0, p1, t) {
+    const v = (SABLONLAR[template] || {}).varsayilan || {};
+    const out = {};
+    for (const k of new Set(Object.keys(p0).concat(Object.keys(p1)))) {
+      const a = p0[k] != null ? p0[k] : v[k] || 0;
+      const b = p1[k] != null ? p1[k] : v[k] || 0;
+      out[k] = a + (b - a) * t;
+    }
+    return out;
+  }
 
   // Etiketleri iki sütuna dizer, çakışmayı önler, kılavuz çizgisi çeker.
   function etiketle(g, parts, labels, instant, eski) {
@@ -481,7 +506,7 @@
     const s = SABLONLAR[c.template];
     if (!s) { console.warn('Bilinmeyen şablon:', c.template); return null; }
     const g = svg('g', { class: 'an-sablon' + (instant ? '' : ' fade-in') }, svgEl);
-    const parts = s.ciz(g, c.variant || s.varyantlar[0], { probe: !!c.probe });
+    const parts = s.ciz(g, c.variant || s.varyantlar[0], { probe: !!c.probe, p: c.p });
     for (const h of [].concat(c.highlight || [])) {
       g.querySelectorAll(`[data-part="${h}"]`).forEach((n) => n.classList.add('an-vurgu'));
     }
@@ -503,5 +528,5 @@
     return out;
   }
 
-  AT.anatomi = { ciz, liste, SABLONLAR, MM };
+  AT.anatomi = { ciz, liste, durum, araDurum, SABLONLAR, MM };
 })(window.AT = window.AT || {});

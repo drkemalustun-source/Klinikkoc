@@ -353,6 +353,12 @@
         "cue": {
           "type": "integer",
           "minimum": 1
+        },
+        "gecis": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Yalnız anatomik şablonlu draw: tahtada aynı şablon varsa çizim eski durumdan bu komutun variant'ına bu kadar saniyede akarak geçer (canlandırma)."
         }
       },
       "allOf": [

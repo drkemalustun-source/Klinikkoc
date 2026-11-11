@@ -262,6 +262,7 @@
       this.aktif = true;
       this.soz = neden === 'soz';
       ses.audio.pause();
+      AT.Board.animDurdu = true; // tahtadaki canlandırma da bekler
       if (board.video && board.video.durum === 'oynuyor') { board.video.duraklat(); this.videoDurdu = board.video; }
       try { if (window.speechSynthesis) speechSynthesis.pause(); } catch (e) { /* yok */ }
       this.goster();
@@ -272,6 +273,7 @@
       this.aktif = false;
       this.soz = false;
       if (ses.caliyor) ses.audio.play().catch(() => {});
+      AT.Board.animDurdu = false;
       if (this.videoDurdu && this.videoDurdu === board.video) this.videoDurdu.oynat();
       this.videoDurdu = null;
       try { if (window.speechSynthesis) speechSynthesis.resume(); } catch (e) { /* yok */ }
@@ -282,6 +284,7 @@
     sifirla() {
       this.soz = false;
       this.videoDurdu = null;
+      AT.Board.animDurdu = false;
       if (!this.aktif) return;
       this.aktif = false;
       try { if (window.speechSynthesis) speechSynthesis.resume(); } catch (e) { /* yok */ }
@@ -852,6 +855,8 @@
           r = await ses.anlat(a.anlat, { bas: k.cumle, cumle });
         }
       } else if (a.bekle) await new Promise((r) => setTimeout(r, Math.min(15, a.bekle) * 1000));
+      // Şablon canlandırması (draw.gecis) cümleden uzun sürdüyse sıradaki adım onun bitmesini bekler.
+      if (!k.iptal) await board.animBekle();
     }
     if (k.iptal) return { durum: 'iptal', tamamlanan: liste.length, uyarilar };
     return uyarilar.length ? { durum: 'bitti', uyarilar } : { durum: 'bitti' };
