@@ -2,6 +2,8 @@ name: Denetim
 
 on:
   push:
+    # Öğrenci sürümü dalı aynı koddan türetilir (öğretmen dosyaları çıkarılmış hâli); testler tam kodda koşar.
+    branches-ignore: ['*-ogrenci']
   pull_request:
 
 permissions:
