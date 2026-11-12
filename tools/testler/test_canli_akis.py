@@ -330,6 +330,34 @@ class Uyandirma(unittest.TestCase):
         self.assertEqual([x["metin"] for x in self.c.konusmalar], ["soru"])
         self.assertEqual(self.c.uyandirma["durum"], "olmadi")
 
+    def test_basarisiz_soz_yeniden_denenmez(self):
+        """Gönderilemeyen söz için Claude penceresi tekrar tekrar öne getirilmez; yeni söz gelince bir kez daha denenir."""
+        self.sonuc = (False, "izin yok")
+        self.c.soyle("soru")
+        self.c.konusmalar[-1]["t"] -= 10
+        self.assertEqual(self.c.uyandir_bir_kez(self.gonderici)[0], False)
+        self.c.uyandirma["t"] -= 60   # iki deneme arasındaki bekleme geçmiş olsa bile
+        self.c.son_arac -= 60
+        self.assertIsNone(self.c.uyandir_bir_kez(self.gonderici))
+        self.assertEqual(len(self.giden), 1)
+        self.c.soyle("yeni soru")
+        self.c.konusmalar[-1]["t"] -= 10
+        self.assertEqual(self.c.uyandir_bir_kez(self.gonderici)[0], False)
+        self.assertEqual(len(self.giden), 2)
+
+    def test_tahta_kapaliyken_uyandirmaz(self):
+        self.c.soyle("soru")
+        self.c.konusmalar[-1]["t"] -= 10
+        self.c.son_gorulme -= 60      # tahta sayfası bir süredir görünmüyor
+        self.assertIsNone(self.c.uyandir_bir_kez(self.gonderici))
+        self.assertEqual(self.giden, [])
+
+    def test_mac_betigi_claudeu_acmaz(self):
+        import uyandirma
+        b = uyandirma._MAC_BETIK
+        self.assertLess(b.index('is not running'), b.index('to activate'))
+        self.assertLess(b.index('UI elements enabled'), b.index('to activate'))
+
 
 SAHTE_ISCI = """import sys, json, time, base64
 print("@@" + json.dumps({"hazir": True, "sure": 0}), flush=True)

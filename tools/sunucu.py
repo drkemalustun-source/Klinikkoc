@@ -556,6 +556,13 @@ class Canli:
     def _uyandirilacak(self, simdi):
         if not self.konusmalar or self.dinliyor():
             return None
+        # Tahta sayfası kapalıysa (öğrenci çalışmıyor) Claude penceresine dokunulmaz.
+        if not self.bagli():
+            return None
+        # Aynı söz için yalnız bir kez denenir: gönderilemediyse (Claude kapalı, izin yok) yeni bir söz gelene
+        # kadar yeniden denenmez. Yoksa her 25 saniyede Claude penceresi öne gelir.
+        if self.konusmalar[-1].get("t") == getattr(self, "uyandirma_olmadi_t", None):
+            return None
         if simdi - self.konusmalar[-1].get("t", simdi) < self.UYANDIR_SOZ_SN:
             return None
         if simdi - self.son_arac < self.UYANDIR_ARAC_SN or simdi - self.uyandirma.get("t", 0) < self.UYANDIR_ARA_SN:
@@ -578,6 +585,7 @@ class Canli:
                 self.ayrilan.pop(tno, None)  # söz sohbete gitti; Claude onu bir araçtan ikinci kez almasın
             else:
                 self._geri_koy(tno)
+                self.uyandirma_olmadi_t = parcalar[-1].get("t") if parcalar else None
             self.uyandirma = {"durum": "gonderildi" if ok else "olmadi", "neden": neden, "t": time.time(),
                               "saat": time.strftime("%H:%M:%S"), "acik": True}
             if ok:
