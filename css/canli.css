@@ -269,3 +269,51 @@
   .canli .canli-yuvarlak { width: 42px; height: 42px; }
   .canli .topbar .section-name { display: none; }
 }
+
+/* ================= 3.5.1 · Canlı tahta kil görünümünde =================
+   Çerçeve, üst çubuk ve pencereler ana ekranla aynı bej/kil görünümdedir. Çizim alanı koyu kalır
+   (çizimler ve tebeşir yazısı koyu zemine göre ayarlı) ama rengi ana ekranın kobalt mavisidir. */
+body:has(.canli) { background: #EAE5DC; }
+.canli { --board: #1B367B; --board-2: #24459a; --board-line: rgba(255,255,255,.16); background: #EAE5DC; }
+.canli .topbar { background: transparent; border-bottom: 0; padding: 8px 12px 6px; color: #2A2D3A; }
+.canli .topbar .lesson-name { color: #1B367B; }
+.canli .topbar .section-name { color: #6b6658; }
+.canli .topbar .ctrl-btn.speed, .canli .topbar .icon-btn, .canli .claude-isik, .canli .canli-ses {
+  color: #2A2D3A; background: #F4EFE6; border: 0;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), inset 0 -3px 0 rgba(0,0,0,.08), 0 3px 8px -3px rgba(80,60,30,.35); }
+.canli .topbar .ctrl-btn.speed:hover, .canli .topbar .icon-btn:hover { background: #fff; }
+.canli .claude-isik { color: #6b6658; }
+.canli .claude-isik.acik { color: #2c6b4a; box-shadow: inset 0 0 0 2px #3f8a63, 0 3px 8px -3px rgba(80,60,30,.35); }
+.canli .claude-isik.acik i { background: #3f8a63; }
+.canli .canli-ses.yedek { color: #7a5200; background: #F3DFAE; }
+.canli .canli-dot { background: #d9452b; box-shadow: 0 0 0 3px rgba(217,69,43,.18); }
+.canli .canli-dot.bagli { background: #3f8a63; box-shadow: 0 0 0 3px rgba(63,138,99,.2); }
+.canli .board { margin: 0 10px; border-radius: 22px; color: var(--chalk);
+  background: radial-gradient(120% 90% at 30% 0%, #24459a 0%, #1B367B 45%, #14285e 100%);
+  box-shadow: inset 0 3px 10px rgba(0,0,0,.35), inset 0 -2px 0 rgba(255,255,255,.08), 0 10px 24px -10px rgba(40,40,80,.5); }
+.canli .canli-alt { padding-top: 8px; }
+.canli .canli-dok { box-shadow: inset 0 2px 0 rgba(255,255,255,.8), inset 0 -4px 0 rgba(0,0,0,.08), 0 6px 18px -8px rgba(80,60,30,.4); background: #F4EFE6; }
+.canli .canli-serit { background: rgba(12, 22, 54, .92); }
+.canli .an-nokta { stroke: #1B367B; }
+.canli .canli-menu { background: #F4EFE6; color: #2A2D3A; border: 0; box-shadow: 0 14px 34px -8px rgba(60,40,20,.45), inset 0 1px 0 #fff; }
+.canli .canli-menu-baslik, .canli .canli-secenek small, .canli .canli-menu-not { color: #6b6658; }
+.canli .canli-secenek:hover { background: rgba(0,0,0,.04); }
+.canli .canli-komut code { background: #DED8CC; color: #1B367B; }
+.canli.tam .topbar { background: #EAE5DC; }
+.canli.tam .board { margin: 0; border-radius: 0; }
+.canli.tam .canli-alt { background: #14285e; }
+.canli-sihirbaz { background: #EAE5DC; }
+/* Başlangıç ve uyarı pencereleri */
+.canli-baslat { background: rgba(234,229,220,.92); }
+.canli-baslat .q-card { background: #F4EFE6; color: #2A2D3A; border: 0; border-radius: 26px;
+  box-shadow: inset 0 2px 0 #fff, inset 0 -6px 0 rgba(0,0,0,.08), 0 22px 44px -14px rgba(60,40,20,.5); }
+.canli-baslat .q-tag { color: #E06826; }
+.canli-baslat .q-prompt { color: #1B367B; }
+.canli-baslat .canli-not { color: #6b6658; }
+.canli-baslat .btn { color: #2A2D3A; background: #EAE5DC; border: 0; border-radius: 999px;
+  box-shadow: inset 0 1px 0 #fff, inset 0 -4px 0 rgba(0,0,0,.1), 0 4px 10px -4px rgba(80,60,30,.4); }
+.canli-baslat .btn.primary { color: #fff; background: linear-gradient(#ee7b3a, #E06826); box-shadow: inset 0 1px 0 rgba(255,255,255,.5), inset 0 -4px 0 #a8461a, 0 6px 14px -4px rgba(224,104,38,.6); }
+.canli-buyuk-dugme { background: #F4EFE6; color: #1B367B; border-color: #E06826; }
+.canli-buyuk-dugme small { color: #6b6658; }
+.canli .question { background: rgba(12,22,54,.86); }
+.canli .board.case-mode .question { background: rgba(12,22,54,.92); }
