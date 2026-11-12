@@ -12,5 +12,5 @@ if errorlevel 1 (
   exit /b 1
 )
 echo KlinikKoc aciliyor. Bu pencere acik kaldikca KlinikKoc calisir; isiniz bitince pencereyi kapatin.
-%PY% tools\sunucu.py --sayfa index.html
+%PY% tools\sunucu.py --sayfa ana.html
 pause

@@ -3,17 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#16201c">
+  <meta name="theme-color" content="#EAE5DC">
   <title>KlinikKoç · Kullanım kılavuzu</title>
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="css/tahta.css">
   <link rel="stylesheet" href="css/makaleler.css">
   <link rel="stylesheet" href="css/kilavuz.css">
+  <link rel="stylesheet" href="css/kil.css">
 </head>
 <body>
+  <script src="js/kil-sayfa.js"></script>
   <main class="mk kl">
     <header class="mk-head">
-      <a class="mk-geri" href="index.html">‹ Dersler</a> <a class="mk-geri" href="makaleler.html">Ders paketleri ve makaleler</a>
+      <a class="mk-geri" href="index.html">‹ Dersler</a>
       <h1>Kullanım kılavuzu</h1>
       <p>KlinikKoç'u kurmaktan bir dersi bitirip arşive kaldırmaya kadar her adım, ekran görüntüleriyle.
         Öğrenciyseniz 1–4. bölümler, öğretmenseniz 5. bölüm sizin için.</p>
@@ -23,6 +25,16 @@
       <h2>İçindekiler</h2>
       <ol>
         <li><a href="#nedir">KlinikKoç nedir?</a></li>
+        <li><a href="#yeni">Yeni ana ekran (3.5.0)</a>
+          <ol>
+            <li><a href="#yeni-ana">Ana ekran ve üç büyük düğme</a></li>
+            <li><a href="#yeni-sec">Ders ya da PDF seçip çalışmak</a></li>
+            <li><a href="#yeni-makale">Makale yardımcısı</a></li>
+            <li><a href="#yeni-tahta">Canlı tahtanın yeni düzeni</a></li>
+            <li><a href="#guncelleme">Tek tuşla güncelleme</a></li>
+            <li><a href="#surumler">Öğrenci ve öğretmen sürümü</a></li>
+            <li><a href="#program-onerisi">Geri bildirim: program kendini geliştirir</a></li>
+          </ol></li>
         <li><a href="#kurulum">Kurulum</a>
           <ol>
             <li><a href="#kurulum-windows">Windows</a></li>
@@ -75,6 +87,96 @@
             Claude masaüstü uygulamasıyla çalışan <i>canlı tahta</i> (sohbet, sesli soru-cevap, vaka, rubrikle puanlama).
             Canlı tahta sizin Claude aboneliğinizle çalışır; ek ücret ya da API anahtarı gerekmez.</li>
         </ul>
+      </section>
+
+      <section id="yeni">
+        <h2>Yeni ana ekran (3.5.0)</h2>
+        <p>3.5.0 sürümüyle KlinikKoç tek bir ana ekranla açılır. Aşağıdaki bölümlerde eski görünümden kalma ekran
+          görüntüleri de vardır; düğmelerin adı ve yaptıkları aynıdır, yalnız yerleri bu ana ekrana taşınmıştır.</p>
+
+        <h3 id="yeni-ana">Ana ekran ve üç büyük düğme</h3>
+        <p>Üstte üç büyük düğme durur: <b>Sihirbaz</b> (ders seçme, ekleme ve çalışma ekranı; program bununla açılır),
+          <b>Canlı tahta</b> (Claude ile ders) ve <b>Kılavuz</b> (bu sayfa). Solda bölüm düğmeleri vardır; birine basınca
+          yalnız sağdaki panel değişir, sayfa aşağı doğru uzamaz.</p>
+        <figure class="kl-sekil">
+          <img src="belgeler/kilavuz/yeni-1-derslerim.png" width="900" height="506" loading="lazy"
+               alt="Ana ekran: üstte Sihirbaz, Canlı tahta ve Kılavuz düğmeleri, solda bölümler, sağda Derslerim paneli">
+          <figcaption><b>Derslerim</b>: eklediğiniz ders paketleri ve kendi PDF'leriniz. Çalışmak istediklerinizi işaretleyin.</figcaption>
+        </figure>
+        <ul>
+          <li><b>Derslerim</b>: kurulu dersler ve PDF'ler; seçip çalışırsınız.</li>
+          <li><b>Ders paketi ekle</b>: öğretmeninizin verdiği .zip dosyasını bırakırsınız.</li>
+          <li><b>Kendi PDF'lerim</b>: kendi makale ya da notlarınızı eklersiniz; birden çok dosyayı birlikte bırakabilirsiniz.</li>
+          <li><b>Makale yardımcısı</b>: dersin makalelerini kolayca indirmenize yardım eder.</li>
+          <li><b>Raporlarım</b>: tamamlama raporları, tekrar kartları, depolama ve arşiv.</li>
+          <li><b>Çizim şablonları</b>: tahtada kullanılan hazır çizimler.</li>
+          <li><b>Geri bildirim</b>: Claude'un programın kendisi için yazdığı öneriler.</li>
+          <li><b>Ders hazırla</b> (yalnız öğretmen sürümünde): ders hazırlama sihirbazı.</li>
+        </ul>
+
+        <h3 id="yeni-sec">Ders ya da PDF seçip çalışmak</h3>
+        <ol class="kl-adim">
+          <li><b>Derslerim</b>'de bir ya da birkaç dersi ya da PDF'i işaretleyin.</li>
+          <li><b>Seçilenlerle çalış</b>'a basın. Açılan pencerede Claude'a söyleyeceğiniz hazır cümle yazar; kopyalayıp
+            Claude masaüstü uygulamasına yapıştırın. Claude seçtiklerinizi bilir ve dersi yalnız onlardan anlatır.</li>
+          <li>İsterseniz hiçbir şey işaretlemeden Claude'a yazmanız da yeter:
+            <span class="kl-soyle"><b>Claude'a:</b> "Akut periodontal lezyonlar dersini aç."</span>
+            Claude dersi kendisi bulup açar.</li>
+        </ol>
+        <figure class="kl-sekil">
+          <img src="belgeler/kilavuz/yeni-3-pdf.png" width="900" height="506" loading="lazy"
+               alt="Kendi PDF'lerim paneli: PDF bırakma alanı ve eklenen PDF listesi">
+          <figcaption><b>Kendi PDF'lerim</b>: birden çok PDF'i birlikte bırakın; sırayla eklenir. Dosyalar bilgisayarınızda kalır.</figcaption>
+        </figure>
+
+        <h3 id="yeni-makale">Makale yardımcısı</h3>
+        <p>Ders paketlerinde makalelerin kendisi değil, yalnız künyesi ve DOI'si bulunur. Yardımcı önce açık erişimli
+          kopyayı kendisi indirir. Bulamadıklarında <b>Yayıncıda aç</b>'a basın ve PDF'i her zamanki gibi
+          İndirilenler klasörüne kaydedin. Yardımcı birkaç dakika boyunca bu klasöre kendisi bakar; indirdiğiniz dosyayı DOI'sinden ya da başlığından tanır ve
+          doğru makalenin yerine koyar; dosyayı elle taşımanız gerekmez.</p>
+        <figure class="kl-sekil">
+          <img src="belgeler/kilavuz/yeni-4-makale.png" width="900" height="506" loading="lazy"
+               alt="Makale yardımcısı paneli: makale listesi, durum etiketleri ve Yayıncıda aç düğmeleri">
+        </figure>
+
+        <h3 id="yeni-tahta">Canlı tahtanın yeni düzeni</h3>
+        <p>Çizim alanı büyüsün diye üst çubuk inceldi ve alttaki bütün düğmeler tek satıra indi. Eski düğmelerin hepsi yerindedir.</p>
+        <figure class="kl-sekil">
+          <img src="belgeler/kilavuz/yeni-5-canli-tahta.png" width="900" height="506" loading="lazy"
+               alt="Canlı tahta: ince üst çubuk, geniş çizim alanı, altta tek satır düğmeler ve altyazı">
+        </figure>
+        <ul>
+          <li><b>Üst çubuk</b>: bağlantı ışığı, ders adı, ses, "Claude dinliyor" ışığı, <b>Ana ekran</b>, (öğretmende) <b>Sihirbaz</b>,
+            anlatım hızı ve tam ekran. Tam ekranda üst çubuk 3 saniye sonra kendiliğinden gizlenir; fareyi ekranın üst
+            kenarına götürünce geri gelir.</li>
+          <li><b>Alt satır</b>: duraklat, mikrofon, dikte motoru, yazı kutusu, gönder, durdur ve <b>Altyazı</b>.</li>
+          <li><b>Altyazı</b> düğmesi sırayla üç durum arasında geçer: son ileti, son iki ileti, kapalı.</li>
+          <li>Kısayollar aynıdır: <kbd>M</kbd> konuş, <kbd>Enter</kbd> gönder, <kbd>P</kbd> ya da <kbd>Boşluk</kbd> duraklat,
+            <kbd>Esc</kbd> durdur, <kbd>F</kbd> tam ekran.</li>
+        </ul>
+
+        <h3 id="guncelleme">Tek tuşla güncelleme</h3>
+        <p>Yeni bir sürüm çıktığında ana ekranın üstünde <b>Yeni sürüm hazır</b> kutusu belirir. <b>Güncelle</b>'ye basın;
+          program yeni sürümü indirir, eskisini yedekler, kurar ve kendini yeniden başlatır. Dersleriniz, PDF'leriniz,
+          kayıtlarınız ve ayarlarınız yerinde kalır. Bir sorun çıkarsa güncelleme kendiliğinden eski sürüme döner;
+          siz de sol üstteki sürüm numarasına basıp <b>Önceki sürüme dön</b> ile geri alabilirsiniz. İnternet yoksa program
+          olduğu gibi çalışmayı sürdürür.</p>
+
+        <h3 id="surumler">Öğrenci ve öğretmen sürümü</h3>
+        <p>İki indirme dosyası vardır. <b>Öğrenci sürümünde</b> yalnız ders çalışmak için gerekenler bulunur.
+          <b>Öğretmen sürümünde</b> buna ek olarak <b>Ders hazırla</b> bölümü (ders hazırlama sihirbazı) vardır.
+          Hangi sürümü kullandığınız ana ekranın sağ üstünde yazar. Güncelleme, kurulu sürümün türünü değiştirmez.</p>
+
+        <h3 id="program-onerisi">Geri bildirim: program kendini geliştirir</h3>
+        <p>Her dersin sonunda Claude, programın kendisi için kısa notlar yazar: eksik bir çizim, kaynaklarda bulunamayan
+          bir soru, çalışmayan bir araç gibi. Bu notlar <b>Geri bildirim</b> bölümünde görünür, <b>yalnız sizin
+          bilgisayarınızda</b> durur ve isim içermez. <b>Metni kopyala</b> ile öğretmeninize iletebilir ya da
+          <b>Geliştirme önerisi olarak gönder</b> ile programı geliştirenlere ulaştırabilirsiniz; bu düğme
+          tarayıcınızda içi dolu bir sayfa açar, göndermek sizin elinizdedir. Siz göndermedikçe hiçbir şey dışarı çıkmaz.</p>
+        <figure class="kl-sekil">
+          <img src="belgeler/kilavuz/yeni-7-geri-bildirim.png" width="900" height="506" loading="lazy"
+               alt="Geri bildirim paneli: Claude'un programa önerileri ve öğrencilerden gelen formlar">
+        </figure>
       </section>
 
       <section id="kurulum">
@@ -348,8 +450,8 @@
           ders paketleri çıkar. <b>Sihirbaz önerir, siz onaylarsınız:</b> onaylamadığınız hiçbir şey derse girmez.</p>
 
         <h3 id="sihirbaz-acmak">Sihirbazı açmak</h3>
-        <p>KlinikKoç'u <a href="#acmak">BASLAT dosyasıyla ya da Claude'la açın</a>, ana sayfanın altındaki
-          <b>Öğretmen: ders hazırlama sihirbazı</b> bağlantısına basın. Daha önce başladığınız taslaklar <b>Ders taslağı</b>
+        <p>KlinikKoç'u <a href="#acmak">BASLAT dosyasıyla ya da Claude'la açın</a>, ana ekranda soldaki
+          <b>Ders hazırla</b> düğmesine basın (yalnız öğretmen sürümünde görünür). Daha önce başladığınız taslaklar <b>Ders taslağı</b>
           listesinde durur; yeni bir ders için <b>Yeni ders aç</b>'a basın.</p>
         <figure class="kl-sekil">
           <img src="belgeler/kilavuz/ogretmen-1-yeni-ders.png" width="862" height="353" loading="lazy"
@@ -357,7 +459,25 @@
           <figcaption>Başlığı yazın; kısa kimlik kendiliğinden oluşur (Türkçe harfsiz, tireli). Kimlik paketin ve klasörün adı olur.</figcaption>
         </figure>
 
-        <h3 id="sihirbaz-adimlar">Altı adım</h3>
+        <h3 id="sihirbaz-adimlar">Dokuz adım</h3>
+        <p>3.5.0 ile adımlar solda bir liste olarak durur; birine basınca yalnız sağdaki bölüm değişir, tamamlanan adım
+          yeşil işaret alır. Sıra şöyledir: 1 Ders kartı, 2 Makaleler, 3 Ders notu ve vakalar, 4 Hedefler ve önemli noktalar,
+          5 Çizim ve animasyonlar, 6 Videolar ve YouTube, 7 Sorular, 8 Öneriler ve onay, 9 Denetle ve paketle.
+          Aşağıdaki görüntülerin bir kısmı eski görünümdendir; alanlar aynıdır.</p>
+        <figure class="kl-sekil">
+          <img src="belgeler/kilavuz/yeni-8-sihirbaz-cizim.png" width="900" height="506" loading="lazy"
+               alt="Sihirbazın 5. adımı: hazır şablondan çizim seçme, bitiş durumu ve animasyon tarifi">
+          <figcaption><b>5. Çizim ve animasyonlar.</b> Hazır şablonlardan seçin. Bir değişimi göstermek için
+            <b>bitiş durumu</b> da seçin (ör. sağlıklıdan periodontitise): çizim tahtada o duruma akarak geçer.
+            <b>Animasyon tarifi</b>ne, çizim akarken eğitmenin söyleyeceğini yazın. <b>Canlandır</b> ile önizleyin.</figcaption>
+        </figure>
+        <ul>
+          <li><b>4. Hedefler ve önemli noktalar.</b> Öğrenme hedeflerini ve dersin sonunda akılda kalması gereken kısa
+            cümleleri yazın. Eğitmen bunları vurgular ve ders sonu özetini bunlardan yapar.</li>
+          <li><b>6. Videolar ve YouTube.</b> YouTube bağlantısı yapıştırın (isterseniz yalnız bir aralığını, ör. 2:10–5:40)
+            ya da kendi video dosyanızı bırakın. YouTube pakete yalnız adres olarak girer ve internet ister;
+            kendi videonuz varsayılan olarak yalnız fakülte paketine girer.</li>
+        </ul>
         <p><b>1. Ders kartı.</b> Başlık, yaklaşık süre, düzey (Lisans / Uzmanlık) ve eğitmen (İnci lisans, Mercan uzmanlık).</p>
         <figure class="kl-sekil">
           <img src="belgeler/kilavuz/ogretmen-2-ders-karti.png" width="862" height="332" loading="lazy" alt="Ders kartı adımı">

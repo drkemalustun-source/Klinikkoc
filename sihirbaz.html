@@ -3,124 +3,174 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#16201c">
+  <meta name="theme-color" content="#EAE5DC">
   <title>KlinikKoç · Ders hazırlama sihirbazı</title>
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="css/tahta.css">
   <link rel="stylesheet" href="css/makaleler.css">
   <link rel="stylesheet" href="css/sihirbaz.css">
+  <link rel="stylesheet" href="css/kil.css">
 </head>
 <body>
-  <main class="mk sh">
-    <header class="mk-head">
-      <a class="mk-geri sh-tahta" id="tahtayaDon" href="canli.html">‹ Tahtaya dön</a>
-      <a class="mk-geri" id="derslereDon" href="index.html">‹ Dersler</a> <a class="mk-geri" id="kilavuzBag" href="kilavuz.html#ogretmen">Kılavuz</a>
-      <h1>Ders hazırlama sihirbazı</h1>
-      <p>Dersi adım adım tanımlayın. Sihirbaz önerir, siz onaylarsınız; onaylanmayan hiçbir şey derse girmez.
-        Sonunda iki paket çıkar: herkese açık ve fakülteye özel.</p>
-    </header>
+  <script src="js/kil-sayfa.js"></script>
+  <main class="mk sh sh-kabuk">
+    <aside class="sh-yan" id="yan">
+      <h2>Ders hazırlama adımları</h2>
+      <ol class="sh-adimlar" id="adimlar"></ol>
+      <p class="sh-yan-not">Her adımda sihirbaz ve Claude öneri yapar; siz onaylamadan hiçbir şey derse girmez.</p>
+    </aside>
 
-    <section class="mk-kutu">
-      <div class="mk-satir">
-        <label for="dersSec">Ders taslağı</label>
-        <select id="dersSec"></select>
-      </div>
-      <details class="sh-yeni" id="yeniKutu">
-        <summary>Yeni ders aç</summary>
-        <div class="sh-form">
+    <div class="sh-sag">
+      <header class="mk-head sh-ust">
+        <a class="mk-geri sh-tahta" id="tahtayaDon" href="canli.html">‹ Tahtaya dön</a>
+        <a class="mk-geri" id="derslereDon" href="ana.html">‹ Ana ekran</a>
+        <a class="mk-geri" id="kilavuzBag" href="kilavuz.html#ogretmen">Kılavuz</a>
+        <div class="sh-taslak">
+          <label for="dersSec">Ders taslağı:</label>
+          <select id="dersSec"></select>
+          <button class="btn small" id="yeniAc" type="button">＋ Yeni ders</button>
+        </div>
+        <div class="sh-form sh-yeni" id="yeniKutu" hidden>
           <label>Ders başlığı <input id="yeniBaslik" placeholder="Akut periodontal lezyonlar"></label>
           <label>Kısa kimlik <input id="yeniKimlik" placeholder="akut-periodontal-lezyonlar"></label>
           <button class="btn primary" id="yeniDugme">Taslağı aç</button>
         </div>
-      </details>
-      <div class="mk-mesaj" id="genelMesaj" aria-live="polite"></div>
-    </section>
+        <div class="mk-mesaj" id="genelMesaj" aria-live="polite"></div>
+      </header>
 
-    <nav class="sh-adimlar" id="adimlar" hidden>
-      <a href="#a1">1 Ders kartı</a><a href="#a2">2 Makaleler</a><a href="#a3">3 Not ve vakalar</a>
-      <a href="#a4">4 Sorular ve dikkat</a><a href="#a5">5 Öneriler</a><a href="#a6">6 Paketle</a>
-    </nav>
+      <div class="sh-icerik" id="icerik" hidden>
+        <section class="mk-kutu" id="a1" data-adim="Ders kartı">
+          <h2>1. Ders kartı</h2>
+          <div class="sh-form sh-iki">
+            <label>Başlık <input data-alan="baslik"></label>
+            <label>Süre (dakika) <input data-alan="sure_dk" type="number" min="5" max="180"></label>
+            <label>Düzey <select data-alan="duzey"><option>Lisans</option><option>Uzmanlık</option></select></label>
+            <label>Eğitmen <select data-alan="egitmen"><option value="inci">İnci (lisans)</option><option value="mercan">Mercan (uzmanlık)</option></select></label>
+            <label class="sh-genis">Öğrenciye kısa açıklama (isteğe bağlı) <textarea data-alan="aciklama_ogrenci" rows="2"></textarea></label>
+            <label class="sh-genis">Değerlendirme formlarının gönderileceği e-posta (isteğe bağlı; pakete yazılır, öğrenci görür)
+              <input data-alan="geri_bildirim_eposta" type="email" placeholder="ornek@akdeniz.edu.tr"></label>
+          </div>
+        </section>
 
-    <div id="icerik" hidden>
-      <section class="mk-kutu" id="a1">
-        <h2>1. Ders kartı</h2>
-        <div class="sh-form sh-iki">
-          <label>Başlık <input data-alan="baslik"></label>
-          <label>Süre (dakika) <input data-alan="sure_dk" type="number" min="5" max="180"></label>
-          <label>Düzey <select data-alan="duzey"><option>Lisans</option><option>Uzmanlık</option></select></label>
-          <label>Eğitmen <select data-alan="egitmen"><option value="inci">İnci (lisans)</option><option value="mercan">Mercan (uzmanlık)</option></select></label>
-          <label class="sh-genis">Öğrenciye kısa açıklama (isteğe bağlı) <textarea data-alan="aciklama_ogrenci" rows="2"></textarea></label>
-          <label class="sh-genis">Değerlendirme formlarının gönderileceği e-posta (isteğe bağlı; pakete yazılır, öğrenci görür)
-            <input data-alan="geri_bildirim_eposta" type="email" placeholder="ornek@akdeniz.edu.tr"></label>
-        </div>
-      </section>
+        <section class="mk-kutu" id="a2" data-adim="Makaleler (künye + DOI)" hidden>
+          <h2>2. Makaleler</h2>
+          <p class="mk-ince">DOI'leri ya da kaynakçayı yapıştırın. Künye, özet ve açık erişim bilgisi kendiliğinden gelir.
+            Pakete makalenin kendisi değil, yalnız künyesi ve DOI'si girer; öğrencinin makale yardımcısı onları indirir.</p>
+          <textarea id="doiMetin" rows="4" placeholder="10.1111/jcpe.12941&#10;https://doi.org/10.1111/jcpe.12946"></textarea>
+          <div class="mk-dugmeler"><button class="btn primary" id="doiDugme">Makaleleri ekle</button>
+            <button class="btn" id="kunyeDugme">Eksik künyeleri yeniden sor</button></div>
+          <div class="mk-mesaj" id="doiMesaj" aria-live="polite"></div>
+          <ol class="mk-liste" id="kaynakListe"></ol>
+        </section>
 
-      <section class="mk-kutu" id="a2">
-        <h2>2. Makaleler</h2>
-        <p class="mk-ince">DOI'leri ya da kaynakçayı yapıştırın. Künye, özet ve açık erişim bilgisi kendiliğinden gelir.
-          Pakete makalenin kendisi değil, yalnız künyesi girer.</p>
-        <textarea id="doiMetin" rows="4" placeholder="10.1111/jcpe.12941&#10;https://doi.org/10.1111/jcpe.12946"></textarea>
-        <div class="mk-dugmeler"><button class="btn primary" id="doiDugme">Makaleleri ekle</button>
-          <button class="btn" id="kunyeDugme">Eksik künyeleri yeniden sor</button></div>
-        <div class="mk-mesaj" id="doiMesaj" aria-live="polite"></div>
-        <ol class="mk-liste" id="kaynakListe"></ol>
-      </section>
+        <section class="mk-kutu" id="a3" data-adim="Ders notu ve vakalar" hidden>
+          <h2>3. Ders notu ve vakalar</h2>
+          <p class="mk-ince">Ders notunuzu (Word .docx, PDF ya da metin) bırakın; başlıklarından bölümlere ayrılır.
+            Vaka kartı (.json) ya da kart + görsellerin zip'i de bırakılabilir. Önce paylaşım kademesini seçin.</p>
+          <div class="mk-satir"><label for="kademeSec">Paylaşım</label><select id="kademeSec"></select></div>
+          <label class="mk-birak" id="dosyaBirak">
+            <input type="file" id="dosyaSec" multiple hidden accept=".docx,.pdf,.txt,.md,.json,.zip">
+            <span>Ders notu ya da vaka kartını buraya bırakın</span>
+          </label>
+          <div class="mk-mesaj" id="dosyaMesaj" aria-live="polite"></div>
+          <h3>Notlar</h3><ol class="mk-liste" id="notListe"></ol>
+          <h3>Vakalar</h3><ol class="mk-liste" id="vakaListe"></ol>
+          <p class="mk-ince">Boş vaka kartı şablonu: <code>sablonlar/vaka-karti-bos.json</code></p>
+          <h3>Makaleden şekiller</h3>
+          <p class="mk-ince">Abonelikli makalenin şeklini pakete koymayın. Claude'a "makalenin Şekil 2'sini derse ekle" deyin:
+            pakete yalnız şeklin yeri (makale, sayfa, bölge) girer, her öğrencinin bilgisayarı şekli kendi PDF'inden çizer.</p>
+          <ol class="mk-liste" id="gorselListe"></ol>
+        </section>
 
-      <section class="mk-kutu" id="a3">
-        <h2>3. Ders notu ve vakalar</h2>
-        <p class="mk-ince">Ders notunuzu (Word .docx, PDF ya da metin) bırakın; başlıklarından bölümlere ayrılır.
-          Vaka kartı (.json) ya da kart + görsellerin zip'i de bırakılabilir. Önce paylaşım kademesini seçin.</p>
-        <div class="mk-satir"><label for="kademeSec">Paylaşım</label><select id="kademeSec"></select></div>
-        <label class="mk-birak" id="dosyaBirak">
-          <input type="file" id="dosyaSec" multiple hidden accept=".docx,.pdf,.txt,.md,.json,.zip">
-          <span>Ders notu ya da vaka kartını buraya bırakın</span>
-        </label>
-        <div class="mk-mesaj" id="dosyaMesaj" aria-live="polite"></div>
-        <h3>Notlar</h3><ol class="mk-liste" id="notListe"></ol>
-        <h3>Vakalar</h3><ol class="mk-liste" id="vakaListe"></ol>
-        <p class="mk-ince">Boş vaka kartı şablonu: <code>sablonlar/vaka-karti-bos.json</code></p>
-        <h3>Makaleden şekiller</h3>
-        <p class="mk-ince">Abonelikli makalenin şeklini pakete koymayın. Claude'a "makalenin Şekil 2'sini derse ekle" deyin:
-          pakete yalnız şeklin yeri (makale, sayfa, bölge) girer, her öğrencinin bilgisayarı şekli kendi PDF'inden çizer.</p>
-        <ol class="mk-liste" id="gorselListe"></ol>
-      </section>
+        <section class="mk-kutu" id="a4" data-adim="Hedefler ve önemli noktalar" hidden>
+          <h2>4. Hedefler ve önemli noktalar</h2>
+          <h3>Öğrenme hedefleri</h3><ol class="mk-liste" id="hedefListe"></ol>
+          <div class="sh-ekle"><input id="hedeflerYeni" placeholder="Ör. Nekrotizan gingivitisi herpetik gingivostomatitten ayırt eder">
+            <button class="btn small" data-ekle="hedefler">Ekle</button></div>
+          <h3>Dersin önemli noktaları</h3>
+          <p class="mk-ince">Ders bitince öğrencinin aklında kalması gerekenler; her biri tek kısa cümle. Eğitmen bunları vurgular ve ders sonu özetini bunlardan yapar.</p>
+          <ol class="mk-liste" id="onemliListe"></ol>
+          <div class="sh-ekle"><input id="onemliYeni" placeholder="Ör. NUG'da papil ucu nekrozu tanı koydurucudur.">
+            <button class="btn small" data-ekle="onemli">Ekle</button></div>
+          <h3>Eğitimde dikkat edilecek yerler</h3>
+          <ol class="mk-liste" id="dikkatListe"></ol>
+          <div class="sh-ekle"><input id="dikkatYeni" placeholder="Ör. NUG'u herpetik gingivostomatitle karıştırmasın; ateşin yerini sorgulat.">
+            <button class="btn small" data-ekle="dikkat">Ekle</button></div>
+          <h3>Bilinen yanılgılar</h3>
+          <ol class="mk-liste" id="yanilgiListe"></ol>
+          <div class="sh-ekle"><input id="yanilgilarYeni" placeholder="Öğrencilerin sık düştüğü yanlış">
+            <button class="btn small" data-ekle="yanilgilar">Ekle</button></div>
+          <h3>Terimler</h3><div class="sh-terimler" id="terimListe"></div>
+          <div class="sh-ekle"><input id="terimlerYeni" placeholder="Alan terimi (konuşma tanıma doğru yazsın diye)">
+            <button class="btn small" data-ekle="terimler">Ekle</button></div>
+        </section>
 
-      <section class="mk-kutu" id="a4">
-        <h2>4. Sorular ve eğitimde dikkat edilecekler</h2>
-        <h3>Eğitimde dikkat edilecek yerler</h3>
-        <ol class="mk-liste" id="dikkatListe"></ol>
-        <div class="sh-ekle"><input id="dikkatYeni" placeholder="Ör. NUG'u herpetik gingivostomatitle karıştırmasın; ateşin yerini sorgulat.">
-          <button class="btn small" data-ekle="dikkat">Ekle</button></div>
-        <h3>Bilinen yanılgılar</h3>
-        <ol class="mk-liste" id="yanilgiListe"></ol>
-        <div class="sh-ekle"><input id="yanilgilarYeni" placeholder="Öğrencilerin sık düştüğü yanlış">
-          <button class="btn small" data-ekle="yanilgilar">Ekle</button></div>
-        <h3>Sorular</h3>
-        <ol class="mk-liste" id="soruListe"></ol>
-        <div class="sh-ekle"><input id="sorularYeni" placeholder="Açık uçlu soru (seçmeli soruyu önerilerden düzenleyerek ekleyin)">
-          <button class="btn small" data-ekle="sorular">Ekle</button></div>
-      </section>
+        <section class="mk-kutu" id="a5" data-adim="Çizim ve animasyonlar" hidden>
+          <h2>5. Tahtada kullanılacak çizimler ve animasyonlar</h2>
+          <p class="mk-ince">Hazır anatomik şablonlardan seçin. Bir değişimi göstermek istiyorsanız (ör. sağlıklıdan periodontitise)
+            “bitiş durumu” da seçin: çizim tahtada o duruma akarak geçer. “Animasyon tarifi”ne çizim akarken eğitmenin söyleyeceğini yazın.</p>
+          <div class="mk-dugmeler"><button class="btn primary" id="cizimEkle" type="button">＋ Çizim ekle</button>
+            <a class="btn" href="sablon-galerisi.html" target="_blank" rel="noopener">Şablon galerisini aç</a></div>
+          <div class="sh-cizimler" id="cizimListe"></div>
+        </section>
 
-      <section class="mk-kutu" id="a5">
-        <h2>5. Öneriler ve onay</h2>
-        <p class="mk-ince">Hızlı öneriler internetsiz çalışır ve notun başlıklarından çıkar. Daha iyi öneriler için
-          Claude'a şunu yazın: <q id="claudeKomut"></q> Öneriler buraya gelir; her birini kabul edin, düzeltin ya da silin.</p>
-        <div class="mk-dugmeler"><button class="btn" id="kuralDugme">Hızlı öneriler (internetsiz)</button></div>
-        <div class="mk-mesaj" id="oneriMesaj" aria-live="polite"></div>
-        <h3>Onaylı hedefler</h3><ol class="mk-liste" id="hedefListe"></ol>
-        <h3>Onaylı terimler</h3><div class="sh-terimler" id="terimListe"></div>
-        <h3>Onay bekleyen öneriler</h3><div id="oneriListe"></div>
-      </section>
+        <section class="mk-kutu" id="a6" data-adim="Videolar ve YouTube" hidden>
+          <h2>6. Videolar ve YouTube bağlantıları</h2>
+          <p class="mk-ince">YouTube bağlantısı pakete yalnız adres olarak girer ve internet ister. İsterseniz videonun yalnız bir aralığını oynatın (ör. 2:10 – 5:40).</p>
+          <div class="sh-form sh-video-form">
+            <label class="sh-genis">YouTube bağlantısı <input id="ytAdres" placeholder="https://www.youtube.com/watch?v=..."></label>
+            <label>Başlık <input id="ytBaslik" placeholder="Akut lezyonlarda tanı"></label>
+            <label>Başlangıç <input id="ytBas" placeholder="2:10"></label>
+            <label>Bitiş <input id="ytBit" placeholder="5:40"></label>
+            <button class="btn primary" id="ytEkle" type="button">Bağlantıyı ekle</button>
+          </div>
+          <h3>Kendi video dosyanız</h3>
+          <p class="mk-ince">Kendi çektiğiniz video (mp4, webm, mov). Büyük olduğu için varsayılan olarak yalnız fakülte paketine girer; internetsiz oynar.</p>
+          <div class="mk-satir"><label for="videoKademe">Paylaşım</label><select id="videoKademe"></select></div>
+          <label class="mk-birak" id="videoBirak">
+            <input type="file" id="videoSec" multiple hidden accept=".mp4,.m4v,.webm,.ogv,.mov,video/*">
+            <span>Video dosyasını buraya bırakın</span>
+          </label>
+          <div class="mk-mesaj" id="videoMesaj" aria-live="polite"></div>
+          <ol class="mk-liste" id="videoListe"></ol>
+        </section>
 
-      <section class="mk-kutu" id="a6">
-        <h2>6. Denetle ve paketle</h2>
-        <div id="denetim"></div>
-        <div class="mk-dugmeler"><button class="btn primary" id="paketDugme">Paketle</button>
-          <button class="btn" id="paketKlasorDugme">Paket klasörünü aç</button></div>
-        <div class="mk-mesaj" id="paketMesaj" aria-live="polite"></div>
-      </section>
+        <section class="mk-kutu" id="a7" data-adim="Sorular" hidden>
+          <h2>7. Sorular</h2>
+          <ol class="mk-liste" id="soruListe"></ol>
+          <div class="sh-ekle"><input id="sorularYeni" placeholder="Açık uçlu soru (seçmeli soruyu önerilerden düzenleyerek ekleyin)">
+            <button class="btn small" data-ekle="sorular">Ekle</button></div>
+        </section>
+
+        <section class="mk-kutu" id="a8" data-adim="Öneriler ve onay" hidden>
+          <h2>8. Öneriler ve onay</h2>
+          <p class="mk-ince">Hızlı öneriler internetsiz çalışır ve notun başlıklarından çıkar. Daha iyi öneriler (hedef, soru, önemli nokta,
+            çizim ve animasyon) için Claude'a şunu yazın: <q id="claudeKomut"></q>
+            <button class="btn small" id="claudeKopyala" type="button">Kopyala</button> Öneriler buraya gelir; her birini kabul edin, düzeltin ya da silin.</p>
+          <div class="mk-dugmeler"><button class="btn" id="kuralDugme">Hızlı öneriler (internetsiz)</button></div>
+          <div class="mk-mesaj" id="oneriMesaj" aria-live="polite"></div>
+          <div id="oneriListe"></div>
+        </section>
+
+        <section class="mk-kutu" id="a9" data-adim="Denetle ve paketle (.zip)" hidden>
+          <h2>9. Denetle ve paketle</h2>
+          <p class="mk-ince">İki zip çıkar: herkese açık paket ve fakülte paketi. Abonelikli makalelerin PDF'i hiçbir pakete girmez.</p>
+          <div id="denetim"></div>
+          <div class="mk-dugmeler"><button class="btn primary" id="paketDugme">Paketle</button>
+            <button class="btn" id="paketKlasorDugme">Paket klasörünü aç</button></div>
+          <div class="mk-mesaj" id="paketMesaj" aria-live="polite"></div>
+        </section>
+      </div>
+
+      <footer class="sh-gezin" id="gezin" hidden>
+        <button class="btn" id="geriDugme" type="button">‹ Geri</button>
+        <span class="mk-ince" id="kayitNotu">Yazdıklarınız kendiliğinden kaydedilir.</span>
+        <button class="btn primary" id="ileriDugme" type="button">Kaydet ve ilerle ›</button>
+      </footer>
     </div>
   </main>
+  <script src="js/anatomi.js"></script>
+  <script src="js/anatomi-bolge.js"></script>
   <script src="js/sihirbaz.js"></script>
 </body>
 </html>

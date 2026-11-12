@@ -46,7 +46,12 @@ import kayit_aktar  # noqa: E402
 import kayit_deposu as kd  # noqa: E402
 import makale_bulucu  # noqa: E402
 import makale_sekil  # noqa: E402
-import sihirbaz  # noqa: E402
+try:
+    import sihirbaz  # noqa: E402  (yalnız öğretmen sürümünde vardır)
+except ImportError:
+    sihirbaz = None
+import ana_ekran  # noqa: E402
+import surum as surum_  # noqa: E402
 import veri_yeri  # noqa: E402
 
 
@@ -88,16 +93,12 @@ GIZLI_ARACLAR = {"dinle"}  # eski ad: bekle'ye yönlenir; eski sohbetler çağı
 
 
 def profil():
+    if sihirbaz is None or not surum_.ogretmen_mi():
+        return "ogrenci"  # öğrenci sürümü: ders hazırlama dosyaları yok, öğretmen araçları da gösterilmez
     p = (os.environ.get("KLINIK_KOC_PROFIL") or _ayar("profil") or "").strip().lower()
     if p in ("ogretmen", "öğretmen", "ogrenci", "öğrenci"):
         return "ogretmen" if p.startswith(("ogr", "öğr")) and "etmen" in p else "ogrenci"
-    try:
-        klasor = os.path.join(veri_yeri.veri_kok(), "sihirbaz")
-        if os.path.isdir(klasor) and any(os.scandir(klasor)):
-            return "ogretmen"
-    except OSError:
-        pass
-    return "ogrenci"
+    return "ogretmen"  # öğretmen sürümü kuruluysa öğretmen araçları açıktır
 
 
 def araclar():
@@ -615,6 +616,8 @@ def ar_egitmen_hazirla(a):
                     "ogretmen_notlari": eg.get("ogretmenNotlari"), "bilinen_yanilgilar": eg.get("yanilgilar"),
                     "oturumlar": eg.get("oturumlar"), "arac_seti": eg.get("aracSeti"), "olcme": olcme_ozeti(eg),
                     "ogretmenin_sorulari": eg.get("soruBankasi") or None,
+                    "onemli_noktalar": eg.get("onemliNoktalar") or None,
+                    "hazir_cizimler": eg.get("cizimler") or None,
                     "gorseller": {k: v.get("aciklama") for k, v in (eg.get("gorseller") or {}).items()}
                     or {k: v.get("caption") for k, v in (d.get("assets") or {}).items()},
                     "hazir_anlatim_bolumleri": [s["id"] for s in d.get("sections", [])],
@@ -1647,7 +1650,7 @@ def ar_sihirbaz_oku(a):
 
 def ar_sihirbaz_oner(a):
     ders = a.get("ders")
-    o = sihirbaz.oneri_yaz(ders, {k: a.get(k) for k in ("hedefler", "terimler", "sorular", "yanilgilar")}, kim="claude")
+    o = sihirbaz.oneri_yaz(ders, {k: a.get(k) for k in sihirbaz.ONERI_TURLERI}, kim="claude")
     out = {"durum": "yazıldı", "sayilar": {k: len(v) for k, v in o.items() if isinstance(v, list)},
            "not": "Öneriler sihirbaz sayfasında öğretmenin onayını bekliyor. Öğretmene bunu söyle."}
     if a.get("ac"):
@@ -1695,6 +1698,7 @@ def ar_ders_bitir(a):
     kimlik = ogrenci_kimligi(a.get("ogrenci"))
     r = ders_sonu.tamamlama_raporu(kimlik, ders, a.get("ogrenci_notu"))
     tespit = degerlendirme.claude_notu(kimlik, ders, a.get("claude_tespitleri") or [])
+    oneri = ana_ekran.oneri_ekle(ders, a.get("program_onerileri") or []) if a.get("program_onerileri") else None
     out = {"durum": "tamamlandı", "rapor": r["dosya"], "tekrar_karti": r["kart_sayisi"],
            "genel_basari": karne_.yuzde(r["genel_basari"]), "gelistirilecek": r["gelistirilecek"],
            "yoklanmayan": r["yoklanmayan"], "claude_tespiti": len(tespit),
@@ -1706,10 +1710,50 @@ def ar_ders_bitir(a):
         out["not"] += (" Sonra kısaca söyle: tarayıcıda 2–3 dakikalık bir değerlendirme formu açıldı; isteğe bağlı ve "
                        "adsız. Kendi tespitlerin formun ikinci bölümünde; göndermeden önce görüp çıkarabilir. Göndermek "
                        "öğrenciye kalmış.")
+    if oneri:
+        out["program_onerisi"] = oneri
+    else:
+        out["program_onerisi_iste"] = PROGRAM_ONERISI_NOTU
     d = ders_sonu.depolama()
     if d["asildi"]:
         out["depolama"] = depolama_ozeti()
         out["depolama"]["not"] = DEPOLAMA_NOTU
+    return metin(out)
+
+
+PROGRAM_ONERISI_NOTU = (
+    "Şimdi program_onerisi aracını çağır: bu derste PROGRAMIN KENDİSİNDE eksik ya da zor bulduğun 1–3 somut şeyi yaz "
+    "(ör. gereken çizim şablonu yoktu, öğrencinin sorusu kaynakta bulunamadı, bir araç hata verdi ya da yavaştı, "
+    "öğrenci bir düğmeyi bulamadı). Öğrencinin adını, başarısını ya da kişisel bilgisini yazma. Gerçekten bir şey "
+    "yoksa çağırma. Öneriler yalnız bu bilgisayarda durur; kullanıcı isterse kendisi gönderir.")
+
+
+def ar_program_onerisi(a):
+    ders = a.get("ders")
+    if ders:
+        ders_yolu(ders)
+    r = ana_ekran.oneri_ekle(ders, a.get("oneriler") or [])
+    r["not"] = ("Kaydedildi (yalnız bu bilgisayarda; ana ekranda 'Geri bildirim' bölümünde görünür). Kullanıcıya tek "
+                "cümleyle söyle: programı geliştirmek için birkaç not yazdın, isterse ana ekrandan görüp gönderebilir.")
+    return metin(r)
+
+
+def ar_calisma_secimi(_):
+    s = ana_ekran.secim_metni()
+    if not s["dersler"] and not s["pdfler"]:
+        return metin({"secim": None, "not": "Ana ekranda işaretlenmiş bir ders ya da PDF yok. Öğrenciye hangi dersi "
+                                            "çalışmak istediğini sor; dersler aracıyla listeyi görebilirsin."})
+    ana = s["dersler"][0] if s["dersler"] else makale_bulucu.KENDI
+    diger = s["dersler"][1:]
+    out = {"dersler": [{"ders": d, "baslik": b} for d, b in zip(s["dersler"], s["ders_adlari"])],
+           "kendi_pdfleri": s["pdf_adlari"], "secim_tarihi": s["tarih"], "ilk_ders": ana}
+    out["not"] = (
+        "Öğrenci ana ekranda bunları işaretledi. egitmen_hazirla(ders='%s') ile başla ve tahtayi_ac çağır. " % ana
+        + ("Sonra sırayla öteki dersler: %s (her biri için yeniden egitmen_hazirla). " % ", ".join(diger) if diger else "")
+        + ("Öğrencinin kendi PDF'leri 'kendi-makalelerim' dersindedir: bilgi_ara(ders='kendi-makalelerim') ile "
+           "onlardan da yararlan ve hangi makaleden aldığını söyle. Yalnız işaretlenen makaleleri kullan: %s. "
+           % ", ".join(s["pdf_adlari"]) if s["pdfler"] else "")
+        + "Birden çok konu seçildiyse önce kısa bir çalışma planı söyle (hangi sırayla, kaç dakika).")
     return metin(out)
 
 
@@ -1826,7 +1870,8 @@ ISLEYICILER = {"egitmen_hazirla": ar_egitmen_hazirla, "kayit_oku": ar_kayit_oku,
                "kayit_anonim_aktar": ar_kayit_anonim_aktar, "makaleler": ar_makaleler,
                "makale_bul": ar_makale_bul, "makale_ekle": ar_makale_ekle,
                "sihirbaz_oku": ar_sihirbaz_oku, "sihirbaz_oner": ar_sihirbaz_oner,
-               "ders_bitir": ar_ders_bitir, "degerlendirme_notu": ar_degerlendirme_notu,
+               "ders_bitir": ar_ders_bitir, "program_onerisi": ar_program_onerisi,
+               "calisma_secimi": ar_calisma_secimi, "degerlendirme_notu": ar_degerlendirme_notu,
                "degerlendirme_ozeti": ar_degerlendirme_ozeti,
                "makale_sayfasi_bak": ar_makale_sayfasi_bak, "makale_sekli_ekle": ar_makale_sekli_ekle, "tekrar_karti_yaz": ar_tekrar_karti_yaz, "depolama": ar_depolama,
                "ders_arsivle": ar_ders_arsivle, "ders_paketi_ekle": ar_ders_paketi_ekle,

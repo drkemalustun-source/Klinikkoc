@@ -64,6 +64,31 @@ def belgeler():
     return ev
 
 
+def indirilenler():
+    """Tarayıcının dosyaları indirdiği klasör (İndirilenler / Downloads). KLINIK_KOC_INDIRILENLER bu yeri değiştirir."""
+    ozel = os.environ.get("KLINIK_KOC_INDIRILENLER")
+    if ozel:
+        return os.path.abspath(os.path.expanduser(ozel))
+    ev = os.path.expanduser("~")
+    if os.name == "nt":
+        try:
+            import ctypes
+            yol = ctypes.c_wchar_p()
+            # FOLDERID_Downloads {374DE290-123F-4565-9164-39C4925E467B}
+            guid = (ctypes.c_byte * 16)(*bytes.fromhex("90e24d373f126545916439c4925e467b"))
+            if ctypes.windll.shell32.SHGetKnownFolderPath(guid, 0, None, ctypes.byref(yol)) == 0 and yol.value:
+                sonuc = yol.value
+                ctypes.windll.ole32.CoTaskMemFree(yol)
+                if os.path.isdir(sonuc):
+                    return sonuc
+        except Exception:
+            pass
+    for aday in (os.path.join(ev, "Downloads"), os.path.join(ev, "İndirilenler")):
+        if os.path.isdir(aday):
+            return aday
+    return os.path.join(ev, "Downloads")
+
+
 def makale_kok():
     """İndirilen makalelerin durduğu, öğrencinin gördüğü klasör: Belgeler/KlinikKoç Makaleler.
     Ders arşivlenince de PDF'ler burada kalır; geri yüklemede önce buraya bakılır.

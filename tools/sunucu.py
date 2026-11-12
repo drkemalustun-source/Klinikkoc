@@ -50,7 +50,12 @@ import ders_paketi  # noqa: E402
 import ders_sonu  # noqa: E402
 import degerlendirme  # noqa: E402
 import makale_bulucu  # noqa: E402
-import sihirbaz  # noqa: E402
+try:
+    import sihirbaz  # noqa: E402  (yalnız öğretmen sürümünde vardır)
+except ImportError:
+    sihirbaz = None
+import ana_ekran  # noqa: E402
+import surum as surum_  # noqa: E402
 import uyandirma  # noqa: E402
 import veri_yeri  # noqa: E402
 
@@ -933,6 +938,9 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
             if yol == "ekle":
                 return self._json(200, makale_bulucu.elle_ekle(q.get("ders", ""), govde, q.get("ad") or "makale.pdf",
                                                                q.get("kaynak") or None))
+            if yol == "tara":
+                veri = json.loads(govde.decode("utf-8")) if govde else {}
+                return self._json(200, makale_bulucu.indirilenlerden_tara(str(veri.get("ders", ""))))
             if yol == "kaldir":
                 veri = json.loads(govde.decode("utf-8")) if govde else {}
                 return self._json(200, makale_bulucu.eki_kaldir(str(veri.get("ders", "")), str(veri.get("id", ""))))
@@ -1010,6 +1018,8 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
         if not self._yerel_mi():
             return self._json(403, {"hata": "Yalnızca bu bilgisayardan"})
         S = sihirbaz
+        if S is None or not surum_.ogretmen_mi():
+            return self._json(404, {"hata": "Ders hazırlama yalnız öğretmen sürümünde vardır."})
         ogretmen_profili_isaretle()
         try:
             if yol == "liste":
@@ -1025,6 +1035,8 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
             ders = q.get("ders", "")
             if yol == "not":
                 return self._json(200, S.not_ekle(ders, govde, q.get("ad") or "not.docx", q.get("kademe") or "fakulte"))
+            if yol == "video":
+                return self._json(200, S.video_ekle(ders, govde, q.get("ad") or "video.mp4", q.get("kademe") or "fakulte"))
             if yol == "vaka":
                 return self._json(200, S.vaka_ekle(ders, govde, q.get("ad") or "vaka.json", q.get("kademe") or "fakulte"))
             v = json.loads(govde.decode("utf-8")) if govde else {}
@@ -1067,6 +1079,54 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             return self._json(500, {"hata": "%s: %s" % (type(e).__name__, e)})
 
+    def _ana(self, govde=b""):
+        """Ana ekran (ana.html): dersler ve PDF'ler, çalışma seçimi, güncelleme, programa öneriler."""
+        u = urllib.parse.urlparse(self.path)
+        yol = u.path[len("/api/ana/"):]
+        if not self._yerel_mi():
+            return self._json(403, {"hata": "Yalnızca bu bilgisayardan"})
+        A = ana_ekran
+        try:
+            if yol == "ozet":
+                return self._json(200, A.ozet())
+            if yol == "geri_bildirim":
+                return self._json(200, A.geri_bildirim())
+            if self.command != "POST":
+                return self._json(405, {"hata": "POST gerekli"})
+            v = json.loads(govde.decode("utf-8")) if govde else {}
+            if yol == "secim":
+                return self._json(200, A.secim_yaz(v.get("dersler"), v.get("pdfler")))
+            if yol == "guncelleme_denetle":
+                return self._json(200, surum_.denetle(zorla=True))
+            if yol == "guncelle":
+                r = surum_.guncelle()
+                if r.get("guncellendi"):
+                    yeniden_baslat()
+                return self._json(200, r)
+            if yol == "geri_al":
+                r = surum_.geri_al()
+                yeniden_baslat()
+                return self._json(200, r)
+            if yol == "oneri_sil":
+                return self._json(200, A.oneri_sil(str(v.get("id", ""))))
+            if yol == "oneri_gonderildi":
+                return self._json(200, A.oneri_isaretle(v.get("idler") or []))
+            if yol == "klasor_ac":
+                k = {"oneri": A.oneri_klasoru(), "form": degerlendirme.klasor(),
+                     "paket": os.path.join(veri_yeri.belgeler(), "KlinikKoç Ders Paketleri")}.get(str(v.get("hangi")))
+                if not k:
+                    raise ValueError("Bilinmeyen klasör")
+                os.makedirs(k, exist_ok=True)
+                klasoru_ac(k)
+                return self._json(200, {"acildi": k})
+            return self._json(404, {"hata": "Bilinmeyen istek"})
+        except FileNotFoundError as e:
+            return self._json(404, {"hata": str(e)})
+        except (ValueError, KeyError, RuntimeError, zipfile.BadZipFile) as e:
+            return self._json(400, {"hata": str(e)})
+        except Exception as e:
+            return self._json(500, {"hata": "%s: %s" % (type(e).__name__, e)})
+
     def _host_yerel_mi(self):
         host = self.headers.get("Host") or ""
         return not host or (urllib.parse.urlsplit("//" + host).hostname or "") in self.YEREL
@@ -1083,6 +1143,13 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
             return self._makale()
         if self.path.startswith("/api/sihirbaz/"):
             return self._sihirbaz()
+        if self.path.startswith("/api/ana/"):
+            return self._ana()
+        if urllib.parse.urlparse(self.path).path in ("/", ""):
+            self.send_response(302)
+            self.send_header("Location", "/ana.html")
+            self.end_headers()
+            return None
         if urllib.parse.urlparse(self.path).path.lower().endswith(self.VIDEO):
             return self._video()
         return super().do_GET()
@@ -1150,13 +1217,15 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
         n = int(self.headers.get("Content-Length") or 0)
         if n > 600 * 1024 * 1024:
             return self._json(413, {"hata": "Dosya çok büyük"})
-        if self.path.startswith(("/api/makale/", "/api/sihirbaz/")) and not self._yerel_mi():
+        if self.path.startswith(("/api/makale/", "/api/sihirbaz/", "/api/ana/")) and not self._yerel_mi():
             return self._json(403, {"hata": "Yalnızca bu bilgisayardan"})
         govde = self.rfile.read(n) if n else b""
         if self.path.startswith("/api/makale/"):
             return self._makale(govde)
         if self.path.startswith("/api/sihirbaz/"):
             return self._sihirbaz(govde)
+        if self.path.startswith("/api/ana/"):
+            return self._ana(govde)
         if self.path.startswith("/api/canli/"):
             return self._canli(govde)
         if self.path.startswith("/api/ses-testi/kaydet"):
@@ -1176,6 +1245,30 @@ def ogretmen_profili_isaretle():
             ders_sonu._json_yaz(ders_sonu.ayar_yolu(), a)
     except Exception:
         pass
+
+
+_PORT = [8810]
+
+
+def yeniden_baslat(gecikme=1.2):
+    """Güncellemeden sonra: yeni dosyalarla yeni bir sunucu başlatır ve bu süreci kapatır (yanıt gittikten sonra)."""
+    arg = [sys.executable, os.path.join(KOK, "tools", "sunucu.py"), "--acma", "--bekle", "--port", str(_PORT[0])]
+
+    def calis():
+        try:
+            if os.name == "nt":
+                subprocess.Popen(arg, cwd=KOK, creationflags=subprocess.CREATE_NEW_CONSOLE,
+                                 stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                subprocess.Popen(arg, cwd=KOK, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                 stderr=subprocess.DEVNULL, start_new_session=True)
+        finally:
+            try:
+                POCKET.kapat()
+            except Exception:
+                pass
+            os._exit(0)
+    threading.Timer(gecikme, calis).start()
 
 
 def klasoru_ac(yol):
@@ -1229,14 +1322,22 @@ def main():
     ap.add_argument("--port", type=int, default=8810)
     ap.add_argument("--kur-duyu", action="store_true", help="Duyu için gereken paketleri kur ve çık")
     ap.add_argument("--acma", action="store_true", help="tarayıcıyı kendiliğinden açma")
-    ap.add_argument("--sayfa", default="ses-testi/", help="açılacak sayfa (varsayılan: ses testi)")
+    ap.add_argument("--sayfa", default="ana.html", help="açılacak sayfa (varsayılan: ana ekran)")
+    ap.add_argument("--bekle", action="store_true", help="kapı doluysa boşalmasını bekle (güncelleme sonrası)")
     a = ap.parse_args()
+    _PORT[0] = a.port
     if a.kur_duyu:
         sys.exit(kur_duyu())
     adres = "http://localhost:%d/%s" % (a.port, a.sayfa)
-    try:
-        sunucu = http.server.ThreadingHTTPServer(("127.0.0.1", a.port), Isleyici)
-    except OSError:
+    sunucu = None
+    for _ in range(40 if a.bekle else 1):
+        try:
+            sunucu = http.server.ThreadingHTTPServer(("127.0.0.1", a.port), Isleyici)
+            break
+        except OSError:
+            if a.bekle:
+                time.sleep(0.5)
+    if sunucu is None:
         # Sunucu zaten açık (ör. Claude başlattı): yalnız sayfayı açarız.
         print("KlinikKoç zaten açık: " + adres)
         if not a.acma:

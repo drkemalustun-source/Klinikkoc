@@ -35,3 +35,56 @@
 @media (max-width: 640px) { .sh-iki { grid-template-columns: minmax(0, 1fr); } }
 
 .sh-tahta { font-weight: 600; color: var(--accent); }
+
+/* ---------- Adımlı düzen (3.5.0): solda adım listesi, sağda yalnız seçili adım; sayfa aşağı uzamaz ---------- */
+body.kil:has(.sh-kabuk) { height: 100vh; height: 100dvh; overflow: hidden; margin: 0; }
+.sh-kabuk { max-width: none; height: 100%; box-sizing: border-box; display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 16px; padding: 12px; }
+body.kil.gomulu .sh-kabuk { padding: 4px; }
+.sh-yan { background: var(--k-adacayi, #BFD2C4); border-radius: 20px; padding: 16px 12px; overflow-y: auto;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.7), inset 0 -5px 0 rgba(0,0,0,.08), 0 10px 22px -8px rgba(80,60,30,.35); }
+.sh-yan h2 { font-size: 1.1em; margin: 0 6px 10px; }
+.sh-adimlar { position: static; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; flex-wrap: nowrap; gap: 2px; background: none; }
+.sh-adimlar button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 8px; border: 0; border-radius: 14px; background: none;
+  font: inherit; font-weight: 600; font-size: .92em; text-align: left; color: inherit; cursor: pointer; }
+.sh-adimlar button:hover { background: rgba(255,255,255,.4); }
+.sh-adimlar button.secili { background: var(--k-fildisi, #F5F1E9); box-shadow: inset 0 2px 0 #fff, inset 0 -3px 0 rgba(0,0,0,.08), 0 5px 10px -6px rgba(60,50,20,.5); }
+.sh-kure { flex: none; display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; font-weight: 800; font-size: .9em; color: #fff;
+  background: radial-gradient(circle at 32% 28%, rgba(255,255,255,.55) 0 8%, transparent 30%), #c9bfae;
+  box-shadow: inset -4px -5px 8px rgba(0,0,0,.2), 0 3px 6px rgba(70,50,20,.3); }
+.sh-adimlar .tamam .sh-kure { background-color: #4f8a66; }
+.sh-adimlar .secili .sh-kure { background-color: var(--k-kiremit, #E06826); }
+.sh-rozet { display: inline-block; margin-left: 6px; padding: 0 7px; border-radius: 999px; background: var(--k-kiremit, #E06826); color: #fff; font-size: .8em; }
+.sh-yan-not { margin: 14px 6px 0; padding: 10px 12px; border-radius: 14px; font-size: .8em; line-height: 1.4; background: rgba(0,0,0,.04);
+  box-shadow: inset 0 3px 7px rgba(70,55,30,.2), inset 0 -2px 0 rgba(255,255,255,.6); }
+.sh-sag { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+.sh-ust { flex: none; margin: 0; }
+.sh-taslak { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 16px; border-radius: 18px; background: var(--k-mavi, #CADEF2);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.7), inset 0 -5px 0 rgba(0,0,0,.08), 0 8px 18px -8px rgba(80,60,30,.35); }
+.sh-taslak label { font-weight: 800; font-size: 1.15em; color: var(--k-kobalt, #1B367B); }
+.sh-taslak select { flex: 1 1 240px; width: auto; font-weight: 700; font-size: 1.05em; }
+.sh-ust .sh-yeni { grid-template-columns: 1fr 1fr auto; align-items: end; padding: 10px 4px 0; }
+.sh-icerik { flex: 1; min-height: 0; overflow-y: auto; padding: 2px 4px 8px; }
+.sh-icerik > .mk-kutu { margin: 0; min-height: calc(100% - 10px); box-sizing: border-box; }
+.sh-icerik > .mk-kutu > h2 { font-size: 1.2em; }
+.sh-gezin { flex: none; display: flex; align-items: center; gap: 12px; }
+.sh-gezin .mk-ince { flex: 1; text-align: right; margin: 0; }
+.sh-cizimler { display: grid; gap: 14px; margin-top: 12px; }
+.sh-cizim { display: grid; grid-template-columns: minmax(200px, 300px) minmax(0, 1fr); gap: 14px; padding: 12px; border-radius: 18px; background: #fbf8f2;
+  box-shadow: inset 0 2px 0 #fff, inset 0 -4px 0 rgba(0,0,0,.07), 0 6px 14px -8px rgba(80,60,30,.45); }
+.sh-cizim-sol { display: grid; gap: 8px; align-content: start; }
+.sh-onizleme { width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; background: #1d2a25; display: block; }
+.sh-cizim .sh-form { margin: 0; }
+.sh-cizim label, .sh-video-form label { display: grid; gap: .2em; font-size: .85em; color: var(--chalk-dim); flex: 1 1 160px; }
+.sh-dar { flex: 0 0 110px !important; }
+.sh-dar input { width: 100%; }
+.sh-video-form { grid-template-columns: 2fr 1fr 1fr auto; align-items: end; }
+@media (max-width: 860px) {
+  body.kil:has(.sh-kabuk) { height: auto; overflow: auto; }
+  .sh-kabuk { display: block; height: auto; }
+  .sh-yan { margin-bottom: 10px; }
+  .sh-adimlar { flex-direction: row; overflow-x: auto; }
+  .sh-adimlar button { white-space: nowrap; }
+  .sh-yan-not, .sh-yan h2 { display: none; }
+  .sh-icerik { overflow: visible; }
+  .sh-cizim, .sh-video-form, .sh-ust .sh-yeni { grid-template-columns: minmax(0, 1fr); }
+}

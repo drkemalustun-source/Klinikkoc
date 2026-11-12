@@ -1260,6 +1260,21 @@
     else document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(() => {});
   };
   $('#tamEkran').addEventListener('click', tamEkran);
+  // Tam ekranda üst çubuk gizlenir; fare/dokunuş ekranın üst kenarına gelince 3 sn görünür.
+  (() => {
+    const kok = $('#lesson'); let sayac = null;
+    const goster = () => { kok.classList.add('ust-acik'); clearTimeout(sayac); sayac = setTimeout(() => kok.classList.remove('ust-acik'), 3000); };
+    document.addEventListener('fullscreenchange', () => { kok.classList.toggle('tam', !!document.fullscreenElement); if (document.fullscreenElement) goster(); });
+    document.addEventListener('mousemove', (e) => { if (e.clientY < 48 && kok.classList.contains('tam')) goster(); });
+    document.addEventListener('touchstart', (e) => { const t = e.touches[0]; if (t && t.clientY < 48 && kok.classList.contains('tam')) goster(); }, { passive: true });
+    // Altyazı: 1 ileti → 2 ileti → kapalı
+    const dok = $('#dok'), dugme = $('#altyazi'), adlar = { 1: 'Altyazı: 1 ileti', 2: 'Altyazı: 2 ileti', 0: 'Altyazı: kapalı' };
+    let durumu = '1';
+    try { durumu = localStorage.getItem('klinikkoc-altyazi') || '1'; } catch (e) { /* depolama kapalı */ }
+    const yaz = () => { if (!(durumu in adlar)) durumu = '1'; dok.dataset.altyazi = durumu; dugme.textContent = adlar[durumu]; };
+    dugme.addEventListener('click', () => { durumu = { 1: '2', 2: '0', 0: '1' }[durumu]; yaz(); try { localStorage.setItem('klinikkoc-altyazi', durumu); } catch (e) { /* depolama kapalı */ } });
+    yaz();
+  })();
   document.addEventListener('keydown', (e) => {
     if (e.target.closest && e.target.closest('input, textarea')) return;
     if (e.key === 'Escape') durdur(null);

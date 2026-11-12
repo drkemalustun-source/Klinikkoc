@@ -38,13 +38,26 @@ vakaya geri döner. Sorular not için değildir; karne yalnız öğrencinin kend
 | Ne yapar | Hazır anlatım, sorular, açık uçlu soru + öz değerlendirme, karne | Yukarıdakilere ek olarak: sohbet, sesli konuşma, dallanan vaka, rubrikle puanlama, kaynakta arama |
 | Ayrıntı | [belgeler/oynatici.md](belgeler/oynatici.md) | [belgeler/canli-tahta.md](belgeler/canli-tahta.md) |
 
+## Öğrenci ve öğretmen sürümü
+
+Kod tektir, iki indirme dosyası vardır. **Öğrenci sürümü** yalnız ders çalışmak için gerekenleri içerir.
+**Öğretmen sürümü** buna ek olarak ders hazırlama sihirbazını içerir (makale künyeleri ve DOI'ler, ders notu,
+vakalar, hedefler, önemli noktalar, hazır çizimler ve animasyon tarifleri, videolar ve YouTube bağlantıları, sorular;
+sonunda .zip ders paketi). Bu depodan indirilen kopya öğretmen sürümüdür. İki dosyayı üretmek için:
+`python tools/surum.py --paketler <klasör>`.
+
 ## Hızlı başlangıç
 
 **Öğrenci (Windows ya da Mac):** Depoyu indirin (yeşil "Code" düğmesi → "Download ZIP"), açın.
 
-- KlinikKoç'u açmak: `BASLAT-Windows` (Mac'te `BASLAT-Mac`) dosyasına çift tıklayın. Ana sayfa tarayıcıda açılır.
-- Ders eklemek: öğretmeninizin verdiği ders paketini (.zip) **Ders paketleri ve makaleler** sayfasına bırakın
-  (ya da Claude'a "şu ders paketini kur" deyin).
+- KlinikKoç'u açmak: `BASLAT-Windows` (Mac'te `BASLAT-Mac`) dosyasına çift tıklayın. Ana ekran tarayıcıda açılır:
+  üstte **Sihirbaz**, **Canlı tahta** ve **Kılavuz** düğmeleri, solda bölümler vardır.
+- Ders eklemek: öğretmeninizin verdiği ders paketini (.zip) ana ekranda **Ders paketi ekle** bölümüne bırakın
+  (ya da Claude'a "şu ders paketini kur" deyin). Kendi PDF'lerinizi **Kendi PDF'lerim** bölümüne bırakırsınız.
+- Çalışmak: **Derslerim**'de bir ya da birkaç dersi/PDF'i işaretleyip **Seçilenlerle çalış**'a basın
+  ya da Claude'a "... dersini aç" deyin.
+- Güncelleme: yeni sürüm çıkınca ana ekranda **Güncelle** düğmesi belirir; tek tuşla kurulur, dersleriniz ve
+  kayıtlarınız yerinde kalır.
 - Yalnız oynatıcı: `index.html` dosyasına çift tıklamak da yeter, ama ders paketi BASLAT ya da Claude ile eklenir.
 - Canlı eğitmen: [Python](https://www.python.org/downloads/) ve Claude masaüstü uygulaması kurulu olmalı.
   `KUR-Windows` dosyasına çift tıklayın, Claude uygulamasını tamamen kapatıp açın, sonra yazın:

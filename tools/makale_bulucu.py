@@ -592,6 +592,62 @@ def elle_ekle(ders, veri, ad="makale.pdf", kaynak_id=None, dizinle=True):
     return sonuc
 
 
+TARAMA_SAATI = 48  # İndirilenler klasöründe yalnız son bu kadar saatte inen PDF'lere bakılır
+
+
+def indirilenlerden_tara(ders, klasor=None, saat=TARAMA_SAATI):
+    """Makale yardımcısı: öğrenci yayıncı sayfasından PDF'i İndirilenler'e kaydedince dosyayı DOI'sinden ya da
+    başlığından tanır ve eksik makalenin yerine koyar. Tanınmayan dosyaya dokunulmaz; her dosyaya bir kez bakılır.
+    Dönen: {"klasor", "eklenen": [{id, kisa, dosya}], "bakilan": n}"""
+    klasor = klasor or veri_yeri.indirilenler()
+    out = {"klasor": klasor, "eklenen": [], "bakilan": 0}
+    if not ders or ders == KENDI or not os.path.isdir(klasor) or not os.path.isdir(ders_klasoru(ders)):
+        return out
+    durum = durum_oku(ders)
+    eksik = [k for k in kaynaklar(ders)
+             if (durum["kaynaklar"].get(str(k["id"])) or {}).get("durum") != "hazir"]
+    if not eksik:
+        return out
+    bakilan = dict(durum.get("tarananlar") or {})
+    sinir = time.time() - saat * 3600
+    yeni_bakilan = {}
+    for yol in sorted(glob.glob(os.path.join(glob.escape(klasor), "*.[pP][dD][fF]"))):
+        try:
+            st = os.stat(yol)
+        except OSError:
+            continue
+        if st.st_mtime < sinir or st.st_size > EN_BUYUK_PDF or st.st_size < 1000:
+            continue
+        iz = "%d-%d" % (int(st.st_mtime), st.st_size)
+        ad = os.path.basename(yol)
+        yeni_bakilan[ad] = iz
+        if bakilan.get(ad) == iz:
+            continue
+        out["bakilan"] += 1
+        try:
+            metin = ilk_sayfa_metni(yol)
+        except Exception:
+            continue
+        bulunan = {doi_temizle(m) for m in DOI_KALIBI.findall(metin)}
+        k = next((a for a in eksik if doi_temizle(a.get("doi")) and doi_temizle(a.get("doi")) in bulunan), None) \
+            or baslikla_esle(metin, eksik)
+        if not k:
+            continue
+        try:
+            with open(yol, "rb") as f:
+                veri = f.read()
+            r = elle_ekle(ders, veri, ad, str(k["id"]))
+        except Exception:
+            continue
+        if r.get("durum") == "hazir":
+            out["eklenen"].append({"id": r["id"], "kisa": r.get("kisa"), "dosya": ad})
+            eksik = [a for a in eksik if str(a["id"]) != str(k["id"])]
+    durum = durum_oku(ders)  # elle_ekle durumu yeniden yazmış olabilir
+    durum["tarananlar"] = yeni_bakilan
+    durum_yaz(ders, durum)
+    return out
+
+
 def eki_kaldir(ders, kid):
     """Öğrencinin eklediği bir makaleyi dersten çıkarır (PDF makale klasöründe kalır)."""
     durum = durum_oku(ders)

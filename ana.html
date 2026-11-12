@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#EAE5DC">
+  <meta name="description" content="KlinikKoç ana ekranı: ders seçme, ders paketi ve PDF ekleme, makale yardımcısı, canlı tahta.">
+  <title>KlinikKoç</title>
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/kil.css">
+</head>
+<body class="k-ana">
+  <!-- Ana ekran ("Sihirbaz"): program bu sayfayla açılır. Yerel sunucuyla çalışır (tools/sunucu.py → /api/ana/…).
+       Üstte üç büyük düğme, solda bölüm düğmeleri; basılınca yalnız sağdaki panel değişir, sayfa aşağı uzamaz. -->
+  <div class="k-kabuk">
+    <header class="k-ust">
+      <a class="k-logo" href="ana.html" aria-label="KlinikKoç ana ekran">
+        <svg viewBox="0 0 40 40" aria-hidden="true"><defs><radialGradient id="kDis" cx=".35" cy=".3" r=".8">
+          <stop offset="0" stop-color="#ffb27d"/><stop offset=".6" stop-color="#E06826"/><stop offset="1" stop-color="#a8461a"/></radialGradient></defs>
+          <path d="M8 9c3-5 9-4 12-2 3-2 9-3 12 2 3 6 0 12-2 17-1 4-1 10-4 10-3 0-3-7-6-7s-3 7-6 7c-3 0-3-6-4-10C8 21 5 15 8 9z" fill="url(#kDis)"/>
+          <path d="M12 11c2-2 5-2 7 0" stroke="rgba(255,255,255,.55)" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>
+        <span>Klinik<b>Koç</b></span>
+      </a>
+      <span class="k-surum" id="surum"></span>
+      <nav class="k-buyuk" aria-label="Ana bölümler">
+        <button class="k-bdug etkin" id="ustSihirbaz" type="button">
+          <span class="k-kure" style="--c:#E06826"><svg viewBox="0 0 24 24"><path d="M12 3l2.2 5.6L20 11l-5.8 2.4L12 19l-2.2-5.6L4 11l5.8-2.4z"/></svg></span>
+          <span>Sihirbaz<small>Ders seç, ekle, çalış</small></span></button>
+        <a class="k-bdug" id="ustTahta" href="canli.html">
+          <span class="k-kure" style="--c:#3f8a63"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></span>
+          <span>Canlı tahta<small>Claude ile ders</small></span></a>
+        <button class="k-bdug" id="ustKilavuz" type="button">
+          <span class="k-kure" style="--c:#c9973e"><svg viewBox="0 0 24 24"><path d="M9.5 9a2.6 2.6 0 1 1 3.6 2.4c-.8.4-1.1 1-1.1 1.9M12 17.2v.3"/></svg></span>
+          <span>Kılavuz<small>Nasıl kullanılır</small></span></button>
+      </nav>
+      <div class="k-guncelle" id="guncelle" hidden>
+        <div>Yeni sürüm hazır<br><b id="guncelleSurum"></b></div>
+        <button class="k-btn kucuk" id="guncelleDugme" type="button">⟳ Güncelle</button>
+      </div>
+      <span class="k-rozet" id="rozet"></span>
+    </header>
+
+    <div class="k-govde">
+      <nav class="k-yan" id="yan" aria-label="Bölümler"></nav>
+      <section class="k-panel" id="panel" aria-live="polite"></section>
+    </div>
+  </div>
+
+  <div class="k-pencere" id="pencere" role="dialog" aria-modal="true" hidden><div id="pencereIc"></div></div>
+  <script src="js/ana.js"></script>
+</body>
+</html>

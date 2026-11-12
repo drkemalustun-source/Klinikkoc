@@ -25,6 +25,11 @@ Sözlü sınav provası için sozlu_prova, bütün derslerden zayıf konu tekrar
 Karar ağacı: vaka ya da ayırıcı tanı anlatırken tahtada tree komutuyla ağacı adım adım kur.
 Pilot ölçme testleri (ön/son/gecikmeli) yalnız olcme_testi ve olcme_kaydet araçlarıyla, öğretmenin onayladığı
 sorularla yapılır; test sırasında ipucu ve açıklama verilmez.
+Ana ekran: Program bir ana ekranla açılır; öğrenci orada bir ya da birkaç ders ve kendi PDF'ini işaretleyip
+"Seçilenlerle çalış" der. Öğrenci "seçtiklerimi çalışalım", "seçtiğim dersi aç" derse ya da hangi dersi istediğini
+söylemeden çalışmak isterse önce calisma_secimi aracını çağır. Öğrenci bir dersi adıyla isterse ("akut lezyonlar
+dersini aç") ana ekrana gitmesini bekleme: dersler aracıyla bul, egitmen_hazirla ve tahtayi_ac ile kendin aç.
+Ders sonunda ders_bitir'den sonra program_onerisi ile programın kendisi için kısa geliştirme notları yaz.
 Nasıl çalış:
 - İlk iş tahtayi_ac. Ders konusu varsa dersler ve ders_oku ile içeriği oku; şekli işaretleyeceksen
   önce gorsel_bak ile görseli gör (işaret koordinatları görselin 0–1 arası oranlarıdır).
@@ -267,7 +272,7 @@ ARACLAR = [
     {
         "name": "sihirbaz_oner",
         "description": "Öğretmen için: ders taslağına öneri yazar (hedefler + Bloom düzeyi, terimler, soru taslakları, "
-                       "yanılgılar). Öneriler öğretmen sihirbaz sayfasında kabul etmeden derse girmez. Biçim için "
+                       "yanılgılar, önemli noktalar, tahta çizimleri ve canlandırma tarifleri). Öneriler öğretmen sihirbaz sayfasında kabul etmeden derse girmez. Biçim için "
                        "sihirbaz_oku'nun talimatına uy. Yalnız gönderdiğin türler değişir.",
         "inputSchema": {"type": "object", "properties": {
             "ders": {"type": "string"},
@@ -275,6 +280,9 @@ ARACLAR = [
             "terimler": {"type": "array", "items": {"type": "string"}},
             "sorular": {"type": "array", "items": {"type": "object"}},
             "yanilgilar": {"type": "array", "items": {"type": "object"}},
+            "onemli": {"type": "array", "items": {"type": "object"}, "description": "dersin önemli noktaları"},
+            "cizimler": {"type": "array", "items": {"type": "object"},
+                         "description": "hazır anatomik çizim ve canlandırma (animasyon) önerileri"},
             "ac": {"type": "boolean", "description": "sihirbaz sayfasını tarayıcıda aç"}},
             "required": ["ders"]},
     },
@@ -290,8 +298,37 @@ ARACLAR = [
             "claude_tespitleri": {"type": "array", "description": "değerlendirme formuna senin tespitlerin (henüz "
                                   "degerlendirme_notu ile yazmadıkların): [{tur, ayrinti, yer}]",
                                   "items": {"type": "object"}},
+            "program_onerileri": {"type": "array", "description": "programın kendisi için geliştirme notların "
+                                  "(program_onerisi aracındaki biçimde): [{tur, metin, yer}]",
+                                  "items": {"type": "object"}},
             "form": {"type": "boolean", "description": "değerlendirme formunu tarayıcıda aç (varsayılan true)"}},
             "required": ["ogrenci", "ders"]},
+    },
+    {
+        "name": "program_onerisi",
+        "description": "Ders bitince (ders_bitir'den sonra) ya da programın bir eksiğini fark ettiğinde çağır: KlinikKoç "
+                       "PROGRAMININ KENDİSİNİ geliştirmek için kısa, somut notlar yazar. tur: eksik_cizim (gereken "
+                       "anatomik şablon ya da canlandırma yoktu), kaynakta_yok (öğrencinin sorduğu konu ders "
+                       "kaynaklarında bulunamadı), arac_hatasi (bir araç hata verdi, yavaştı, ses/video açılmadı), "
+                       "kullanim (öğrenci bir şeyi bulamadı ya da yanlış anladı), yeni_ozellik (işini kolaylaştıracak "
+                       "bir özellik), diger. metin: tek cümle, ne olduğu ve ne olsa iyi olurdu. yer: isteğe bağlı kanıt "
+                       "(hedef, adım, araç adı). Öğrencinin adını, başarısını ya da kişisel bilgisini YAZMA. Notlar "
+                       "yalnız bu bilgisayarda durur; kullanıcı ana ekrandaki 'Geri bildirim' bölümünden görür, siler "
+                       "ya da kendisi gönderir.",
+        "inputSchema": {"type": "object", "properties": {
+            "ders": {"type": "string", "description": "hangi derste fark edildi (isteğe bağlı)"},
+            "oneriler": {"type": "array", "items": {"type": "object", "properties": {
+                "tur": {"type": "string", "enum": ["eksik_cizim", "kaynakta_yok", "arac_hatasi", "kullanim",
+                                                   "yeni_ozellik", "diger"]},
+                "metin": {"type": "string"}, "yer": {"type": "string"}}, "required": ["tur", "metin"]}}},
+            "required": ["oneriler"]},
+    },
+    {
+        "name": "calisma_secimi",
+        "description": "Öğrencinin ana ekranda 'Seçilenlerle çalış' diyerek işaretlediği dersleri ve kendi PDF'lerini "
+                       "verir. Öğrenci 'seçtiklerimi çalışalım' derse ya da hangi dersi istediğini söylemeden çalışmaya "
+                       "başlamak isterse önce bunu çağır; dönen nota göre egitmen_hazirla ve tahtayi_ac ile dersi aç.",
+        "inputSchema": {"type": "object", "properties": {}},
     },
     {
         "name": "makale_sayfasi_bak",

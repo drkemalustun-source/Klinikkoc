@@ -8,4 +8,4 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 1
 fi
 echo "KlinikKoç açılıyor. Bu pencere açık kaldıkça KlinikKoç çalışır; işiniz bitince pencereyi kapatın."
-python3 tools/sunucu.py --sayfa index.html
+python3 tools/sunucu.py --sayfa ana.html

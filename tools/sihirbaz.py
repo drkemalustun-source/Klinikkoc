@@ -121,7 +121,8 @@ def bos_taslak(ders, baslik=""):
               "olusturma": time.strftime("%Y-%m-%d %H:%M")})
     for k, v in (("duzey", "Lisans"), ("egitmen", "inci"), ("sure_dk", 20), ("kaynaklar", []), ("notlar", []),
                  ("vakalar", []), ("sorular", []), ("dikkat", []), ("yanilgilar", []), ("hedefler", []),
-                 ("terimler", []), ("gorseller", []), ("oneriler", {})):
+                 ("terimler", []), ("gorseller", []), ("onemli", []), ("cizimler", []), ("videolar", []),
+                 ("oneriler", {})):
         t.setdefault(k, v)
     return t
 
@@ -177,7 +178,14 @@ def kart_guncelle(ders, alanlar):
     return taslak_yaz(ders, t)
 
 
-LISTELER = {"dikkat", "yanilgilar", "sorular", "hedefler", "terimler", "kaynaklar", "notlar", "vakalar", "gorseller"}
+LISTELER = {"dikkat", "yanilgilar", "sorular", "hedefler", "terimler", "kaynaklar", "notlar", "vakalar", "gorseller",
+            "onemli", "cizimler", "videolar"}
+# onemli:   dersin önemli noktaları            {id, metin, hedef?}
+# cizimler: tahtada kullanılacak hazır çizimler {id, baslik, sablon, varyant, bitis?, sure_sn?, tarif?, hedef?}
+#           "bitis" doluysa canlandırmadır: çizim "varyant" durumundan "bitis" durumuna akar (animasyon tarifi = tarif).
+# videolar: {id, tur: youtube|dosya, adres (YouTube) | dosya (ad), baslik, baslangic?, bitis? (sn), hedef?, kademe}
+YOUTUBE_KALIBI = re.compile(r"(?:youtu\.be/|youtube(?:-nocookie)?\.com/(?:watch\?(?:.*&)?v=|embed/|shorts/|live/))([A-Za-z0-9_-]{11})")
+VIDEO_UZANTILARI = (".mp4", ".m4v", ".webm", ".ogv", ".mov")
 
 
 def oge_kaydet(ders, liste_adi, oge):
@@ -196,8 +204,23 @@ def oge_kaydet(ders, liste_adi, oge):
         raise ValueError("Kademe fakulte, acik ya da paylasilmaz olmalı.")
     if "bloom" in oge and oge["bloom"] and oge["bloom"] not in BLOOM:
         raise ValueError("Bloom düzeyi şunlardan biri olmalı: " + ", ".join(BLOOM))
+    if liste_adi == "videolar" and "adres" in oge:
+        oge["adres"] = str(oge.get("adres") or "").strip()
+        if oge["adres"] and not youtube_kimligi(oge["adres"]):
+            raise ValueError("Bu bir YouTube bağlantısı değil. Örnek: https://www.youtube.com/watch?v=XXXXXXXXXXX")
+        oge.setdefault("tur", "youtube")
+    if liste_adi == "videolar":
+        for a in ("baslangic", "bitis"):
+            if a in oge:
+                oge[a] = saniye(oge[a])
+    if liste_adi == "cizimler" and "sure_sn" in oge:
+        try:
+            oge["sure_sn"] = max(1, min(20, int(float(oge["sure_sn"]))))
+        except (TypeError, ValueError):
+            oge["sure_sn"] = 3
     if not oge.get("id"):
-        onek = {"dikkat": "D", "yanilgilar": "Y", "sorular": "S", "hedefler": "H"}.get(liste_adi, "X")
+        onek = {"dikkat": "D", "yanilgilar": "Y", "sorular": "S", "hedefler": "H", "onemli": "N", "cizimler": "C",
+                "videolar": "V"}.get(liste_adi, "X")
         var = {x.get("id") for x in lst}
         n = len(lst) + 1
         while "%s%d" % (onek, n) in var:
@@ -214,11 +237,60 @@ def oge_kaydet(ders, liste_adi, oge):
     return taslak_yaz(ders, t)
 
 
+def youtube_kimligi(adres):
+    m = YOUTUBE_KALIBI.search(str(adres or ""))
+    return m.group(1) if m else None
+
+
+def saniye(deger):
+    """'90', '1:30', '01:02:03' → saniye (tam sayı) ya da None."""
+    if deger is None or str(deger).strip() == "":
+        return None
+    try:
+        parcalar = [float(x) for x in str(deger).strip().replace(",", ".").split(":")]
+    except ValueError:
+        raise ValueError("Süre '1:30' ya da '90' biçiminde olmalı.")
+    sn = 0
+    for x in parcalar:
+        sn = sn * 60 + x
+    return max(0, int(sn))
+
+
+def video_ekle(ders, veri, ad, kademe="fakulte"):
+    """Öğretmenin kendi video dosyası: taslağa kopyalanır. Büyük olduğu için varsayılan olarak yalnız fakülte paketine girer."""
+    if kademe not in KADEMELER:
+        raise ValueError("Kademe fakulte, acik ya da paylasilmaz olmalı.")
+    ad = os.path.basename(str(ad or "video.mp4").replace("\\", "/"))
+    if not ad.lower().endswith(VIDEO_UZANTILARI):
+        raise ValueError("Video dosyası mp4, m4v, webm, ogv ya da mov olmalı.")
+    taban, uz = os.path.splitext(ad)
+    ad = (kimlik_yap(taban) or "video") + uz.lower()
+    klasor = os.path.join(dosya_klasoru(ders), "videolar")
+    os.makedirs(klasor, exist_ok=True)
+    with open(os.path.join(klasor, ad), "wb") as f:
+        f.write(veri)
+    t = taslak_oku(ders)
+    var = next((v for v in t.setdefault("videolar", []) if v.get("dosya") == ad), None)
+    if var:
+        var.update(kademe=kademe, boyut=len(veri))
+        taslak_yaz(ders, t)
+        return var
+    oge_kaydet(ders, "videolar", {"tur": "dosya", "dosya": ad, "baslik": taban, "kademe": kademe, "boyut": len(veri)})
+    return taslak_oku(ders)["videolar"][-1]
+
+
 def oge_sil(ders, liste_adi, kimlik):
     if liste_adi not in LISTELER:
         raise ValueError("Bilinmeyen liste: %s" % liste_adi)
     t = taslak_oku(ders)
     anahtar = "terim" if liste_adi == "terimler" else "id"
+    if liste_adi == "videolar":
+        for x in t.get("videolar", []):
+            if x.get("id") == kimlik and x.get("dosya"):
+                try:
+                    os.remove(os.path.join(dosya_klasoru(ders), "videolar", os.path.basename(x["dosya"])))
+                except OSError:
+                    pass
     t[liste_adi] = [x for x in t.get(liste_adi, []) if x.get(anahtar) != kimlik]
     if liste_adi == "notlar":
         shutil.rmtree(os.path.join(dosya_klasoru(ders), "notlar", kimlik), ignore_errors=True)
@@ -690,11 +762,14 @@ def kural_onerileri(ders):
     return oneri_yaz(ders, {"hedefler": hedefler, "terimler": terimler[:40], "sorular": sorular}, kim="kural")
 
 
+ONERI_TURLERI = ("hedefler", "terimler", "sorular", "yanilgilar", "onemli", "cizimler")
+
+
 def oneri_yaz(ders, oneriler, kim="claude"):
     """Önerileri taslağa yazar (önceki aynı türden öneriler değiştirilir). Onaylanmadıkça pakete girmez."""
     t = taslak_oku(ders)
     o = t.setdefault("oneriler", {})
-    for tur in ("hedefler", "terimler", "sorular", "yanilgilar"):
+    for tur in ONERI_TURLERI:
         if tur not in oneriler or oneriler[tur] is None:
             continue
         lst = []
@@ -730,6 +805,7 @@ def oneri_kabul(ders, tur, oneri_id, duzeltme=None):
     oge.update(duzeltme or {})
     if tur == "sorular":
         oge.setdefault("kademe", "fakulte")
+    if tur in ("sorular", "yanilgilar", "onemli", "cizimler"):
         hb = oge.pop("hedef_baslik", None)
         if hb and not oge.get("hedef"):
             h = next((h for h in t.get("hedefler", []) if h.get("baslik") == hb), None)
@@ -766,6 +842,8 @@ def claude_icin_malzeme(ders, en_cok_sozcuk=6000):
         "ogretmenin_sorulari": t.get("sorular"), "dikkat_edilecekler": t.get("dikkat"),
         "bilinen_yanilgilar": t.get("yanilgilar"),
         "onayli_hedefler": t.get("hedefler"), "onayli_terimler": [x["terim"] for x in t.get("terimler", [])],
+        "onemli_noktalar": t.get("onemli"), "cizimler": t.get("cizimler"),
+        "videolar": [{"id": v.get("id"), "baslik": v.get("baslik")} for v in t.get("videolar", [])],
         "talimat": ONERI_TALIMAT,
     }
 
@@ -783,6 +861,13 @@ ONERI_TALIMAT = """Öğretmen için ÖNERİ yaz; karar öğretmenindir. sihirbaz
   vaka/klinik senaryo soruları uygula ve üstü düzeyler için.
 - yanilgilar: [{metin, hedef_baslik}] — öğrencilerin bu konuda sık düştüğü yanlışlar (notta ya da dikkat
   edilecekler listesinde dayanağı olanlar).
+- onemli: [{metin, hedef_baslik}] — dersin sonunda öğrencinin aklında kalması gereken önemli noktalar; her biri tek,
+  kısa bir cümle (20 dakikalık derste 5–8 tane). Notta dayanağı olanlar.
+- cizimler: [{baslik, sablon, varyant, bitis?, sure_sn?, tarif, hedef_baslik, gerekce}] — tahtada kullanılacak hazır
+  anatomik çizimler. sablon ve varyant adlarını tahta aracının açıklamasındaki şablon listesinden AYNEN al (ör. sablon
+  "dis", varyant "saglikli"). Bir değişimi göstermek gerekiyorsa canlandırma öner: "bitis" alanına varılacak durumu yaz
+  (ör. varyant "saglikli", bitis "periodontitis", sure_sn 3); tarif = çizim akarken söylenecek bir-iki cümle
+  (animasyon tarifi). Konuya uyan şablon yoksa önerme. Her hedefe en çok bir-iki çizim.
 Öğretmenin "dikkat edilecekler" listesine uy. Makale sonuçlarını kesinleştirme; araştırma ayrıntısı verme.
 Bitince öğretmene önerilerin sihirbaz sayfasında onay beklediğini söyle."""
 
@@ -822,6 +907,22 @@ def denetle(ders):
             uyarilar.append("Soru %s: açık uçlu ama örnek cevap yok." % s.get("id"))
         if s.get("tur") == "secmeli" and (s.get("dogru") is None or not s.get("secenekler")):
             hatalar.append("Soru %s: seçmeli ama seçenekleri ya da doğru cevabı eksik." % s.get("id"))
+    for c in t.get("cizimler", []):
+        if not c.get("sablon"):
+            hatalar.append("Çizim %s için şablon seçilmemiş." % c.get("id"))
+    for v in t.get("videolar", []):
+        if v.get("tur") == "dosya":
+            if not os.path.isfile(os.path.join(dosya_klasoru(ders), "videolar", os.path.basename(v.get("dosya") or "-"))):
+                hatalar.append("Video %s: dosyası bulunamadı; yeniden ekleyin." % (v.get("baslik") or v.get("id")))
+            elif v.get("kademe") == "acik":
+                uyarilar.append("Video \"%s\" herkese açık pakete girecek: paylaşma hakkınız olduğundan emin olun "
+                                "(başkasının videosu için YouTube bağlantısı kullanın)." % (v.get("baslik") or v.get("id")))
+        elif not youtube_kimligi(v.get("adres")):
+            hatalar.append("Video %s: YouTube bağlantısı geçerli değil." % (v.get("baslik") or v.get("id")))
+        if v.get("baslangic") is not None and v.get("bitis") is not None and v["bitis"] <= v["baslangic"]:
+            hatalar.append("Video %s: bitiş süresi başlangıçtan sonra olmalı." % (v.get("baslik") or v.get("id")))
+    if not t.get("onemli"):
+        uyarilar.append("Dersin önemli noktaları yazılmamış; eğitmen ders sonu özetini kendi çıkarır.")
     bekleyen = sum(len(v or []) for k, v in (t.get("oneriler") or {}).items() if isinstance(v, list))
     if bekleyen:
         uyarilar.append("%d öneri onay bekliyor; onaylanmayanlar pakete girmez." % bekleyen)
@@ -893,6 +994,31 @@ def _ders_klasoru_yaz(t, hedef, kademeler, ders_adi):
                                                    ("aciklama", g.get("aciklama")), ("makaleden", m)) if v}
     if gorseller:
         eg["gorseller"] = gorseller
+    onemli = [{k: v for k, v in (("id", n.get("id")), ("metin", n.get("metin")), ("hedef", n.get("hedef"))) if v}
+              for n in t.get("onemli", []) if n.get("metin")]
+    if onemli:
+        eg["onemliNoktalar"] = onemli
+    cizimler = [{k: c[k] for k in ("id", "baslik", "sablon", "varyant", "bitis", "sure_sn", "tarif", "hedef") if c.get(k)}
+                for c in t.get("cizimler", []) if c.get("sablon")]
+    if cizimler:
+        eg["cizimler"] = cizimler
+    videolar, dosya_bilgisi = {}, {}
+    for v in t.get("videolar", []):
+        if v.get("kademe", "acik" if v.get("tur") != "dosya" else "fakulte") not in kademeler:
+            continue
+        bilgi = {k: v[k] for k in ("baslik", "baslangic", "bitis", "hedef") if v.get(k) not in (None, "")}
+        if v.get("tur") == "dosya":
+            kaynak_dosya = os.path.join(dosya_klasoru(ders), "videolar", os.path.basename(v.get("dosya") or "-"))
+            if os.path.isfile(kaynak_dosya):
+                os.makedirs(os.path.join(hedef, "videolar"), exist_ok=True)
+                shutil.copy2(kaynak_dosya, os.path.join(hedef, "videolar", os.path.basename(kaynak_dosya)))
+                dosya_bilgisi[os.path.basename(kaynak_dosya)] = bilgi
+        elif youtube_kimligi(v.get("adres")):
+            videolar[v["id"]] = dict(bilgi, youtube=v["adres"])
+    if videolar:
+        eg["videolar"] = videolar
+    if dosya_bilgisi:
+        _json_yaz(os.path.join(hedef, "videolar", "videolar.json"), dosya_bilgisi)
     _json_yaz(os.path.join(hedef, "egitmen.json"), eg)
     kaynaklar = []
     for k in t["kaynaklar"]:
@@ -984,6 +1110,9 @@ def _paket_ozeti(klasor):
     return {"not_sayfasi": len(glob.glob(os.path.join(klasor, "kaynak", "sayfa-*.txt"))),
             "vaka": len(glob.glob(os.path.join(klasor, "vakalar", "*.json"))),
             "soru": len(eg.get("soruBankasi") or []), "hedef": len(eg.get("hedefler") or []),
+            "onemli": len(eg.get("onemliNoktalar") or []), "cizim": len(eg.get("cizimler") or []),
+            "video": len(eg.get("videolar") or {}) + len([f for f in glob.glob(os.path.join(klasor, "videolar", "*"))
+                                                          if f.lower().endswith(VIDEO_UZANTILARI)]),
             "makale": len((_json_oku(os.path.join(klasor, "kaynaklar", "kaynaklar.json"), {}) or {}).get("kaynaklar") or [])}
 
 
