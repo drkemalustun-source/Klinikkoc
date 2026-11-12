@@ -60,26 +60,37 @@ Write-Output 'TAMAM'
 
 _MAC_BETIK = """
 on run argv
+  -- Claude kapalıysa AÇILMAZ (activate kapalı uygulamayı başlatır); izin yoksa pencereye hiç dokunulmaz.
+  if application "Claude" is not running then return "CLAUDE_YOK"
+  tell application "System Events"
+    if not (UI elements enabled) then return "IZIN_YOK"
+    set onceki to name of first application process whose frontmost is true
+  end tell
   set metin to read (POSIX file (item 1 of argv)) as «class utf8»
-  tell application "System Events" to set onceki to name of first application process whose frontmost is true
   set eskiPano to ""
   try
     set eskiPano to the clipboard as text
   end try
-  set the clipboard to metin
-  tell application "Claude" to activate
-  delay 0.6
-  tell application "System Events"
-    keystroke "v" using command down
-    delay 0.25
-    key code 36
-  end tell
-  delay 0.5
-  if onceki is not "Claude" then
-    tell application onceki to activate
-  end if
+  set sonuc to "TAMAM"
+  try
+    set the clipboard to metin
+    tell application "Claude" to activate
+    delay 0.6
+    tell application "System Events"
+      keystroke "v" using command down
+      delay 0.25
+      key code 36
+    end tell
+    delay 0.5
+  on error hata
+    set sonuc to "HATA " & hata
+  end try
+  -- Hata olsa da kullanıcı önceki penceresine döndürülür.
+  try
+    if onceki is not "Claude" then tell application onceki to activate
+  end try
   if eskiPano is not "" then set the clipboard to eskiPano
-  return "TAMAM"
+  return sonuc
 end run
 """
 
@@ -139,6 +150,9 @@ def gonder(metin, zaman=20):
         return True, "gönderildi"
     if "CLAUDE_YOK" in cikti:
         return False, "Claude masaüstü uygulaması açık değil."
+    if "IZIN_YOK" in cikti:
+        return False, ("Otomatik gönderme için Mac izni yok: Sistem Ayarları › Gizlilik ve Güvenlik › "
+                       "Erişilebilirlik'te Terminal'i (ve Claude'u) açın ya da sorunuzu sohbete kopyalayın.")
     hata = (r.stderr or cikti or "bilinmeyen hata").strip()
     if sys.platform == "darwin" and ("1002" in hata or "not allowed" in hata.lower() or "erişilebilirlik" in hata.lower()):
         return False, ("Mac izin istiyor: Sistem Ayarları › Gizlilik ve Güvenlik › Erişilebilirlik'te Claude'u "
