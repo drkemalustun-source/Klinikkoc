@@ -253,3 +253,68 @@ class EskiSurumler(unittest.TestCase):
                 adlar = z.namelist()
             self.assertIn("lessons/benim-dersim/ders.json", adlar)
             self.assertFalse(any(a.startswith(".ses-ortami") for a in adlar))
+
+
+class OrtakKlasor(unittest.TestCase):
+    def setUp(self):
+        self.t = tempfile.TemporaryDirectory()
+        self.eski = {k: os.environ.get(k) for k in ("HOME", "KLINIK_KOC_VERI", "KLINIK_KOC_KAYIT", "KLINIK_KOC_MAKALE",
+                                                     "KLINIK_KOC_ORTAK", "USERPROFILE")}
+        for k in self.eski:
+            os.environ.pop(k, None)
+        os.environ["HOME"] = os.environ["USERPROFILE"] = os.path.join(self.t.name, "ev")
+        os.makedirs(os.path.join(self.t.name, "ev", "Documents"))
+        os.environ["KLINIK_KOC_VERI"] = os.path.join(self.t.name, "veri")
+
+    def tearDown(self):
+        for k, v in self.eski.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+        self.t.cleanup()
+
+    def test_ayarla_kilit_kapat(self):
+        import json
+        import time
+        import veri_yeri
+        import ortak_klasor as ok
+        import makale_bulucu as mb
+        yerel_kayit = veri_yeri.kayit_kok()
+        os.makedirs(os.path.join(yerel_kayit, "ali"))
+        with open(os.path.join(yerel_kayit, "ali", "k.json"), "w") as f:
+            f.write('{"a": 1}')
+        pdf_klasor = os.path.join(veri_yeri.makale_kok(), "Kendi makalelerim")
+        os.makedirs(pdf_klasor)
+        with open(os.path.join(pdf_klasor, "sanz.pdf"), "wb") as f:
+            f.write(b"%PDF-1.4")
+        os.makedirs(os.path.join(veri_yeri.veri_kok(), "makaleler"))
+        with open(os.path.join(veri_yeri.veri_kok(), "makaleler", "kendi-makalelerim.json"), "w") as f:
+            json.dump({"kaynaklar": {"x": {"durum": "hazir", "pdf": "C:\\\\Users\\\\K\\\\Documents\\\\sanz.pdf"}}}, f)
+        bulut = os.path.join(self.t.name, "OneDrive")
+        os.makedirs(bulut)
+        r = ok.ayarla(bulut)
+        ortak = r["ortak_klasor"]
+        self.assertEqual(veri_yeri.kayit_kok(), os.path.join(ortak, "kayitlar"))
+        self.assertTrue(os.path.exists(os.path.join(ortak, "kayitlar", "ali", "k.json")))
+        self.assertTrue(os.path.exists(r["yedek"]))
+        self.assertTrue(os.path.exists(os.path.join(yerel_kayit, "ali", "k.json")))  # yerelde de kalır
+        # Öbür bilgisayarın (Windows) yolu bu bilgisayardaki PDF'e çevrilir
+        self.assertEqual(mb.durum_oku("kendi-makalelerim")["kaynaklar"]["x"]["pdf"],
+                         os.path.join(ortak, "Makaleler", "Kendi makalelerim", "sanz.pdf"))
+        self.assertIsNone(ok.durum().get("uyari"))
+        with open(os.path.join(ortak, "kilit.json"), "w") as f:
+            json.dump({"bilgisayar": "baska-pc", "zaman": time.time(), "saat": "12:00"}, f)
+        self.assertIn("baska-pc", ok.durum()["uyari"])
+        ok.kilit_tazele(zorla=True)  # başkasının taze kilidinin üstüne yazmaz
+        with open(os.path.join(ortak, "kilit.json")) as f:
+            self.assertEqual(json.load(f)["bilgisayar"], "baska-pc")
+        os.rename(bulut, bulut + "-yok")  # bulut sürücüsü bağlı değil: yerel klasör + uyarı
+        self.assertIn("ulaşılamıyor", ok.durum()["uyari"])
+        self.assertEqual(veri_yeri.kayit_kok(), yerel_kayit)
+        os.rename(bulut + "-yok", bulut)
+        with open(os.path.join(ortak, "kayitlar", "ali", "yeni.json"), "w") as f:
+            f.write("{}")
+        self.assertEqual(ok.kapat()["durum"], "kapatıldı")
+        self.assertEqual(veri_yeri.kayit_kok(), yerel_kayit)
+        self.assertTrue(os.path.exists(os.path.join(yerel_kayit, "ali", "yeni.json")))  # geri kopyalandı

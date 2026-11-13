@@ -55,6 +55,7 @@ try:
 except ImportError:
     sihirbaz = None
 import ana_ekran  # noqa: E402
+import ortak_klasor  # noqa: E402
 import surum as surum_  # noqa: E402
 import uyandirma  # noqa: E402
 import veri_yeri  # noqa: E402
@@ -1154,6 +1155,8 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
                 return self._json(200, A.ozet())
             if yol == "geri_bildirim":
                 return self._json(200, A.geri_bildirim())
+            if yol == "ortak":
+                return self._json(200, dict(ortak_klasor.durum(), adaylar=ortak_klasor.adaylar()))
             if self.command != "POST":
                 return self._json(405, {"hata": "POST gerekli"})
             v = json.loads(govde.decode("utf-8")) if govde else {}
@@ -1170,6 +1173,12 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
                 r = surum_.geri_al()
                 yeniden_baslat()
                 return self._json(200, r)
+            if yol == "ortak_ayarla":
+                r = ortak_klasor.ayarla(str(v.get("yol") or ""))
+                threading.Thread(target=makale_bulucu.ortak_esitle, daemon=True).start()
+                return self._json(200, r)
+            if yol == "ortak_kapat":
+                return self._json(200, ortak_klasor.kapat())
             if yol == "oneri_sil":
                 return self._json(200, A.oneri_sil(str(v.get("id", ""))))
             if yol == "oneri_gonderildi":
@@ -1195,6 +1204,8 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
         return not host or (urllib.parse.urlsplit("//" + host).hostname or "") in self.YEREL
 
     def do_GET(self):
+        if self.path.startswith("/api/"):
+            ortak_kilidi_tazele()
         # DNS yeniden bağlama: başka bir alan adı bu sunucuya yönlendirilip ders dosyaları okunamasın.
         if not self._host_yerel_mi():
             return self.send_error(403, "Yalnızca bu bilgisayardan")
@@ -1380,6 +1391,14 @@ def kur_duyu():
     return 0
 
 
+def ortak_kilidi_tazele():
+    """Tahta ya da ana ekran açıkken (sayfalar API'yi düzenli yoklar) ortak klasörde "bu bilgisayar açık" kilidi."""
+    try:
+        ortak_klasor.kilit_tazele()
+    except Exception:
+        pass
+
+
 def main():
     ap = argparse.ArgumentParser(description="KlinikKoç yerel sunucusu")
     ap.add_argument("--port", type=int, default=8810)
@@ -1416,6 +1435,11 @@ def main():
     print("Otomatik uyandırma: " + ("açık (Claude dinlemiyorken söylenenler sohbete gönderilir)"
                                     if CANLI.uyandirma["acik"] else "kapalı"))
     print("Ses: " + CANLI.ses_durumu() + " (ayar: ses/ses-ayari.json)")
+    od = ortak_klasor.durum()
+    if od.get("acik"):
+        print("Ortak klasör: " + (od.get("yol") or "") + (" (ULAŞILAMIYOR)" if not od.get("erisilebilir") else ""))
+        if od.get("erisilebilir"):
+            threading.Thread(target=makale_bulucu.ortak_esitle, daemon=True).start()
     if not a.acma:
         threading.Timer(0.8, lambda: webbrowser.open(adres)).start()
     try:
@@ -1424,6 +1448,10 @@ def main():
         print("\nKapatıldı.")
     finally:
         POCKET.kapat()
+        try:
+            ortak_klasor.kilit_birak()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

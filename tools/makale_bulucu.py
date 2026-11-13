@@ -192,7 +192,7 @@ def metin_klasoru(ders, kid):
 
 
 def durum_yolu(ders):
-    return os.path.join(veri_yeri.veri_kok(), "makaleler", ders_gecerli(ders) + ".json")
+    return os.path.join(veri_yeri.paylasilan_kok(), "makaleler", ders_gecerli(ders) + ".json")
 
 
 def durum_oku(ders):
@@ -202,6 +202,11 @@ def durum_oku(ders):
     d.setdefault("ders", ders)
     d.setdefault("kaynaklar", {})
     d.setdefault("ekler", [])
+    for s in d["kaynaklar"].values():  # ortak klasörde öbür bilgisayarın yolu yazılı olabilir: bu bilgisayarınkine çevir
+        if isinstance(s, dict) and s.get("pdf") and not os.path.isfile(s["pdf"]):
+            aday = os.path.join(makale_klasoru(ders), re.split(r"[\\/]", s["pdf"])[-1])
+            if os.path.isfile(aday):
+                s["pdf"] = aday
     return d
 
 
@@ -503,6 +508,40 @@ def sekilleri_cikar(ders):
         return makale_sekil.cikar(ders)
     except Exception as e:  # görsel çıkmasa da ders ve makale metni çalışır
         return {"hata": str(e)}
+
+
+def ortak_esitle():
+    """Ortak klasör (ya da başka bir bilgisayar) üzerinden gelen makalelerin metnini bu bilgisayarda da üretir:
+    durum "hazır" ve PDF burada var ama bu bilgisayarda metin yoksa PDF yeniden okunur ve aramaya eklenir.
+    Bu bilgisayarda kurulu olmayan derslere dokunulmaz. Hazırlanan [{ders, id}] listesini döndürür."""
+    out = []
+    for yol in sorted(glob.glob(os.path.join(veri_yeri.paylasilan_kok(), "makaleler", "*.json"))):
+        ders = os.path.basename(yol)[:-5]
+        try:
+            ders_gecerli(ders)
+        except ValueError:
+            continue
+        if ders == KENDI:
+            kendi_kitaplik_hazirla()
+        elif not os.path.isdir(ders_klasoru(ders)):
+            continue
+        durum = durum_oku(ders)
+        hazirlanan = []
+        for kid, s in list(durum["kaynaklar"].items()):
+            if not isinstance(s, dict) or s.get("durum") != "hazir" or not s.get("pdf") or not os.path.isfile(s["pdf"]):
+                continue
+            try:
+                if glob.glob(os.path.join(metin_klasoru(ders, kid), "sayfa-*.txt")):
+                    continue
+                k = next((x for x in kaynaklar(ders) + durum["ekler"] if str(x.get("id")) == kid), {"id": kid})
+                metne_cevir(ders, kid, s["pdf"], k, ogrenci=bool(s.get("ogrenci")))
+                hazirlanan.append(kid)
+            except Exception:
+                continue
+        if hazirlanan:
+            aramaya_ekle(ders)
+            out += [{"ders": ders, "id": k} for k in hazirlanan]
+    return out
 
 
 def aramaya_ekle(ders):

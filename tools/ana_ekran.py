@@ -174,6 +174,11 @@ def secim_metni(s=None):
 def ozet(guncelleme=True):
     out = {"surum": surum_.surum(), "tur": surum_.tur(), "dersler": dersler(), "pdfler": pdfler(),
            "secim": secim_metni(), "tekrar_karti": _tekrar_karti_sayisi(), "oneri_sayisi": len(oneriler())}
+    try:
+        import ortak_klasor
+        out["ortak"] = ortak_klasor.durum()
+    except Exception as e:  # ortak klasör denetimi ana ekranı engellemez
+        out["ortak"] = {"acik": False, "hata": str(e)}
     if guncelleme:
         try:
             out["guncelleme"] = surum_.denetle()

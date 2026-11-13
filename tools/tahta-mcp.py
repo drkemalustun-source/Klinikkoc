@@ -492,15 +492,16 @@ def yeni_kutu(kutu, dogru, yardimsiz, iskele=None):
             return max(1, kutu)
         return 1
     return min(4, kutu + 1) if yardimsiz else 1
-KAYIT_KOK = veri_yeri.kayit_kok()          # kalıcı yer; KLINIK_KOC_KAYIT önce gelir
+KAYIT_KOK = None  # None: veri_yeri.kayit_kok() her seferinde sorulur (ortak klasör açılıp kapanabilir); testler sabitler
 ESKI_KAYIT_KOK = os.path.join(KOK, "kayitlar")  # eski sürümlerin yeri: ilk açılışta bir kez kopyalanır
 _DEPO = None
 
 
 def depo():
     global _DEPO
-    if _DEPO is None or _DEPO.kok != os.path.abspath(KAYIT_KOK):
-        _DEPO = kd.Depo(KAYIT_KOK, None if veri_yeri.kayit_ortamdan_mi() else ESKI_KAYIT_KOK)
+    kok = KAYIT_KOK or veri_yeri.kayit_kok()
+    if _DEPO is None or _DEPO.kok != os.path.abspath(kok):
+        _DEPO = kd.Depo(kok, None if veri_yeri.kayit_ortamdan_mi() else ESKI_KAYIT_KOK)
     return _DEPO
 
 
@@ -1443,6 +1444,35 @@ def ar_ses_yeniden_baslat(_):
                                                          "kapatıp tahtayi_ac'ı yeniden çağır." % e.code}, hata=True)
 
 
+def ortak_uyarisi():
+    """Ortak (bulut) klasör kullanılıyorsa ve başka bilgisayar açıksa ya da klasöre ulaşılamıyorsa Claude'a uyarı."""
+    try:
+        import ortak_klasor
+        od = ortak_klasor.durum()
+    except Exception:
+        return {}
+    if not od.get("uyari"):
+        return {}
+    return {"ortak_klasor_uyarisi": od["uyari"] + " Bunu öğrenciye derse başlamadan önce bir cümleyle söyle."}
+
+
+def ar_ortak_klasor(a):
+    import ortak_klasor
+    islem = a.get("islem") or "durum"
+    if islem == "durum":
+        return metin(dict(ortak_klasor.durum(), adaylar=ortak_klasor.adaylar()))
+    if a.get("onay") is not True:
+        raise ValueError("Kullanıcının açık onayı gerekli (onay: true).")
+    if islem == "ayarla":
+        r = ortak_klasor.ayarla(str(a.get("yol") or ""))
+        threading.Thread(target=makale_bulucu.ortak_esitle, daemon=True).start()
+        return metin({**r, "not": "Öbür bilgisayarda da aynı bulut klasörü seçilmeli (ana ekran › Raporlarım › "
+                                  "İki bilgisayarda çalışma ya da bu araç). Ders paketleri iki bilgisayara ayrı kurulur."})
+    if islem == "kapat":
+        return metin(ortak_klasor.kapat())
+    raise ValueError("islem: durum | ayarla | kapat")
+
+
 def ar_tahtayi_ac(_):
     d = sunucu_acik()
     yabanci = baska_kurulum_mu(d)
@@ -1483,8 +1513,9 @@ def ar_tahtayi_ac(_):
                 break
     if not d.get("bagli"):
         return metin({"durum": "bekleniyor", "not": "Tarayıcıda canli.html açılıyor; birkaç saniye sonra tekrar dene."})
+    out_ortak = ortak_uyarisi()
     return metin({"durum": "hazır", "surum": surum_bilgisi(d), "tahta": d.get("sayfa"), "ses": d.get("ses"),
-                  "dikte": dikte_durumu(d),
+                  "dikte": dikte_durumu(d), **out_ortak,
                   "not": "Tahta açık. 'ses' alanı gerçekten kullanılacak sesi söyler (yedek sese düşüldüyse kullanıcıya bir "
                          "cümleyle söyle). Kullanıcı ilk açılışta sayfada 'başlat' düğmesine bir kez dokunmalı. Tarayıcı sesi "
                          "engellerse anlatım o cümlede bekler ve tahta_durumu'nda sayfa.ses_engelli true olur: kullanıcıdan "
@@ -2086,7 +2117,7 @@ ISLEYICILER = {"egitmen_hazirla": ar_egitmen_hazirla, "kayit_oku": ar_kayit_oku,
                "calisma_secimi": ar_calisma_secimi, "degerlendirme_notu": ar_degerlendirme_notu,
                "degerlendirme_ozeti": ar_degerlendirme_ozeti,
                "makale_sayfasi_bak": ar_makale_sayfasi_bak, "makale_sekli_ekle": ar_makale_sekli_ekle, "tekrar_karti_yaz": ar_tekrar_karti_yaz, "depolama": ar_depolama,
-               "eski_surumler": ar_eski_surumler, "eski_surumleri_sil": ar_eski_surumleri_sil,
+               "eski_surumler": ar_eski_surumler, "ortak_klasor": ar_ortak_klasor, "eski_surumleri_sil": ar_eski_surumleri_sil,
                "ders_arsivle": ar_ders_arsivle, "ders_paketi_ekle": ar_ders_paketi_ekle,
                "ses_yeniden_baslat": ar_ses_yeniden_baslat, "arsivden_geri_yukle": ar_arsivden_geri_yukle}
 
@@ -2345,7 +2376,7 @@ def kendini_dene():
     print("Klasör:", KOK)
     print("Dersler:", ", ".join(g["id"] for g in katalog()) or "yok")
     print("Araçlar:", ", ".join(a["name"] for a in ARACLAR))
-    print("Kayıt klasörü:", KAYIT_KOK)
+    print("Kayıt klasörü:", KAYIT_KOK or veri_yeri.kayit_kok())
     d = sunucu_acik()
     print("Yerel sunucu:", "açık, tahta " + ("bağlı" if d and d.get("bagli") else "bağlı değil") if d else "kapalı (Claude açacak)")
     satirlar, uyarilar = ayar_raporu()

@@ -411,6 +411,19 @@ ARACLAR = [
         "inputSchema": {"type": "object", "properties": {"ac": {"type": "boolean"}}},
     },
     {
+        "name": "ortak_klasor",
+        "description": "İki bilgisayarda (ör. Mac ve Windows) aynı kayıtlar ve makalelerle çalışmak için ortak bulut klasörü "
+                       "(OneDrive, Google Drive, iCloud Drive, Dropbox). islem 'durum' (varsayılan): açık mı, yolu, bu bilgisayarda "
+                       "bulunan bulut klasörleri (adaylar), başka bilgisayar şu an açık mı (uyari). 'ayarla' {yol}: kayıtları ve "
+                       "makale PDF'lerini oraya kopyalar (önce yedek alınır, hiçbir şey silinmez). 'kapat': ortak klasördeki "
+                       "veriyi bu bilgisayara kopyalayıp ortak klasörü bırakır. ayarla ve kapat YALNIZ kullanıcı açıkça "
+                       "isteyince ve onay true ile çağrılır. Kullanıcıya aynı anda iki bilgisayarda çalışmamasını söyle.",
+        "inputSchema": {"type": "object", "properties": {
+            "islem": {"type": "string", "enum": ["durum", "ayarla", "kapat"]},
+            "yol": {"type": "string", "description": "ayarla için bulut klasörü (adaylardan biri)"},
+            "onay": {"type": "boolean"}}},
+    },
+    {
         "name": "eski_surumler",
         "description": "Bu bilgisayardaki eski KlinikKoç (ve eski akıllı tahta) klasörlerini listeler: sürüm, boyut, son "
                        "değişiklik, yeni kurulumda olmayan dersler, Claude'un o klasörü kullanıp kullanmadığı. Hiçbir şey silmez. "
