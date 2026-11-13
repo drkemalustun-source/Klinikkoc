@@ -366,3 +366,168 @@ class RaporDuzeltmeleri(unittest.TestCase):
                     os.environ.pop("KLINIK_KOC_VERI", None)
                 else:
                     os.environ["KLINIK_KOC_VERI"] = eski_veri
+
+
+def _mcp():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("tahta_mcp_t2", os.path.join(KOK, "tools", "tahta-mcp.py"))
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
+
+
+class IkinciRaporDuzeltmeleri(Gecici):
+    """v4.1.0 deneme raporu (2026-11-13) düzeltmeleri."""
+
+    def test_sablon_uyarilari(self):
+        m = _mcp()
+        ciz = lambda **c: m.cizim_uyarilari([{"komutlar": [dict(type="draw", **c)]}])
+        self.assertEqual(ciz(template="kontur-fasiyal", variant="kritik-fazla", labels="hepsi", highlight=["kritik"]), [])
+        u = ciz(template="kontur-fasiyal", variant="konveks", gecis=3)
+        self.assertEqual(len(u), 1)
+        self.assertIn("'konveks' varyantı yok", u[0])
+        self.assertIn("kritik-alti-konveks", u[0])
+        u = ciz(template="kontur-fasiyal", etiket_surukle={"etiketler": ["kritik-kontur", "kritik-alti-kontur", "mukoza-kenari"]})
+        self.assertEqual(len(u), 2)
+        self.assertIn("kritik-alti", u[0])           # geçerli adlar listelenir
+        self.assertIn("GÖSTERİLMEDİ", u[1])
+        u = ciz(template="kontur-fasiyal", variant="duz", labels=["kayma", {"part": "kritik"}])
+        self.assertIn("varyantında bu parçalar yok", u[0])
+        self.assertIn("yok; hiçbir şey çizilmedi", ciz(template="kontur")[0])
+        self.assertEqual(ciz(template="dis", variant="saglikli", isaretle={"soru": "?", "dogru": ["sement"]},
+                             etiket_surukle={"etiketler": ["mine", "sement", "kemik"]}), [])
+
+    def test_sablon_bilgisi_ve_dokum_guncel(self):
+        import json
+        import re
+        m = _mcp()
+        o = json.loads(m.ar_sablon_bilgisi({"template": "kontur-fasiyal", "variant": "duz"})["content"][0]["text"])
+        self.assertEqual(o["parcalar"]["kritik"], "Kritik kontur")
+        self.assertNotIn("kayma", o["bu_varyantta"])
+        tum = json.loads(m.ar_sablon_bilgisi({})["content"][0]["text"])["sablonlar"]
+        # Döküm js dosyalarıyla aynı şablonları içermeli (yeni şablon eklenince node tools/sablon_dokum.mjs unutulmasın).
+        js = "".join(open(os.path.join(KOK, "js", d), encoding="utf-8").read()
+                     for d in ("anatomi.js", "anatomi-bolge.js", "anatomi-kontur.js"))
+        for ad in tum:
+            self.assertRegex(js, r"['\"]?%s['\"]?\s*:\s*\{\s*ad:" % re.escape(ad))
+        self.assertEqual(len(tum), len(re.findall(r"\n\s+['\"]?[a-z-]+['\"]?:\s*\{\s*ad:\s*'[^']+',\s*varyantlar:", js)))
+        self.assertNotIn("kuron", json.dumps(list(v for s in m.sablonlar().values() for v in s["parcalar"].values()), ensure_ascii=False).lower())
+        ilgili = m.dersle_ilgili_sablonlar("x", {"baslik": "İmplant dayanağı ve kron konturu: kritik ve kritik altı kontur"}, {})
+        self.assertIn("kontur-fasiyal", ilgili)
+
+    def _ders_kur(self, t, mb, sayfalar):
+        import json
+        dk = os.path.join(t, "lessons", "kontur-dersi")
+        os.makedirs(os.path.join(dk, "kaynak"))
+        os.makedirs(os.path.join(dk, "kaynaklar"))
+        with open(os.path.join(dk, "egitmen.json"), "w", encoding="utf-8") as f:
+            json.dump({"baslik": "Kontur", "kaynak": {"baslik": "Su H, Lee E. Considerations of implant abutment and "
+                       "crown contour: critical contour and subcritical contour. IJPRD 2010."}}, f)
+        with open(os.path.join(dk, "kaynaklar", "kaynaklar.json"), "w", encoding="utf-8") as f:
+            json.dump({"kaynaklar": [{"id": "su-2010", "kisa": "Su ve ark. 2010", "rol": "ana", "pmid": "20664835",
+                                      "atif": "Su H, Lee E. Considerations of implant abutment and crown contour: critical contour."}]}, f)
+        for n, mt in sayfalar.items():
+            with open(os.path.join(dk, "kaynak", "sayfa-%02d.txt" % n), "w", encoding="utf-8") as f:
+                f.write(mt)
+
+    def _kitaplik_kur(self, mb, sayfalar, ad="Su- critical.pdf"):
+        mb.kendi_kitaplik_hazirla()
+        pdf = os.path.join(mb.makale_klasoru(mb.KENDI), ad)
+        os.makedirs(os.path.dirname(pdf), exist_ok=True)
+        with open(pdf, "wb") as f:
+            f.write(b"%PDF-1.4 sahte")
+        mk = mb.metin_klasoru(mb.KENDI, "ogrenci-su")
+        os.makedirs(mk)
+        for n, mt in sayfalar.items():
+            with open(os.path.join(mk, "sayfa-%02d.txt" % n), "w", encoding="utf-8") as f:
+                f.write(mt)
+        d = mb.durum_oku(mb.KENDI)
+        d["ekler"] = [{"id": "ogrenci-su", "kisa": "Su- critical", "ogrenci": True}]
+        d["kaynaklar"] = {"ogrenci-su": {"id": "ogrenci-su", "durum": "hazir", "pdf": pdf}}
+        mb.durum_yaz(mb.KENDI, d)
+        return pdf
+
+    @staticmethod
+    def _metin(n):
+        import random
+        r = random.Random(n)
+        soz = ["contour", "margin", "papilla", "implant", "tissue", "gingival", "crown", "abutment", "critical", "bone",
+               "facial", "profile", "zenith", "convex", "concave", "restoration", "height", "level", "apical", "coronal"]
+        return " ".join(r.choice(soz) + str(r.randint(0, 9)).replace("0", "") for _ in range(400)).replace("1", "a").replace(
+            "2", "b").replace("3", "c").replace("4", "d").replace("5", "e").replace("6", "f").replace("7", "g").replace("8", "h").replace("9", "i")
+
+    def test_kendi_makalelerimden_bulur(self):
+        import makale_bulucu as mb
+        import makale_sekil
+        eski = mb.KOK
+        t = self.tmp.name
+        try:
+            mb.KOK = t
+            ders = {1: "kapak", **{n: self._metin(n) for n in range(2, 11)}, 11: "telif"}
+            self._ders_kur(t, mb, ders)
+            # Aynı baskı, son iki sayfası eksik (Kemal'in kopyası): bağlanır, eksik sayfalar bildirilir.
+            pdf = self._kitaplik_kur(mb, {n: ders[n] for n in range(1, 10)})
+            hd = mb.hazir_ders_bul("ogrenci-su")
+            self.assertEqual((hd["ders"], hd["eslesme"]), ("kontur-dersi", "icerik"))
+            self.assertEqual(hd["sayfa_uyumu"]["kayma"], 0)
+            k = mb.kaynaklar("kontur-dersi")[0]
+            d = mb.kaynak_hazirla("kontur-dersi", k, ag_kullan=False)
+            self.assertEqual((d["durum"], d["nereden"], d["pdf"]), ("hazir", "kendi-makalelerim", pdf))
+            self.assertEqual(d["eksik_sayfalar"], [10])
+            self.assertNotIn("sayfa_kaymasi", d)
+            s = mb.durum_oku("kontur-dersi")
+            s["kaynaklar"] = {"su-2010": d}
+            mb.durum_yaz("kontur-dersi", s)
+            self.assertEqual(makale_sekil.pdf_sayfasi("kontur-dersi", "su-2010", 4), 4)
+            with self.assertRaises(ValueError):
+                makale_sekil.pdf_sayfasi("kontur-dersi", "su-2010", 10)
+        finally:
+            mb.KOK = eski
+
+    def test_kaymis_ve_baska_baski(self):
+        import shutil
+        import makale_bulucu as mb
+        import makale_sekil
+        eski = mb.KOK
+        t = self.tmp.name
+        try:
+            mb.KOK = t
+            ders = {1: "kapak", **{n: self._metin(n) for n in range(2, 11)}}
+            self._ders_kur(t, mb, ders)
+            k = mb.kaynaklar("kontur-dersi")[0]
+            # Kapaksız kopya: her sayfa bir önde. Kayma ölçülür ve sayfa açarken uygulanır.
+            self._kitaplik_kur(mb, {n - 1: ders[n] for n in range(2, 11)})
+            d = mb.kaynak_hazirla("kontur-dersi", k, ag_kullan=False)
+            self.assertEqual((d["durum"], d["sayfa_kaymasi"]), ("hazir", -1))
+            s = mb.durum_oku("kontur-dersi")
+            s["kaynaklar"] = {"su-2010": d}
+            mb.durum_yaz("kontur-dersi", s)
+            self.assertEqual(makale_sekil.pdf_sayfasi("kontur-dersi", "su-2010", 4), 3)
+            # Sayfaları karışık (başka dizgi): bağlanmaz, nedeni söylenir.
+            shutil.rmtree(mb.metin_klasoru(mb.KENDI, "ogrenci-su"))
+            self._kitaplik_kur(mb, {1: ders[5], 2: ders[2], 3: ders[9], 4: ders[3]})
+            d = mb.kaynak_hazirla("kontur-dersi", k, ag_kullan=False)
+            self.assertEqual(d["durum"], "eksik")
+            self.assertIn("başka bir baskısı", d["neden"])
+            # İçeriği tutmayan PDF, dosya adı uysa da sayfa metni olan derse bağlanmaz.
+            shutil.rmtree(mb.metin_klasoru(mb.KENDI, "ogrenci-su"))
+            self._kitaplik_kur(mb, {1: self._metin(77), 2: self._metin(78)})
+            d = mb.kaynak_hazirla("kontur-dersi", k, ag_kullan=False)
+            self.assertEqual(d["durum"], "eksik")
+            self.assertIn("Kendi makalelerim", d["denenen"])
+        finally:
+            mb.KOK = eski
+
+    def test_pmid_ile_doi(self):
+        import makale_bulucu as mb
+
+        class Ag:
+            def json(self, url):
+                assert "20664835" in url
+                return {"records": [{"pmid": 20664835, "doi": "10.1000/ABC.1"}]}
+        self.assertEqual(mb.pmid_ile_doi("PMID: 20664835", Ag()), "10.1000/abc.1")
+
+        class Bos:
+            def json(self, url):
+                return {"records": [{"pmid": 20664835, "status": "error"}]}
+        self.assertIsNone(mb.pmid_ile_doi("20664835", Bos()))

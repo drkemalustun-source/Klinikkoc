@@ -968,12 +968,17 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
             for m in makale_bulucu.ozet(ders)["makaleler"]:
                 if m.get("durum") == "hazir" and kaynak and kaynak.lower() in (m.get("kisa") or "").lower():
                     pdf = makale_sekil._pdf_yolu(ders, m["id"])
+                    kaynak = m["id"]
                     break
         if not pdf:
             return self._json(404, {"hata": "Bu makalenin PDF'i bu bilgisayarda yok. Makaleler sayfasından ekleyin."})
         if not makale_sekil.cizici_var():
             return self._json(503, {"hata": "Sayfa çizici (pypdfium2) kurulu değil: KUR dosyasını yeniden çalıştırın."})
-        veri = makale_sekil.onizleme(pdf, max(1, int(q.get("sayfa") or 1)), None, 2.0)
+        try:
+            sayfa = makale_sekil.pdf_sayfasi(ders, kaynak, max(1, int(q.get("sayfa") or 1)))
+        except ValueError as e:
+            return self._json(404, {"hata": str(e)})
+        veri = makale_sekil.onizleme(pdf, sayfa, None, 2.0)
         self.send_response(200)
         self.send_header("Content-Type", "image/png")
         self.send_header("Content-Length", str(len(veri)))

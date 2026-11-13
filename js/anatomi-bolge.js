@@ -742,7 +742,7 @@
 
     const sinif = p.rec < 0.3 ? '' : p.ara < 0.3 ? 'RT1' : p.ara <= p.rec ? 'RT2' : 'RT3';
     Object.assign(parts, {
-      kuron:            { ad: 'Orta kesici kuronu', at: [56.75, 52] },
+      kuron:            { ad: 'Orta kesici kronu', at: [56.75, 52] },
       'mine-sement':    { ad: 'Mine-sement sınırı', at: [72.25, 39.3] },
       'dis-eti':        { ad: 'Keratinize dişeti', at: [56.75, 33] },
       mgj:              { ad: 'Mukogingival sınır', at: [77, MGJ] },
@@ -790,8 +790,8 @@
   };
   const PLI_OLCUT = ['Dişeti bölgesinde plak yok', 'İnce plak; yalnız sonda ile görülür', 'Gözle görülen orta miktarda plak',
     'Cepte ve kenarda bol birikinti'];
-  const QH_OLCUT = ['Plak yok', 'Servikalde ayrı plak lekeleri', 'Servikalde ≤ 1 mm kesintisiz ince bant', '1 mm’den geniş, kuronun 1/3’ünden az',
-    'Kuronun 1/3–2/3’ü', 'Kuronun 2/3’ü ve fazlası'];
+  const QH_OLCUT = ['Plak yok', 'Servikalde ayrı plak lekeleri', 'Servikalde ≤ 1 mm kesintisiz ince bant', '1 mm’den geniş, kronun 1/3’ünden az',
+    'Kronun 1/3–2/3’ü', 'Kronun 2/3’ü ve fazlası'];
   const GI_OLCUT = ['Normal dişeti', 'Hafif iltihap, kanama yok', 'Orta iltihap, sondalamada kanama', 'Şiddetli iltihap, kendiliğinden kanama'];
 
   // Üst kesici kuronu, vestibülden: distal dış bükey ve köşesi yuvarlak, mezyal düz ve köşesi keskin; boyun dar.
@@ -1159,7 +1159,7 @@
       parts.kret = { ad: imp > 0.5 ? 'Alveol kreti' : 'Çökmüş labial duvar', at: [LB(cL + 0.01) + 0.6, cL + 1] };
       if (imp > 0.5) {
         parts.implant = { ad: 'İmplant (palatinal konumda)', at: [IX + 4, IY - 12] };
-        parts.kron = { ad: 'İmplant üstü kuron', at: [70, 70] };
+        parts.kron = { ad: 'İmplant üstü kron', at: [70, 70] };
         parts['bukkal-kemik'].ad = 'Labialde ≥ 2 mm kemik hedeflenir';
       } else parts.rezorpsiyon = { ad: 'Kayıp en çok labial yüzde', at: [LB(46) - 0.4, 46] };
     }

@@ -127,7 +127,7 @@ KOMUT_SEMASI = {
                    "soket-koruma (pihti, granulasyon, orgu-kemik, olgun-kemik, demet-kemigi, rezorpsiyon, dikey-kayip, eski-hat, greft, kollajen-ortu). "
                    "template:kemik-ici variant: saglikli|uc-duvarli|iki-duvarli|tek-duvarli|krater (defekt, duvar, bukkal-duvar, lingual-duvar, "
                    "proksimal-duvar, septum). template:cekilme variant: saglikli|rt1|rt2|rt3 (Cairo; cekilme, acik-kok, sinif, papilla, temas, "
-                   "siyah-ucgen, ara-kayip, mgj, mine-sement). ŞABLONDA YANIT: template'li draw'a isaretle:{soru, dogru?:[parça], coklu?} eklersen öğrenci şablonda bir bölgeye dokunur ve seçtiği parça sana söz olarak gelir ('İşaretleme · soru: ad [parça] (doğru|yanlış)'); etiket_surukle:{etiketler:[parça], soru?} eklersen şablon etiketsiz çizilir, öğrenci etiketleri yerine sürükler, hepsi yerleşince sonuç gelir ('Etiket yerleştirme: 3/4 doğru (yanlış: …)'). Parça adlarını aşağıdaki listelerden al; işaretlemede yalnız çizimde şekli olan parçalar seçilebilir. template:papil variant: dis-dis|duz|konkav|konveks|kare-kron|ince-biyotip|implant-implant (diş–implant arası meziodistal kesit; papil, tepe, temas, olcum, kret, siyah-ucgen, kritik, kritik-alti, kron-sag, implant, kuron, kazanc, biyotip). template:kontur-fasiyal variant: duz|kritik-fazla|kritik-az|kritik-alti-konkav|kritik-alti-konveks (implant labio-palatinal kesit; kritik, kritik-alti, kenar, kayma, hacim, labial-kemik, labial-mukoza, palatinal-mukoza, kron, implant). papil: kritik altı kontur dış bükey (konveks) yapılınca papil tepesi koronale kayar, siyah üçgen küçülür. Bu iki şablondaki doku tepkisi ölçüleri (papil artışı, kenar kayması) yaklaşık gözlemdir; eşik gibi söyleme. template:sondalama variant: saglikli|gingivitis|periodontitis|cekilme "
+                   "siyah-ucgen, ara-kayip, mgj, mine-sement). ŞABLONDA YANIT: template'li draw'a isaretle:{soru, dogru?:[parça], coklu?} eklersen öğrenci şablonda bir bölgeye dokunur ve seçtiği parça sana söz olarak gelir ('İşaretleme · soru: ad [parça] (doğru|yanlış)'); etiket_surukle:{etiketler:[parça], soru?} eklersen şablon etiketsiz çizilir, öğrenci etiketleri yerine sürükler, hepsi yerleşince sonuç gelir ('Etiket yerleştirme: 3/4 doğru (yanlış: …)'). Parça adlarını aşağıdaki listelerden al; işaretlemede yalnız çizimde şekli olan parçalar seçilebilir. template:papil variant: dis-dis|duz|konkav|konveks|kare-kron|ince-biyotip|implant-implant (diş–implant arası meziodistal kesit; papil, tepe, temas, olcum, kret, siyah-ucgen, kritik, kritik-alti, kron-sag, implant, kuron, kazanc, biyotip). template:kontur-fasiyal variant: duz|kritik-fazla|kritik-az|kritik-alti-konkav|kritik-alti-konveks (implant labio-palatinal kesit; kritik, kritik-alti, kenar, kayma, hacim, labial-kemik, labial-mukoza, palatinal-mukoza, kron, implant). papil: kritik altı kontur dış bükey (konveks) yapılınca papil tepesi koronale kayar, siyah üçgen küçülür. Bu iki şablondaki doku tepkisi ölçüleri (papil artışı, kenar kayması) yaklaşık gözlemdir; eşik gibi söyleme. Bu iki şablonda kritik kontur MAVİ, kritik altı kontur TURUNCU çizilir. Hazır etiketlerdeki sayılar (implant çapı, kemik ve mukoza kalınlığı, papil yüksekliği) şemanın çizim ölçüleridir; makaleye bağlı derste sayı makalede yoksa draw'a olcu:false ekle (sayılar yazılmaz). Şablon, varyant ya da parça adını yanlış yazarsan sonuçta cizim_uyarilari gelir ve geçerli adlar listelenir; güncel adlar için sablon_bilgisi aracı. template:sondalama variant: saglikli|gingivitis|periodontitis|cekilme "
                    "(cep derinliği ve klinik ataşman ölçümü; dis parçalarına ek: olcum-cd, olcum-kas, olcum-gm, olcum-formul). "
                    "İNDEKSLER: template:plak-indeksi variant: pli-0..pli-3 (Silness–Löe) | qh-0..qh-5 (Quigley–Hein/Turesky, plak boyalı); "
                    "template:gingival-indeks variant: gi-0..gi-3 (Löe–Silness). Parçalar: dis, dis-eti, papilla, mgj, alveol-mukozasi, skor, olcut, "
@@ -348,6 +348,16 @@ ARACLAR = [
                        "verir. Öğrenci 'seçtiklerimi çalışalım' derse ya da hangi dersi istediğini söylemeden çalışmaya "
                        "başlamak isterse önce bunu çağır; dönen nota göre egitmen_hazirla ve tahtayi_ac ile dersi aç.",
         "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "sablon_bilgisi",
+        "description": "Hazır anatomik şablonların (draw.template) güncel bilgisi: varyantlar, parça kimlikleri ve tahtada "
+                       "görünen adları, hangi parçanın yalnız hangi varyantta bulunduğu. template verilmezse bütün şablonların "
+                       "listesi döner. Bir şablonu ilk kez kullanmadan, labels/highlight/isaretle/etiket_surukle için parça adı "
+                       "yazmadan önce çağır; adları tahmin etme (bilinmeyen ad çizilmez, tahta aracı uyarı döndürür).",
+        "inputSchema": {"type": "object", "properties": {
+            "template": {"type": "string", "description": "şablon adı, ör. kontur-fasiyal, papil, dis, implant"},
+            "variant": {"type": "string", "description": "verilirse o varyantta bulunan parçalar da listelenir"}}},
     },
     {
         "name": "makale_sayfasi_bak",
@@ -703,7 +713,9 @@ ARACLAR = [
     {
         "name": "anlatima_devam",
         "description": "Kullanıcı söz alınca duraklayan anlatımı, cevabından sonra kaldığı cümleden sürdürür (tahta cevaptan "
-                       "önceki hâline döner) ve anlatımın bitmesini tahta gibi bekler. birak=true: anlatımı sürdürmez, bırakır.",
+                       "önceki hâline döner) ve anlatımın bitmesini tahta gibi bekler. birak=true: anlatımı sürdürmez, bırakır; "
+                       "anlatım duraklamamış, hâlâ sürüyorsa da keser ('birakildi'). Bırakılacak anlatım yoksa "
+                       "'devam_edilecek_anlatim_yok' ya da 'etkisiz' döner.",
         "inputSchema": {"type": "object", "properties": {
             "birak": {"type": "boolean", "description": "anlatımı sürdürme, bırak (konu değiştiyse)"}}},
     },

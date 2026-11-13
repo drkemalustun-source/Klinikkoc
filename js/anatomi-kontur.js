@@ -11,6 +11,11 @@
   const { svg, smooth, poly, trabekul, clamp, f, uid } = AT.anatomi._y;
   const tag = (n, part) => { n.dataset.part = part; return n; };
   const mm1 = (v) => String(Math.round(v * 10) / 10).replace('.', ',');
+  // Hazır etiketlerdeki sayılar şemanın çizim ölçüleridir, bir makalenin bulgusu değildir. olcu:false ile yazılmaz;
+  // yazıldığında çizimin altında "Ölçüler şematiktir" notu durur.
+  const olculu = (opt) => !opt || opt.olcu !== false;
+  const sayi = (opt, ad, ek) => (olculu(opt) ? ad + ek : ad);
+  const sematikNot = (g0, opt) => { if (olculu(opt)) svg('text', { x: 1, y: 88.6, 'text-anchor': 'start', 'font-size': 2.3, class: 'an-yazi an-sematik-not' }, g0).textContent = 'Ölçüler şematiktir'; };
   const ayna = (x) => 160 - x;
   const sin = Math.sin, PI = Math.PI;
 
@@ -153,26 +158,27 @@
     const yuzR = (y) => [X(-xAt(impYuzey(), y)), Y(y)];
     Object.assign(parts, {
       papil:   { ad: 'İnterdental papil', at: [80, Y((tepe + yT) / 2)] },
-      tepe:    { ad: `Papil yüksekliği ≈ ${mm1(h)} mm`, at: [80, Y(yT) - 0.3] },
+      tepe:    { ad: sayi(opt, 'Papil yüksekliği', ` ≈ ${mm1(h)} mm`), at: [80, Y(yT) - 0.3] },
       temas:   { ad: 'Temas noktası', at: [80, Y(yC)] },
-      olcum:   { ad: `Temas–kemik tepesi ≈ ${mm1(d)} mm`, at: [X(ox - 0.4), Y((tepe + yC) / 2)] },
+      olcum:   { ad: sayi(opt, 'Temas–kemik tepesi', ` ≈ ${mm1(d)} mm`), at: [X(ox - 0.4), Y((tepe + yC) / 2)] },
       kret:    { ad: ikiImp > 0.5 ? 'İmplantlar arası kemik tepesi' : 'Kemik tepesi', at: [X(0), Y(orta) - 0.3] },
       kemik:   { ad: 'Alveol kemiği', at: [X(-6), Y(-7)], ayrinti: true }
     });
     if (yC - yT > 0.08) parts['siyah-ucgen'] = { ad: 'Siyah üçgen', at: [80, Y((yT + yC) / 2)] };
     if (iL < 0.5) parts.kuron = { ad: 'Doğal diş (orta kesici)', at: [X(-4), Y(8)] };
-    else parts['kron-sol'] = { ad: 'İmplant üstü kuron', at: [X(-4), Y(8)] };
+    else parts['kron-sol'] = { ad: 'İmplant üstü kron', at: [X(-4), Y(8)] };
     if (iR > 0.5) {
       Object.assign(parts, {
-        'kron-sag':    { ad: 'İmplant üstü kuron', at: [X(4), Y(8)] },
-        implant:       { ad: 'İmplant (çap 4,1 mm)', at: [X(-(kenar - IMP_R)), Y(-7)] },
+        'kron-sag':    { ad: 'İmplant üstü kron', at: [X(4), Y(8)] },
+        implant:       { ad: sayi(opt, 'İmplant', ' (çap 4,1 mm)'), at: [X(-(kenar - IMP_R)), Y(-7)] },
         'dayanak-sag': { ad: 'Dayanak', at: [X(4), Y(PLATFORM + 1.1)], ayrinti: true },
         'kritik-alti': { ad: p.sub > 0.5 ? 'Kritik altı kontur: iç bükey' : p.sub < -0.5 ? 'Kritik altı kontur: dış bükey' : 'Kritik altı kontur: düz', at: yuzR((PLATFORM + kritikBas) / 2) },
-        kritik:        { ad: p.kare > 0.5 ? 'Kritik kontur: geniş (kare kron)' : 'Kritik kontur (≈ 1 mm)', at: yuzR(kritikBas + 0.5) }
+        kritik:        { ad: p.kare > 0.5 ? 'Kritik kontur: geniş (kare kron)' : sayi(opt, 'Kritik kontur', ' (≈ 1 mm)'), at: yuzR(kritikBas + 0.5) }
       });
     } else parts['kuron-sag'] = { ad: 'Komşu doğal diş', at: [X(4), Y(8)] };
-    if (p.sub < -0.5) parts.kazanc = { ad: 'Papil ≈ 0,5–1 mm koronale (yaklaşık)', at: [80.3, Y(yT) + 0.4] };
+    if (p.sub < -0.5) parts.kazanc = { ad: sayi(opt, 'Papil', ' ≈ 0,5–1 mm') + ' koronale (yaklaşık)', at: [80.3, Y(yT) + 0.4] };
     if (p.b < 0.5) parts.biyotip = { ad: 'İnce biyotip: sivri papil', at: [80, Y(yT) - 1.2] };
+    sematikNot(g0, opt);
     return parts;
   }
 
@@ -260,22 +266,23 @@
     }
 
     Object.assign(parts, {
-      implant:        { ad: 'İmplant (çap 4,1 mm)', at: [FX(0), FYy(-3.6)] },
+      implant:        { ad: sayi(opt, 'İmplant', ' (çap 4,1 mm)'), at: [FX(0), FYy(-3.6)] },
       dayanak:        { ad: 'Dayanak', at: [FX(0.6), FYy(0.8)], ayrinti: true },
-      kron:           { ad: 'İmplant üstü kuron', at: [FX(0), FYy(G + 3.5)] },
-      'labial-kemik': { ad: `Labial kemik ≈ ${mm1(p.tB)} mm`, at: [FX(-r - p.tB / 2), FYy(-3)] },
+      kron:           { ad: 'İmplant üstü kron', at: [FX(0), FYy(G + 3.5)] },
+      'labial-kemik': { ad: sayi(opt, 'Labial kemik', ` ≈ ${mm1(p.tB)} mm`), at: [FX(-r - p.tB / 2), FYy(-3)] },
       'palatinal-kemik': { ad: 'Palatinal kemik', at: [FX(3.4), FYy(-2.5)] },
-      'labial-mukoza': { ad: `Labial mukoza ≈ ${mm1(p.tG)} mm`, at: [FX(dis - p.tG / 2), FYy(-1.5)] },
+      'labial-mukoza': { ad: sayi(opt, 'Labial mukoza', ` ≈ ${mm1(p.tG)} mm`), at: [FX(dis - p.tG / 2), FYy(-1.5)] },
       'palatinal-mukoza': { ad: 'Palatinal mukoza', at: [FX(3.8), FYy(1.6)] },
       kenar:          { ad: 'Mukoza kenarı', at: [FX(kenarX), FYy(Gm)] },
       'kritik-alti':  { ad: p.sub > 0.5 ? 'Kritik altı kontur: iç bükey' : p.sub < -0.5 ? 'Kritik altı kontur: dış bükey' : 'Kritik altı kontur', at: FP([[xAt(lab, (G - 1) / 2), (G - 1) / 2]])[0] },
-      kritik:         { ad: p.crit > 0.5 ? 'Kritik kontur: fazla (dış bükey)' : p.crit < -0.5 ? 'Kritik kontur: azaltılmış' : 'Kritik kontur (≈ 1 mm)', at: FP([[xAt(lab, G - 0.5), G - 0.5]])[0] },
+      kritik:         { ad: p.crit > 0.5 ? 'Kritik kontur: fazla (dış bükey)' : p.crit < -0.5 ? 'Kritik kontur: azaltılmış' : sayi(opt, 'Kritik kontur', ' (≈ 1 mm)'), at: FP([[xAt(lab, G - 0.5), G - 0.5]])[0] },
       plan:           { ad: 'Planlanan kenar düzeyi', at: [FX(ucX + 0.4), FYy(G)], ayrinti: true }
     });
     if (p.kay < -0.1) parts.kayma = { ad: 'Kenar apikale kayar (yaklaşık)', at: [FX(ucX - 2.6), FYy((G + Gm) / 2)] };
     if (p.kay > 0.1) parts.kayma = { ad: 'Kenar koronale kayabilir (yaklaşık)', at: [FX(ucX - 2.6), FYy((G + Gm) / 2)] };
     if (p.sub > 0.5) parts.hacim = { ad: 'Yumuşak doku hacmi artar', at: [FX(-r - 0.6), FYy(1.2)] };
     if (p.sub < -0.5) parts.hacim = { ad: 'Mukoza incelir', at: [FX(-r - 0.9), FYy(1.2)] };
+    sematikNot(g0, opt);
     return parts;
   }
 

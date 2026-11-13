@@ -23,7 +23,7 @@
     const s = AT.anatomi && AT.anatomi.SABLONLAR[c.template];
     if (!s) return {};
     const g = document.createElementNS(NS, 'g');
-    return s.ciz(g, c.variant || s.varyantlar[0], { probe: !!c.probe, p: c.p }) || {};
+    return s.ciz(g, c.variant || s.varyantlar[0], { probe: !!c.probe, p: c.p, olcu: c.olcu }) || {};
   }
 
   function svgNokta(s, x, y) {

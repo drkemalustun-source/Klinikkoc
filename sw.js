@@ -6,7 +6,7 @@
  * localhost:8810) tarayıcı eski board.js'i vermeyi sürdürdü ("board.animBekle is not a function").
  * Sunucu bu bilgisayarda çalıştığı için ağ her zaman hızlıdır; önbellek yalnız sunucu kapalıyken kullanılır. */
 const PREFIX = 'klinik-koc-';
-const SW_SURUM = '4.1.0'; // bu dosya değişince tarayıcı yeni işçiyi kurar
+const SW_SURUM = '4.1.1'; // bu dosya değişince tarayıcı yeni işçiyi kurar
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {

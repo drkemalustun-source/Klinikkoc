@@ -24,6 +24,7 @@ import glob
 import hashlib
 import json
 import os
+import re
 import random
 import shutil
 import subprocess
@@ -674,6 +675,13 @@ def ar_egitmen_hazirla(a):
                     "vakalar": [os.path.splitext(os.path.basename(y))[0]
                                 for y in sorted(glob.glob(ders_yolu(ders, "vakalar", "*.json")))]},
            "bloom_sirasi": BLOOM}
+    ilgili = dersle_ilgili_sablonlar(ders, eg, d)
+    if ilgili:
+        out["sablonlar"] = {"bu_dersle_ilgili": [sablon_ozeti(x) for x in ilgili],
+                            "tum_sablonlar": sorted(sablonlar()),
+                            "not": "Çizimde önce bu hazır şablonları kullan; parça ve varyant adlarını buradan al (tahmin "
+                                   "etme). Başka şablon için sablon_bilgisi(template). Makaleye bağlı derste sayı makalede "
+                                   "yoksa draw'a olcu:false ekle."}
     if not_:
         out["not"] = not_
     kimlik, soru = ogrenci_sec(a)
@@ -1589,13 +1597,101 @@ SEKIL_ALANLARI = {
 }
 
 
+_SABLONLAR = {}
+
+
+def sablonlar():
+    """Şablonların parça ve varyant dökümü (tools/sablonlar.json; node tools/sablon_dokum.mjs üretir)."""
+    if not _SABLONLAR:
+        try:
+            with open(os.path.join(KOK, "tools", "sablonlar.json"), encoding="utf-8") as f:
+                _SABLONLAR.update(json.load(f))
+        except (OSError, ValueError):
+            pass
+    return _SABLONLAR
+
+
+def sablon_ozeti(ad, varyant=None):
+    """Bir şablonun Claude'a gösterilen bilgisi: varyantlar, parçalar (kimlik → tahtadaki adı), yalnız bazı
+    varyantlarda bulunan parçalar."""
+    s = sablonlar().get(ad)
+    if not s:
+        return None
+    out = {"template": ad, "ad": s["ad"], "varyantlar": s["varyantlar"], "parcalar": dict(s["parcalar"])}
+    if s.get("ayrinti"):
+        out["ayrinti_parcalari"] = s["ayrinti"]
+    if s.get("yalniz"):
+        out["yalniz_bu_varyantlarda"] = s["yalniz"]
+    if varyant:
+        if varyant not in s["varyantlar"]:
+            out["uyari"] = "'%s' varyantı yok; geçerli: %s" % (varyant, ", ".join(s["varyantlar"]))
+        else:
+            out["bu_varyantta"] = sorted(_sablon_parcalari(s, varyant))
+    return out
+
+
+def _sablon_parcalari(s, varyant):
+    return {p for p in s["parcalar"] if p not in s.get("yalniz", {}) or varyant in s["yalniz"][p]}
+
+
+def sablon_uyarilari(c, yer):
+    """template'li draw: bilinmeyen şablon, varyant, parça (labels, highlight, isaretle.dogru, etiket_surukle.etiketler).
+    Tahta bunları sessizce yok sayar (bilinmeyen varyant ilk varyant gibi çizilir); Claude'a geçerli adlar söylenir."""
+    tum = sablonlar()
+    ad = c.get("template")
+    if not tum or not ad:
+        return []
+    s = tum.get(ad)
+    if not s:
+        return ["%s: '%s' şablonu yok; hiçbir şey çizilmedi. Geçerli şablonlar: %s" % (yer, ad, ", ".join(sorted(tum)))]
+    out = []
+    v = c.get("variant")
+    if v and v not in s["varyantlar"]:
+        out.append("%s: %s şablonunda '%s' varyantı yok, '%s' çizildi. Geçerli: %s"
+                   % (yer, ad, v, s["varyantlar"][0], ", ".join(s["varyantlar"])))
+        v = None
+    v = v or s["varyantlar"][0]
+    var = _sablon_parcalari(s, v)
+    istenen = []
+    lab = c.get("labels")
+    if isinstance(lab, list):
+        istenen += [("labels", l.get("part") if isinstance(l, dict) else l) for l in lab]
+    elif isinstance(lab, str) and lab not in ("hepsi", "all", "ayrinti"):
+        out.append("%s: labels '%s' tanınmıyor; 'hepsi', 'ayrinti' ya da parça listesi ver" % (yer, lab))
+    h = c.get("highlight")
+    istenen += [("highlight", x) for x in (h if isinstance(h, list) else [h] if h else [])]
+    isr = c.get("isaretle") if isinstance(c.get("isaretle"), dict) else {}
+    dg = isr.get("dogru")
+    istenen += [("isaretle.dogru", x) for x in (dg if isinstance(dg, list) else [dg] if dg else [])]
+    es = c.get("etiket_surukle") if isinstance(c.get("etiket_surukle"), dict) else {}
+    et = [x for x in (es.get("etiketler") or [])]
+    istenen += [("etiket_surukle.etiketler", x) for x in et]
+    yok, baska = [], []
+    for alan, x in istenen:
+        if x in var:
+            continue
+        if x in s["parcalar"]:
+            baska.append("%s '%s' (yalnız: %s)" % (alan, x, ", ".join(s["yalniz"].get(x, []))))
+        else:
+            yok.append("%s '%s'" % (alan, x))
+    if yok:
+        out.append("%s: %s şablonunda bu parçalar yok, yok sayıldı: %s. Geçerli parçalar (%s): %s"
+                   % (yer, ad, "; ".join(yok), v, ", ".join(sorted(var))))
+    if baska:
+        out.append("%s: %s şablonunun '%s' varyantında bu parçalar yok, yok sayıldı: %s" % (yer, ad, v, "; ".join(baska)))
+    if c.get("etiket_surukle") is not None and not [x for x in et if x in var]:
+        out.append("%s: etiket_surukle için geçerli etiket kalmadı; öğrenciye etiket kartı GÖSTERİLMEDİ." % yer)
+    return out
+
+
 def cizim_uyarilari(adimlar):
-    """draw komutlarındaki şekillerde bilinmeyen tür, bilinmeyen alan ya da eksik zorunlu alan."""
+    """draw komutlarında: şekillerde bilinmeyen tür/alan ya da eksik zorunlu alan; şablonlarda bilinmeyen ad."""
     out = []
     for i, adim in enumerate(adimlar or [], 1):
         for c in (adim or {}).get("komutlar") or []:
             if not isinstance(c, dict) or c.get("type") != "draw":
                 continue
+            out += sablon_uyarilari(c, "adım %d" % i)
             for j, sh in enumerate(c.get("shapes") or [], 1):
                 if not isinstance(sh, dict):
                     continue
@@ -1613,6 +1709,42 @@ def cizim_uyarilari(adimlar):
                     out.append("%s: %s bu alanları tanımıyor, yok sayıldı: %s (geçerli: %s)" % (
                         yer, tur, ", ".join(fazla), ", ".join(sorted(gerekli | istege | SEKIL_ORTAK))))
     return out
+
+
+def dersle_ilgili_sablonlar(ders, eg, d, en_cok=4):
+    """Derste adı geçen ya da başlığı dersin başlığıyla örtüşen şablonlar (egitmen_hazirla bunların parça listesini verir)."""
+    tum = sablonlar()
+    if not tum:
+        return []
+    ham = json.dumps([eg, d], ensure_ascii=False).lower()
+    baslik = set(re.findall(r"[a-zçğıöşü]{5,}", ((eg or {}).get("baslik") or (d or {}).get("title") or "").lower()))
+    puan = {}
+    for ad, s in tum.items():
+        p = 0
+        if re.search(r"[\"'`]%s[\"'`]" % re.escape(ad), ham):
+            p += 10
+        p += len(baslik & set(re.findall(r"[a-zçğıöşü]{5,}", (s["ad"] + " " + ad).lower())))
+        if p:
+            puan[ad] = p
+    return sorted(puan, key=lambda a: -puan[a])[:en_cok]
+
+
+def ar_sablon_bilgisi(a):
+    ad = (a.get("template") or "").strip()
+    tum = sablonlar()
+    if not tum:
+        raise ValueError("Şablon dökümü (tools/sablonlar.json) bulunamadı.")
+    if not ad:
+        return metin({"sablonlar": {k: {"ad": v["ad"], "varyantlar": v["varyantlar"]} for k, v in tum.items()},
+                      "not": "Parça adları için sablon_bilgisi(template: '<ad>') çağır."})
+    o = sablon_ozeti(ad, a.get("variant"))
+    if not o:
+        raise ValueError("'%s' şablonu yok. Geçerli: %s" % (ad, ", ".join(sorted(tum))))
+    o["kullanim"] = ("draw{template, variant, labels:'hepsi'|[parça], highlight:[parça], gecis:sn, olcu:false, "
+                     "isaretle:{soru, dogru:[parça]}, etiket_surukle:{etiketler:[parça]}}. Parça KİMLİKLERİNİ (soldaki adlar) "
+                     "kullan; tahtada sağdaki Türkçe ad görünür. olcu:false hazır etiketlerdeki şematik sayıları (mm) yazmaz: "
+                     "makaleye bağlı derste, sayı makalede yoksa böyle çiz.")
+    return metin(o)
 
 
 def ar_tahta(a):
@@ -1854,7 +1986,7 @@ def aramada_durumu(ders, out):
         out["arama_dizini"] = "okunamadı: %s" % e
         return out
     for m in out.get("makaleler") or []:
-        if m.get("durum") != "hazir" or m.get("nereden") == "ders":
+        if m.get("durum") != "hazir" or m.get("nereden") == "ders" or m.get("eslesme") == "icerik":
             continue
         klasor = makale_bulucu.metin_klasoru(ders, m["id"])
         bilgi = {}
@@ -2059,7 +2191,7 @@ def _makale_pdf(ders, kaynak):
 
 def ar_makale_sayfasi_bak(a):
     pdf = _makale_pdf(a.get("ders"), a.get("kaynak"))
-    veri = makale_sekil.onizleme(pdf, int(a.get("sayfa") or 1), a.get("bolge"))
+    veri = makale_sekil.onizleme(pdf, makale_sekil.pdf_sayfasi(a.get("ders"), a.get("kaynak"), a.get("sayfa")), a.get("bolge"))
     return {"content": [{"type": "image", "data": base64.b64encode(veri).decode("ascii"), "mimeType": "image/png"},
                         {"type": "text", "text": "Sayfa %s%s. Bölge [sol, üst, sağ, alt], 0–1 oran." % (
                             a.get("sayfa"), " (yalnız bölge)" if a.get("bolge") else "")}]}
@@ -2180,7 +2312,7 @@ ISLEYICILER = {"egitmen_hazirla": ar_egitmen_hazirla, "kayit_oku": ar_kayit_oku,
                "makale_bul": ar_makale_bul, "makale_ekle": ar_makale_ekle,
                "sihirbaz_oku": ar_sihirbaz_oku, "sihirbaz_oner": ar_sihirbaz_oner,
                "ders_bitir": ar_ders_bitir, "program_onerisi": ar_program_onerisi,
-               "calisma_secimi": ar_calisma_secimi, "degerlendirme_notu": ar_degerlendirme_notu,
+               "calisma_secimi": ar_calisma_secimi, "sablon_bilgisi": ar_sablon_bilgisi, "degerlendirme_notu": ar_degerlendirme_notu,
                "degerlendirme_ozeti": ar_degerlendirme_ozeti,
                "makale_sayfasi_bak": ar_makale_sayfasi_bak, "makale_sekli_ekle": ar_makale_sekli_ekle, "tekrar_karti_yaz": ar_tekrar_karti_yaz, "depolama": ar_depolama,
                "eski_surumler": ar_eski_surumler, "ortak_klasor": ar_ortak_klasor, "eski_surumleri_sil": ar_eski_surumleri_sil,

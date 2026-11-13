@@ -549,7 +549,7 @@
     const S = (x, yy) => [160 - x, yy];
     const Gm = (p.mY + p.sY) / 2;
     const parts = {
-      kron:              { ad: 'Protetik kuron', at: S(70, 17) },
+      kron:              { ad: 'Protetik kron', at: S(70, 17) },
       dayanak:           { ad: 'Dayanak (abutment)', at: S(76, 36.5) },
       platform:          { ad: 'İmplant platformu', at: S(75.6, 43) },
       implant:           { ad: 'İmplant (titanyum vida)', at: S(77, 66) },
@@ -647,12 +647,13 @@
     sag.forEach((a) => ciz(a, 'sag'));
   }
 
-  // svgEl içine şablonu çizer. c: {template, variant, labels, highlight, probe}
+  // svgEl içine şablonu çizer. c: {template, variant, labels, highlight, probe, olcu}
+  // olcu:false → kontur şablonlarının hazır etiketlerinde şematik sayılar (mm) yazılmaz.
   function ciz(svgEl, c, instant, eski) {
     const s = SABLONLAR[c.template];
     if (!s) { console.warn('Bilinmeyen şablon:', c.template); return null; }
     const g = svg('g', { class: 'an-sablon' + (instant ? '' : ' fade-in') }, svgEl);
-    const parts = s.ciz(g, c.variant || s.varyantlar[0], { probe: !!c.probe, p: c.p });
+    const parts = s.ciz(g, c.variant || s.varyantlar[0], { probe: !!c.probe, p: c.p, olcu: c.olcu });
     for (const h of [].concat(c.highlight || [])) {
       g.querySelectorAll(`[data-part="${h}"]`).forEach((n) => n.classList.add('an-vurgu'));
     }

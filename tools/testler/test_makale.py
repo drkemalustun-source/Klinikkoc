@@ -212,7 +212,7 @@ class BulucuTest(OrtamliTest):
         self.ders_kur(ders, [{"id": "a", "doi": "10.1/a", "kisa": "A"}, {"id": "b", "kisa": "Kitap bölümü"}])
         o = mb.hazirla(ders, ag_kullan=False, dizinle=False)
         self.assertEqual(o["sayilar"], {"eksik": 2})
-        self.assertEqual(o["makaleler"][1]["neden"], "DOI yok; PDF'i elle ekleyin.")
+        self.assertIn("DOI'si yok", o["makaleler"][1]["neden"])
         self.assertFalse(o["calisiyor"])
         self.assertEqual(o["makaleler"][0]["sayfa_adresi"], "https://doi.org/10.1/a")
 

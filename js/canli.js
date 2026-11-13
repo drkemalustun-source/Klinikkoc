@@ -823,7 +823,7 @@
   function durum() {
     // Başlık: title komutunun başlığı; yoksa tahtadaki en son çizim/tablo/listenin başlığı.
     const h = boardEl.querySelector('.board-title h2');
-    const altlar = boardEl.querySelectorAll('h3');
+    const altlar = [...boardEl.querySelectorAll('h3, h4, figcaption')].filter((n) => n.textContent.trim());
     const h3 = altlar.length ? altlar[altlar.length - 1] : null;
     return {
       ders: dersId,
@@ -1116,8 +1116,10 @@
     let sonuc;
     if (k && k.birak) {
       if (eski) { eski.iptal = true; tahtaKaydi = null; eski.uyandir(); }
-      else if (durak.soz && calisan) { calisan.iptal = true; ses.dur(); durak.sifirla(); }
+      // Duraklamamış, süren anlatım da bırakılır (durdur gibi): "bırakıldı" deyip anlatımın sürmesi yanıltıcıydı.
+      else if (calisan && calisan.tur === 'adimlar') { calisan.iptal = true; ses.dur(); if (board.video) board.video.duraklat(); durak.sifirla(); }
       sonuc = { durum: eski || calisan ? 'birakildi' : 'devam_edilecek_anlatim_yok' };
+      if (!eski && calisan && calisan.tur !== 'adimlar') sonuc = { durum: 'etkisiz', not: 'Bırakılacak bir anlatım yok (açık bir soru olabilir); kesmek için durdur.' };
     } else if (eski) {
       tahtayiGeriYukle();
       durak.sifirla();

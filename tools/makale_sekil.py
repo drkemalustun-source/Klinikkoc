@@ -84,6 +84,16 @@ def _pdf_yolu(ders, kaynak):
     return None
 
 
+def pdf_sayfasi(ders, kaynak, sayfa):
+    """Dersin sayfa numarasının bu bilgisayardaki PDF kopyasındaki karşılığı. Kopya başka sayfadan başlıyorsa
+    (makale bulunurken ölçülen sayfa_kaymasi) düzeltilir; kopyada olmayan sayfa için ValueError."""
+    s = (mb.durum_oku(ders).get("kaynaklar") or {}).get(kaynak) or {}
+    sayfa = int(sayfa or 1)
+    if sayfa in (s.get("eksik_sayfalar") or []):
+        raise ValueError("Bu PDF kopyasında dersin %d. sayfası yok." % sayfa)
+    return sayfa + int(s.get("sayfa_kaymasi") or 0)
+
+
 def sayfa_ciz(pdf, sayfa, bolge=None, olcek=OLCEK):
     """(genislik, yukseklik, RGB satırları). sayfa 1'den başlar; bolge [x0, y0, x1, y1] oran (sol-üst köken)."""
     import pypdfium2 as pdfium
@@ -135,7 +145,7 @@ def cikar(ders, yeniden=False):
             sonuc[ad] = "cizici-yok"
             continue
         try:
-            png_yaz(hedef, *sayfa_ciz(pdf, int(m.get("sayfa") or 1), m.get("bolge")))
+            png_yaz(hedef, *sayfa_ciz(pdf, pdf_sayfasi(ders, m.get("kaynak"), m.get("sayfa")), m.get("bolge")))
             sonuc[ad] = "hazir"
         except Exception as e:  # bozuk PDF, yanlış sayfa: o görsel eksik kalır, ders çalışır
             sonuc[ad] = "hata: %s" % e
@@ -208,7 +218,7 @@ def tanimla(ders, ad, kaynak, sayfa, bolge=None, baslik=None, aciklama=None):
         return {"ad": ad, "durum": "makale-yok", "makaleden": m}
     hedefler = [h for a2, h, _ in tanimlar(ders) if a2 == ad]
     for h in hedefler:
-        png_yaz(h, *sayfa_ciz(pdf, m["sayfa"], m.get("bolge")))
+        png_yaz(h, *sayfa_ciz(pdf, pdf_sayfasi(ders, m["kaynak"], m["sayfa"]), m.get("bolge")))
     return {"ad": ad, "durum": "hazir", "makaleden": m, "dosya": hedefler[0] if hedefler else None}
 
 
