@@ -46,6 +46,9 @@ fi
 echo
 python3 tools/tahta-mcp.py --dene
 echo
+echo "Eski sürüm klasörleri aranıyor (onayınız olmadan hiçbir şey silinmez)..."
+python3 tools/eski_surumler.py --sor
+echo
 echo "Bitti. Claude uygulamasını tamamen kapatın (üst menüde Claude → Quit Claude ya da Cmd+Q) ve yeniden açın."
 echo "Ayarlar › Geliştirici ekranında klinik-koc \"Çalışıyor\" görünmeli."
 read -r -p "Kapatmak için Enter'a basın..." _

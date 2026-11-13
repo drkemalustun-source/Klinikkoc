@@ -411,6 +411,24 @@ ARACLAR = [
         "inputSchema": {"type": "object", "properties": {"ac": {"type": "boolean"}}},
     },
     {
+        "name": "eski_surumler",
+        "description": "Bu bilgisayardaki eski KlinikKoç (ve eski akıllı tahta) klasörlerini listeler: sürüm, boyut, son "
+                       "değişiklik, yeni kurulumda olmayan dersler, Claude'un o klasörü kullanıp kullanmadığı. Hiçbir şey silmez. "
+                       "Kullanıcıya klasörleri tek tek say ve hangilerinin silinmesini istediğini sor.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "eski_surumleri_sil",
+        "description": "Eski KlinikKoç klasörlerini yedekleyip siler. YALNIZ kullanıcı bu konuşmada o klasörleri adıyla "
+                       "görüp açıkça 'sil' dediyse çağır; onay true olmalı. Önce yeni kurulumda olmayan dersler yeni kuruluma "
+                       "kopyalanır, sonra klasörün yedeği Belgeler/KlinikKoç Yedekler içine zip olarak alınır ve doğrulanır, "
+                       "en son klasör silinir. Çalışan kurulum ve Claude'un kullandığı klasör silinmez. Yedeğin yerini kullanıcıya söyle.",
+        "inputSchema": {"type": "object", "properties": {
+            "klasorler": {"type": "array", "items": {"type": "string"}, "description": "eski_surumler'in verdiği yollar"},
+            "onay": {"type": "boolean", "description": "kullanıcı açıkça onayladı"}},
+            "required": ["klasorler", "onay"]},
+    },
+    {
         "name": "ders_arsivle",
         "description": "Bir dersi arşive kaldırır. YALNIZ öğrenci o dersi açıkça seçip onaylayınca çağır. Arşiv zip'i "
                        "(Belgeler/KlinikKoç Arşiv) tamamlama raporlarını, ilerlemeyi ve makale listesini taşır; PDF'ler "

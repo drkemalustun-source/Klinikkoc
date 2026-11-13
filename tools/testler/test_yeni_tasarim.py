@@ -213,3 +213,43 @@ class SihirbazYeniListeler(Gecici):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class EskiSurumler(unittest.TestCase):
+    def test_bul_yedekle_sil(self):
+        import eski_surumler as es
+        with tempfile.TemporaryDirectory() as t:
+            def kur(yol, surum=None, dersler=()):
+                os.makedirs(os.path.join(yol, "tools"))
+                open(os.path.join(yol, "tools", "tahta-mcp.py"), "w").close()
+                if surum:
+                    with open(os.path.join(yol, "SURUM"), "w") as f:
+                        f.write(surum)
+                for d in dersler:
+                    os.makedirs(os.path.join(yol, "lessons", d))
+                    with open(os.path.join(yol, "lessons", d, "ders.json"), "w") as f:
+                        f.write("{}")
+                os.makedirs(os.path.join(yol, ".ses-ortami"))
+                with open(os.path.join(yol, ".ses-ortami", "buyuk"), "wb") as f:
+                    f.write(b"0" * 1000)
+            yeni = os.path.join(t, "Belgeler", "KlinikKoc")
+            eski = os.path.join(t, "Belgeler", "deneme", "klinikkoc-v3")
+            kur(yeni, "4.1.0", ["ortak"])
+            kur(eski, "3.1.0", ["ortak", "benim-dersim"])
+            bulunan = es.bul([t], kendisi=yeni)
+            self.assertEqual([x["yol"] for x in bulunan], [eski])  # çalışan kurulum listede yok
+            self.assertEqual(bulunan[0]["yeni_kurulumda_olmayan_dersler"], ["benim-dersim"])
+            yedek = os.path.join(t, "yedek")
+            # bulunmayan / çalışan klasör silinmez
+            s = es.temizle([yeni, os.path.join(t, "Belgeler")], kendisi=yeni, kokler=[t], yedek_yeri=yedek)
+            self.assertTrue(all(x["durum"] == "atlandı" for x in s))
+            self.assertTrue(os.path.isdir(yeni))
+            s = es.temizle([eski], kendisi=yeni, kokler=[t], yedek_yeri=yedek)[0]
+            self.assertEqual(s["durum"], "silindi")
+            self.assertFalse(os.path.exists(eski))
+            self.assertTrue(os.path.exists(os.path.join(yeni, "lessons", "benim-dersim", "ders.json")))
+            import zipfile
+            with zipfile.ZipFile(s["yedek"]) as z:
+                adlar = z.namelist()
+            self.assertIn("lessons/benim-dersim/ders.json", adlar)
+            self.assertFalse(any(a.startswith(".ses-ortami") for a in adlar))

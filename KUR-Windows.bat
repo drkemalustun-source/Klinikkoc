@@ -40,6 +40,9 @@ echo Dogal ses kurulmadi; tahta daha basit bir yedek sesle konusacak. Sonra kurm
 echo.
 %PY% tools\tahta-mcp.py --dene
 echo.
+echo Eski surum klasorleri araniyor (onayiniz olmadan hicbir sey silinmez)...
+%PY% tools\eski_surumler.py --sor
+echo.
 echo Bitti. Claude'u tamamen kapatin: saatin yanindaki ^^ isareti, Claude simgesi, sag tik, Cik.
 echo Sonra Claude'u acin. Ayarlar, Gelistirici ekraninda klinik-koc "Calisiyor" gorunmeli.
 pause

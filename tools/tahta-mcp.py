@@ -2018,6 +2018,25 @@ def ar_tekrar_karti_yaz(a):
                   "ogrenildi": bool(k.get("ogrenildi"))})
 
 
+def ar_eski_surumler(a):
+    import eski_surumler
+    eski = eski_surumler.bul()
+    return metin({"eski_klasorler": eski, "yedek_yeri": eski_surumler.yedek_klasoru(),
+                  "not": ("Eski klasör yok." if not eski else
+                          "Hiçbir şey silinmedi. Kullanıcıya klasörleri say; silinmesini açıkça istediklerini "
+                          "eski_surumleri_sil ile (onay: true) sil.")})
+
+
+def ar_eski_surumleri_sil(a):
+    import eski_surumler
+    if a.get("onay") is not True:
+        raise ValueError("Kullanıcının açık onayı gerekli (onay: true). Önce eski_surumler ile listeyi göster ve sor.")
+    klasorler = [str(x) for x in (a.get("klasorler") or []) if x]
+    if not klasorler:
+        raise ValueError("klasorler gerekli")
+    return metin({"sonuc": eski_surumler.temizle(klasorler)})
+
+
 def ar_depolama(a):
     out = depolama_ozeti()
     if out["asildi"]:
@@ -2067,6 +2086,7 @@ ISLEYICILER = {"egitmen_hazirla": ar_egitmen_hazirla, "kayit_oku": ar_kayit_oku,
                "calisma_secimi": ar_calisma_secimi, "degerlendirme_notu": ar_degerlendirme_notu,
                "degerlendirme_ozeti": ar_degerlendirme_ozeti,
                "makale_sayfasi_bak": ar_makale_sayfasi_bak, "makale_sekli_ekle": ar_makale_sekli_ekle, "tekrar_karti_yaz": ar_tekrar_karti_yaz, "depolama": ar_depolama,
+               "eski_surumler": ar_eski_surumler, "eski_surumleri_sil": ar_eski_surumleri_sil,
                "ders_arsivle": ar_ders_arsivle, "ders_paketi_ekle": ar_ders_paketi_ekle,
                "ses_yeniden_baslat": ar_ses_yeniden_baslat, "arsivden_geri_yukle": ar_arsivden_geri_yukle}
 
