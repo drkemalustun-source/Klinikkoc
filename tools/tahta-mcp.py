@@ -918,6 +918,33 @@ def anlam_dizini_arka_planda(model):
     threading.Thread(target=is_, daemon=True, name="anlam-dizini").start()
 
 
+_ANLAM_KURULUM = {"durum": None}  # None | "kuruluyor" | "bitti" | "hata"
+
+
+def anlam_kurulumu_arka_planda():
+    """Anlam araması kurulu değilse (ör. tek tuşla güncellenmiş eski kurulum) bir kez arka planda kurar.
+    Kurulum bitince model yeniden yüklenir; o zamana dek arama sözcük + terim eşlemesiyle sürer."""
+    if _ANLAM_KURULUM["durum"] or os.environ.get("KLINIK_KOC_ANLAM_KURMA"):
+        return
+
+    def is_():
+        global _MODEL
+        try:
+            gunluk = os.path.join(veri_yeri.veri_kok(), "anlam-kurulumu.log")
+            os.makedirs(os.path.dirname(gunluk), exist_ok=True)
+            with open(gunluk, "w", encoding="utf-8") as f:
+                kod = subprocess.call([sys.executable, os.path.join(KOK, "tools", "bilgi_bankasi.py"), "--kur-anlam"],
+                                      stdout=f, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, timeout=3600)
+            _ANLAM_KURULUM["durum"] = "bitti" if kod == 0 else "hata"
+        except Exception:
+            _ANLAM_KURULUM["durum"] = "hata"
+        if _ANLAM_KURULUM["durum"] == "bitti":
+            _MODEL = None  # bir sonraki aramada yeni model yüklenir
+
+    _ANLAM_KURULUM["durum"] = "kuruluyor"
+    threading.Thread(target=is_, daemon=True, name="anlam-kurulumu").start()
+
+
 def ar_bilgi_ara(a):
     sorgu = (a.get("sorgu") or "").strip()
     if not sorgu:
@@ -934,10 +961,17 @@ def ar_bilgi_ara(a):
             _DIZIN_KILIDI.release()
     if model.hazir:
         anlam_dizini_arka_planda(model)
+    else:
+        anlam_kurulumu_arka_planda()
     k = max(1, min(int(a.get("k") or 6), 15))
     sonuclar, oz = bilgi_bankasi.ara_ve_dayanak(sorgu, a.get("ders"), a.get("tur"), k, model=model)
     out = {"sorgu": sorgu, "anlam_aramasi": "açık" if model.hazir else "kapalı (yalnız sözcük araması)",
            "dayanak": oz["dayanak"]}
+    if not model.hazir and _ANLAM_KURULUM["durum"] == "kuruluyor":
+        out["anlam_aramasi"] += "; arka planda kuruluyor (bir kez, ~120 MB), birkaç dakika sonra açılır"
+    esler = bilgi_bankasi.ingilizce_karsiliklar(sorgu)
+    if esler:
+        out["terim_eslemesi"] = sorted({" ".join(e) for v in esler.values() for e in v})
     if model.hazir and _ANLAM_IS["calisiyor"]:
         out["anlam_dizini"] = ("hazırlanıyor: yeni eklenen metinler şimdilik yalnız sözcük aramasında; birkaç dakika "
                                "sonra anlam aramasına da girer")

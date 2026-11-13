@@ -21,6 +21,9 @@ if ! python3 tools/ses-uret.py --kur; then
 fi
 python3 tools/makale_bulucu.py --kur || echo "PDF okuyucu kurulamadı; makaleler indirilir ama okunamaz."
 echo
+echo "Anlam araması kuruluyor (yaklaşık 120 MB, bir kez; Türkçe soruyla İngilizce makalede arama için)..."
+python3 tools/bilgi_bankasi.py --kur-anlam || echo "Anlam araması kurulamadı; arama yine çalışır (sözcük araması + Türkçe–İngilizce terim eşlemesi)."
+echo
 echo "2/3 Claude masaüstü uygulamasına KlinikKoç araçları ekleniyor..."
 python3 tools/tahta-mcp.py --kur
 echo

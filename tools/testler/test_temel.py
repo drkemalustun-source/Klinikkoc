@@ -10,6 +10,7 @@ import sys
 import tempfile
 import unittest
 import zlib
+os.environ.setdefault("KLINIK_KOC_ANLAM_KURMA", "1")  # testler anlam aramasını arka planda kurmaya kalkmasın
 
 KOK = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(KOK, "tools"))
@@ -80,7 +81,7 @@ class BilgiBankasi(unittest.TestCase):
 
     def test_turkce_kucuk_harf_ve_sorgu(self):
         self.assertEqual(bilgi_bankasi.kucuk("IŞIK İltihabı"), "ışık iltihabı")
-        self.assertEqual(bilgi_bankasi.fts_sorgusu("İltihabı"), '"iltih"*')
+        self.assertEqual(bilgi_bankasi.fts_sorgusu("İltihabı"), '"iltih"* OR "inflammation"* OR "inflammatory"*')
         self.assertEqual(bilgi_bankasi.fts_sorgusu("a"), "")
 
     def test_hafif_kok_bulucu(self):
@@ -93,7 +94,7 @@ class BilgiBankasi(unittest.TestCase):
         self.assertIn("kayb", ok("kayıp"))
         self.assertEqual(ok("periodontitis"), ["perio"])  # uzun sözcükte önceki davranış korunur
         self.assertEqual(ok("kanal"), ["kanal"])
-        self.assertEqual(bilgi_bankasi.fts_sorgusu("apsede drenaj"), '"apse"* OR "drena"*')
+        self.assertEqual(bilgi_bankasi.fts_sorgusu("apsede drenaj"), '"apse"* OR "drena"* OR "abscess"*')
 
     def test_parcalama_ortusur(self):
         p = bilgi_bankasi.parcala(" ".join(str(i) for i in range(250)), n=100, ortusme=20)
@@ -112,6 +113,37 @@ class BilgiBankasi(unittest.TestCase):
         r = bilgi_bankasi.ara("implant", ders="peri-implantitis-cerrahi", tur="vaka", yol=self.db)
         self.assertTrue(r)
         self.assertTrue(all(x["tur"] == "vaka" and x["ders"] == "peri-implantitis-cerrahi" for x in r))
+
+    def test_turkce_soru_ingilizce_makalede(self):
+        """Anlam araması kapalıyken de Türkçe terim, İngilizce makale metninde karşılığıyla bulunur."""
+        kok = os.path.join(self.gecici.name, "kok")
+        mk = os.path.join(kok, "lessons", "deneme", "makale-metin", "su-2010")
+        os.makedirs(mk)
+        with open(os.path.join(kok, "lessons", "deneme", "egitmen.json"), "w", encoding="utf-8") as f:
+            json.dump({"ad": "deneme"}, f)
+        with open(os.path.join(mk, "sayfa-01.txt"), "w", encoding="utf-8") as f:
+            f.write("A convex subcritical contour may support the papilla, while excess cement around the "
+                    "abutment is associated with peri-implant disease and bleeding on probing.")
+        eski = bilgi_bankasi.KOK
+        bilgi_bankasi.KOK = kok
+        try:
+            bilgi_bankasi.dizinle(yol=self.db, sessiz=True)
+            for soru in ("Siman artığı neden önemli?", "Kritik altı konturun papile etkisi nedir?",
+                         "Sondlamada kanamanın anlamı"):
+                r, oz = bilgi_bankasi.ara_ve_dayanak(soru, yol=self.db)
+                self.assertTrue(r, soru)
+                self.assertIn("su-2010", r[0]["kaynak"].lower().replace(" ", "-") + r[0].get("makale", ""))
+                self.assertNotEqual(oz["dayanak"], "yok", soru)
+            self.assertEqual(bilgi_bankasi.ara_ve_dayanak("Karnıyarık nasıl yapılır?", yol=self.db)[1]["dayanak"], "yok")
+        finally:
+            bilgi_bankasi.KOK = eski
+
+    def test_terim_eslemesi(self):
+        k = bilgi_bankasi.ingilizce_karsiliklar("diş eti cebinin derinliği")
+        self.assertIn(["pocket"], k["cebinin"])
+        self.assertIn(["depth"], k["derinliği"])
+        self.assertIn('"bleeding on probing"*', bilgi_bankasi.fts_sorgusu("sondlamada kanama"))
+        self.assertEqual(bilgi_bankasi.ingilizce_karsiliklar("karnıyarık tarifi"), {})
 
     def test_karma_arama_anlam_ile(self):
         m = SahteModel()

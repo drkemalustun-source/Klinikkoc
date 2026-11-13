@@ -222,7 +222,9 @@ ARACLAR = [
         "name": "bilgi_ara",
         "description": "Bu bilgisayardaki derslerin kaynak metinlerinde (ders notu/makale sayfaları), hazır anlatımlarında, "
                        "sorularında, öğretmen notlarında ve vaka kartlarında arar. Sözcük araması her zaman açıktır; "
-                       "anlam araması kuruluysa anlamca yakın parçaları da bulur. Her sonuçta kaynak (sayfa) bilgisi vardır. "
+                       "Türkçe terimler İngilizce karşılıklarıyla birlikte aranır (terim_eslemesi alanı hangilerinin eklendiğini söyler); "
+                       "İngilizce makalede sonuç azsa sorguyu İngilizce terimlerle de tekrarlayabilirsin. "
+                       "Anlam araması kuruluysa anlamca yakın parçaları da bulur. Her sonuçta kaynak (sayfa) bilgisi vardır. "
                        "Sonuçta 'dayanak' (guclu | zayif | yok) kaynakta bu soruya gerçekten dayanak olup olmadığını söyler.",
         "inputSchema": {"type": "object", "properties": {
             "sorgu": {"type": "string", "description": "aranacak soru ya da anahtar sözcükler (Türkçe)"},

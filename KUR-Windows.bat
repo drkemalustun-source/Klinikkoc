@@ -16,6 +16,10 @@ echo 1/3 Piper ses paketleri denetleniyor (zaten kuruluysa hizli gecer)...
 %PY% tools\ses-uret.py --kur
 %PY% tools\makale_bulucu.py --kur
 echo.
+echo Anlam aramasi kuruluyor (yaklasik 120 MB, bir kez; Turkce soruyla Ingilizce makalede arama icin)...
+%PY% tools\bilgi_bankasi.py --kur-anlam
+if errorlevel 1 echo Anlam aramasi kurulamadi. Arama yine calisir: sozcuk aramasi ve Turkce-Ingilizce terim eslemesi.
+echo.
 echo 2/3 Claude masaustu uygulamasina KlinikKoc araclari ekleniyor...
 %PY% tools\tahta-mcp.py --kur
 echo.
