@@ -689,6 +689,13 @@ def ar_egitmen_hazirla(a):
         uyari_ekle(out["ogrenci"], k)
     else:
         out["ogrenci"] = soru
+        out["sonraki_cagri"] = "Öğrenci adını verince egitmen_hazirla'yı yalniz_ogrenci: true ile çağır (kurallar yeniden gönderilmez)."
+    if a.get("yalniz_ogrenci") is True:
+        kisa = {"egitmen": out["egitmen"], "ders": {"kimlik": ders, "baslik": out["ders"]["baslik"]},
+                "ogrenci": out["ogrenci"], "not": "Kurallar ve ders bilgisi bu konuşmadaki önceki egitmen_hazirla yanıtındadır."}
+        if out.get("not"):
+            kisa["egitmen_notu"] = out["not"]
+        return metin(kisa)
     if depo().tasima_raporu and not getattr(depo(), "_tasima_soylendi", False):
         r = depo().tasima_raporu
         depo()._tasima_soylendi = True
@@ -696,6 +703,10 @@ def ar_egitmen_hazirla(a):
                                "kaynak": r["kaynak"], "yeni_yer": depo().kok, "kopyalanan": r["kopyalanan"]}
     if ders == makale_bulucu.KENDI:
         mo = makale_bulucu.ozet(ders)
+        hd = {m["kisa"]: m["hazir_ders"] for m in mo["makaleler"] if m.get("hazir_ders")}
+        if hd:
+            out["hazir_dersler"] = {"makaleler": hd, "not": "Bu makalelerin öğretmenin hazırladığı sunumlu bir dersi var; "
+                                    "öğrenci isterse o derse geç."}
         out["makaleler"] = {"hazir": [m["kisa"] for m in mo["makaleler"] if m["durum"] == "hazir"],
                             "not": "Öğrencinin kendi eklediği makaleler. Hangisiyle çalışmak istediğini sor; bilgiyi "
                                    "bilgi_ara(ders='kendi-makalelerim') ile bu makalelerden al."}
@@ -1563,7 +1574,44 @@ def dikte_durumu(d):
         out["duyu"] = "hazır" if du.get("hazir") else ("kurulu" if du.get("model_indirildi")
                                                        else "kurulu, model ilk kullanımda indirilecek")
     out["terim_duzeltme"] = ("Dikteyle gelen sözlerde 'metin' terim sözlüğüyle düzeltilmiştir; 'ham_metin' tanıyıcının "
-                             "ilk çıktısıdır. İkisi farklıysa ve anlam belirsizse öğrenciye kısaca sor.")
+                             "ilk çıktısıdır. İkisi farklıysa ve anlam belirsizse öğrenciye kısaca sor. 'belirsiz: true' "
+                             "tanıyıcının kendinden emin olmadığını söyler; bağlama uymayan gündelik sözcük de dikte "
+                             "hatası olabilir (ör. 'hâlini' → 'kalesini'): tahmin etme, 'Şunu mu demek istediniz?' diye sor.")
+    return out
+
+
+# Serbest çizim (draw.shapes) alanları: tahta bilinmeyen alanı sessizce yok sayar; Claude yanlış tahmin etmesin diye uyarılır.
+SEKIL_ORTAK = {"kind", "id", "color", "fill", "opacity", "stroke", "width", "dashed"}
+SEKIL_ALANLARI = {
+    "line": ({"x1", "y1", "x2", "y2"}, set()), "arrow": ({"x1", "y1", "x2", "y2"}, set()),
+    "rect": ({"x", "y", "w", "h"}, {"r"}), "ellipse": ({"cx", "cy", "rx"}, {"ry"}),
+    "path": ({"d"}, set()), "text": ({"x", "y", "text"}, {"size", "anchor"}),
+}
+
+
+def cizim_uyarilari(adimlar):
+    """draw komutlarındaki şekillerde bilinmeyen tür, bilinmeyen alan ya da eksik zorunlu alan."""
+    out = []
+    for i, adim in enumerate(adimlar or [], 1):
+        for c in (adim or {}).get("komutlar") or []:
+            if not isinstance(c, dict) or c.get("type") != "draw":
+                continue
+            for j, sh in enumerate(c.get("shapes") or [], 1):
+                if not isinstance(sh, dict):
+                    continue
+                yer = "adım %d, şekil %d%s" % (i, j, " (id %s)" % sh["id"] if sh.get("id") else "")
+                tur = sh.get("kind")
+                if tur not in SEKIL_ALANLARI:
+                    out.append("%s: bilinmeyen kind %r (line|arrow|rect|ellipse|path|text); şekil çizilmedi" % (yer, tur))
+                    continue
+                gerekli, istege = SEKIL_ALANLARI[tur]
+                eksik = sorted(gerekli - set(sh))
+                fazla = sorted(set(sh) - gerekli - istege - SEKIL_ORTAK)
+                if eksik:
+                    out.append("%s: %s için eksik alan %s" % (yer, tur, ", ".join(eksik)))
+                if fazla:
+                    out.append("%s: %s bu alanları tanımıyor, yok sayıldı: %s (geçerli: %s)" % (
+                        yer, tur, ", ".join(fazla), ", ".join(sorted(gerekli | istege | SEKIL_ORTAK))))
     return out
 
 
@@ -1575,7 +1623,12 @@ def ar_tahta(a):
     komut = {"tur": "adimlar", "adimlar": adimlar}
     if a.get("ders"):
         komut["ders"] = a["ders"]
-    return metin(gonder(komut, a.get("bekle", True) is not False))
+    uyari = cizim_uyarilari(adimlar)
+    r = gonder(komut, a.get("bekle", True) is not False)
+    if uyari and isinstance(r, dict):
+        r["cizim_uyarilari"] = uyari[:12]
+        r["cizim_notu"] = "Bu şekiller istediğin gibi çizilmemiş olabilir; tahta_durumu(goruntu: true) ile bak."
+    return metin(r)
 
 
 def ar_soru_sor(a):
@@ -1971,6 +2024,19 @@ def ar_calisma_secimi(_):
     diger = s["dersler"][1:]
     out = {"dersler": [{"ders": d, "baslik": b} for d, b in zip(s["dersler"], s["ders_adlari"])],
            "kendi_pdfleri": s["pdf_adlari"], "secim_tarihi": s["tarih"], "ilk_ders": ana}
+    hazir = {}
+    for pid, ad in zip(s["pdfler"], s["pdf_adlari"]):
+        try:
+            hd = makale_bulucu.hazir_ders_bul(pid)
+        except Exception:
+            hd = None
+        if hd:
+            hazir[ad] = hd
+    if hazir:
+        out["kendi_pdflerinin_hazir_dersleri"] = hazir
+        out["hazir_ders_notu"] = ("Bu PDF'lerin öğretmenin hazırladığı (sunumlu, görselli) bir dersi de var. Öğrenci "
+                                  "'sunumlu hâli', 'dersi' gibi bir şey isterse o derse geç (egitmen_hazirla(ders=...)); "
+                                  "yalnız makaleyi tartışmak isterse kendi-makalelerim ile sürdür. Emin değilsen sor.")
     out["not"] = (
         "Öğrenci ana ekranda bunları işaretledi. egitmen_hazirla(ders='%s') ile başla ve tahtayi_ac çağır. " % ana
         + ("Sonra sırayla öteki dersler: %s (her biri için yeniden egitmen_hazirla). " % ", ".join(diger) if diger else "")

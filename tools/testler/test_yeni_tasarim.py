@@ -318,3 +318,51 @@ class OrtakKlasor(unittest.TestCase):
         self.assertEqual(ok.kapat()["durum"], "kapatıldı")
         self.assertEqual(veri_yeri.kayit_kok(), yerel_kayit)
         self.assertTrue(os.path.exists(os.path.join(yerel_kayit, "ali", "yeni.json")))  # geri kopyalandı
+
+
+class RaporDuzeltmeleri(unittest.TestCase):
+    """v4.0.2 deneme raporu (2026-11-13) düzeltmeleri."""
+
+    def test_cizim_uyarilari(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("tahta_mcp_t", os.path.join(KOK, "tools", "tahta-mcp.py"))
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        u = m.cizim_uyarilari([{"komutlar": [{"type": "draw", "shapes": [
+            {"kind": "arrow", "x1": 1, "y1": 2, "x2": 3, "y2": 4},
+            {"kind": "text", "x": 1, "y": 2, "text": "a", "font": 3},
+            {"kind": "rect", "x": 1, "y": 2, "w": 3},
+            {"kind": "kare"}]}]}])
+        self.assertEqual(len(u), 3)
+        self.assertIn("font", u[0])
+        self.assertIn("eksik alan h", u[1])
+        self.assertIn("bilinmeyen kind", u[2])
+
+    def test_kendi_pdf_hazir_ders_eslemesi(self):
+        import json
+        import makale_bulucu as mb
+        eski_kok, eski_veri = mb.KOK, os.environ.get("KLINIK_KOC_VERI")
+        with tempfile.TemporaryDirectory() as t:
+            try:
+                mb.KOK = t
+                os.environ["KLINIK_KOC_VERI"] = os.path.join(t, "veri")
+                os.makedirs(os.path.join(t, "lessons", "kontur-dersi"))
+                with open(os.path.join(t, "lessons", "kontur-dersi", "egitmen.json"), "w", encoding="utf-8") as f:
+                    json.dump({"baslik": "Kontur", "kaynak": {"baslik": "Su H, Lee E. Considerations of implant abutment "
+                               "and crown contour: critical contour and subcritical contour. Int J Periodontics "
+                               "Restorative Dent. 2010;30:335-343."}}, f)
+                mb.kendi_kitaplik_hazirla()
+                mk = mb.metin_klasoru(mb.KENDI, "ogrenci-su")
+                os.makedirs(mk)
+                with open(os.path.join(mk, "sayfa-01.txt"), "w", encoding="utf-8") as f:
+                    f.write("Considerations of Implant Abutment and Crown Contour: Critical Contour and Subcritical Contour")
+                self.assertEqual(mb.hazir_ders_bul("ogrenci-su")["ders"], "kontur-dersi")
+                with open(os.path.join(mk, "sayfa-01.txt"), "w", encoding="utf-8") as f:
+                    f.write("Gingival recession in orthodontic patients")
+                self.assertIsNone(mb.hazir_ders_bul("ogrenci-su"))
+            finally:
+                mb.KOK = eski_kok
+                if eski_veri is None:
+                    os.environ.pop("KLINIK_KOC_VERI", None)
+                else:
+                    os.environ["KLINIK_KOC_VERI"] = eski_veri

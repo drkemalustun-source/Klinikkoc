@@ -441,13 +441,18 @@
       rec.interimResults = true;
       rec.maxAlternatives = 1;
       const finals = [];
+      this.guven = null; // tanıyıcının en düşük güveni (Chrome verir); düşükse Claude'a belirsiz olarak işaretlenir
       this.rec = rec;
       this.sure(8000); // hiç konuşulmazsa 8 sn sonra kapanır
       rec.onresult = (ev) => {
         let ara = '';
         for (let i = ev.resultIndex; i < ev.results.length; i++) {
           const r = ev.results[i];
-          if (r.isFinal) finals.push(r[0].transcript.trim());
+          if (r.isFinal) {
+            finals.push(r[0].transcript.trim());
+            const g = Number(r[0].confidence);
+            if (g > 0) this.guven = this.guven == null ? g : Math.min(this.guven, g);
+          }
           else ara += r[0].transcript;
         }
         this.metin = finals.join(' ').trim();
@@ -495,7 +500,7 @@
       const ham = this.metin.trim();
       this.metin = '';
       if (!ham) return this.bos();
-      await this.duzeltVeOnayla(ham, 'tarayici');
+      await this.duzeltVeOnayla(ham, 'tarayici', this.guven);
     },
 
     // --- Duyu: kayıt, sessizlik algılama, sunucuda yazıya çevirme ---
@@ -581,13 +586,13 @@
 
     birlestir(m) { return [this.onceki, (m || '').trim()].join(' ').replace(/\s+/g, ' ').trim(); },
 
-    async duzeltVeOnayla(ham, motor) {
+    async duzeltVeOnayla(ham, motor, guven) {
       let d = { metin: ham, ham_metin: ham, duzeltmeler: [] };
       try {
         const r = await api('duzelt', { metin: ham });
         if (r.ok) d = await r.json();
       } catch (e) { /* sözlük yoksa ham metin */ }
-      onay.baslat(this.birlestir(d.metin), this.birlestir(d.ham_metin), motor, d.duzeltmeler);
+      onay.baslat(this.birlestir(d.metin), this.birlestir(d.ham_metin), motor, d.duzeltmeler, guven);
     },
 
     bos() {
@@ -633,8 +638,9 @@
   const onay = {
     t: null,
     bilgi: null,
-    baslat(metin, ham, motor, duzeltmeler) {
+    baslat(metin, ham, motor, duzeltmeler, guven) {
       this.bilgi = { ham_metin: ham, motor };
+      if (guven != null) this.bilgi.guven = guven;
       yaziEl.value = metin;
       gonderBtn.disabled = !metin;
       dokEl.classList.remove('onayda');
@@ -690,6 +696,8 @@
     altyazi(metin, 'Siz');
     const govde = { metin, motor: (ek && ek.motor) || 'yazi' };
     if (ek && ek.ham_metin) govde.ham_metin = ek.ham_metin;
+    // Öğrenci kutuda düzelttiyse tanıyıcının güveni artık geçmez.
+    if (ek && ek.guven != null && metin === ek.ham_metin) govde.guven = ek.guven;
     try {
       const r = await api('soyle', govde);
       const j = await r.json();
@@ -813,10 +821,13 @@
   }
 
   function durum() {
+    // Başlık: title komutunun başlığı; yoksa tahtadaki en son çizim/tablo/listenin başlığı.
     const h = boardEl.querySelector('.board-title h2');
+    const altlar = boardEl.querySelectorAll('h3');
+    const h3 = altlar.length ? altlar[altlar.length - 1] : null;
     return {
       ders: dersId,
-      baslik: h ? h.textContent : '',
+      baslik: (h && h.textContent.trim()) || (h3 && h3.textContent.trim()) || '',
       gorsel: !!board.figure,
       soruAcik: !qEl.hidden,
       konusuyor: ses.konusuyor,
@@ -1090,6 +1101,15 @@
     durak.goster();
   }
 
+  function araCevabiBirak() {
+    const x = araCalisan;
+    if (!x) return;
+    x.iptal = true;
+    if (x._iptal) { soruyuKapat(); x._iptal(); }
+    ses.dur();
+    durak.sifirla();
+  }
+
   // 'devam' komutu (k) ya da ▶ (k = null): askıdaki ya da söz için duraklayan anlatım kaldığı yerden sürer.
   function anlatimaDon(k) {
     const eski = askidaki();
@@ -1286,6 +1306,9 @@
           if (k.tur === 'dur') durdur(k);
           else if (k.tur === 'goruntu') goruntuVer(k); // Claude tahtaya bakmak istiyor: sırayı beklemez
           else if (k.tur === 'devam') {
+            // Araya giren cevap öğrenci konuştuğu için duraklamışsa (söz/⏸) onu bekleme: Claude anlatıma dönmek ya da
+            // anlatımı bırakmak istiyor; duraklayan cevap (açık soru dahil) kapanır, devam/bırak hemen uygulanır.
+            if (araCalisan && (durak.soz || durak.aktif)) araCevabiBirak();
             if (araCalisan || araSira.length) { araSira.push(k); araIsle(); } else anlatimaDon(k);
           } else if (calisan && calisan.tur === 'adimlar' && (durak.soz || durak.aktif || calisan.askida)) {
             // Elle duraklatılmışken (⏸) gelen yeni cevap da beklemez: duraklayan anlatım askıya alınır,

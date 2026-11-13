@@ -85,7 +85,11 @@ KOMUT_SEMASI = {
                    "flow{title?,nodes[],direction?:row|column} | compare{title?,columns[{title,items?[],asset?,caption?,color?}]} "
                    "(asset verilen sütunda o ders görseli gösterilir: iki fotoğrafı yan yana karşılaştırmak için) | "
                    "draw{title?,viewBox?='0 0 160 90',shapes[{kind:line|arrow|rect|ellipse|path|text, ...}]} "
-                   "(şekil renkleri: color = çizgi/yazı rengi, fill = true | renk, opacity = dolgu saydamlığı 0–1, "
+                   "(şekil alanları, koordinatlar viewBox biriminde (160×90, sol üst 0,0): line ve arrow{x1,y1,x2,y2} "
+                   "(arrow ucu x2,y2'dedir) | rect{x,y,w,h,r?} | ellipse{cx,cy,rx,ry?} | path{d} (SVG yol: M,L,Q,C,Z) | "
+                   "text{x,y,text,size?=5,anchor?:start|middle|end}; hepsinde isteğe bağlı id, color, fill, opacity, stroke, "
+                   "width, dashed. Bunların dışındaki alanlar yok sayılır ve sonuçta cizim_uyarilari olarak döner. "
+                   "Şekil renkleri: color = çizgi/yazı rengi, fill = true | renk, opacity = dolgu saydamlığı 0–1, "
                    "stroke = çizgi rengi ya da 'none', width = çizgi kalınlığı. Renk: tahta adları chalk|accent|ok|warn|info|muted, "
                    "doku adları dis-eti|iltihap|mukoza|epitel|mine|dentin|sement|pulpa|pdl|kemik|kortikal|greft|titanyum|"
                    "dayanak|kron|plak|kan (şablonlarla aynı tonlar) ya da hex '#f2a7a7'. style alanı yoktur. "
@@ -185,7 +189,9 @@ ARACLAR = [
             "deneme": {"type": "boolean", "description": "öğretmen denemesi: kayıt 'deneme' olarak işaretlenir, "
                                                          "araştırma aktarımına katılmaz"},
             "egitmen": {"type": "string", "enum": ["inci", "mercan"],
-                        "description": "yalnız ders izin veriyorsa başka eğitmen seçmek için"}},
+                        "description": "yalnız ders izin veriyorsa başka eğitmen seçmek için"},
+            "yalniz_ogrenci": {"type": "boolean", "description": "kuralları ve ders bilgisini bu konuşmada zaten aldıysan "
+                                                                 "(ör. ilk çağrı ad sordu) true: yalnız öğrenci kaydı döner, kısa yanıt"}},
             "required": ["ders"]},
     },
     {
@@ -619,7 +625,13 @@ ARACLAR = [
                        "tahtaya çizilir, sonra anlat metni okunur. Anlatım çok uzun sürerse araç "
                        "'sürüyor' döner; bitişini bekle(no) ile bekle. Kullanıcı tahtada duraklattıysa "
                        "'duraklatildi' döner: hata değil, bekle(no) ile beklemeyi sürdür. Kullanıcı konuşursa "
-                       "anlatım duraklar ve araç hemen 'kullanici_konustu' döner: cevap ver, sonra anlatima_devam.",
+                       "anlatım duraklar ve araç hemen 'kullanici_konustu' döner: cevap ver, sonra anlatima_devam. "
+                       "Sonuçtaki araya_girdi: true, bu komutun askıdaki bir anlatımın arasına girdiğini söyler (o anlatım "
+                       "kaldigi_yer.askida ile bekler; anlatima_devam ile sürer, birak:true ile kapanır). ders_oku'daki anlatım "
+                       "metinlerinde geçen {1}, {2} işaretleri ve komutlardaki cue alanı oynatıcı içindir: tahta {n}'yi sesli "
+                       "okumaz, cue'yu yok sayar ve bir adımın bütün komutlarını adımın başında çizer. Bir görselin belirli bir "
+                       "cümlede gelmesini istiyorsan onu ayrı bir adıma koy. Diş, dişeti, kemik, implant, papil ya da kontur "
+                       "çizeceksen önce hazır şablonu (draw template) kullan; serbest çizimi yalnız uyan şablon yoksa yap.",
         "inputSchema": {"type": "object", "properties": {
             "ders": {"type": "string", "description": "image komutu kullanılacaksa görsellerin alınacağı ders"},
             "adimlar": {"type": "array", "minItems": 1, "maxItems": 12, "items": {
@@ -633,7 +645,11 @@ ARACLAR = [
         "name": "soru_sor",
         "description": "Tahtada çoktan seçmeli bir soru kartı açar ve dokunulan cevabı döndürür (cevap gelmeden "
                        "'sürüyor' dönerse bekle(no) ile beklemeyi sürdür). dogru verilirse kart doğru/yanlışı ve "
-                       "aciklama'yı gösterir. Sorular not için değil, öğrenmek içindir.",
+                       "aciklama'yı gösterir. Sorular not için değil, öğrenmek içindir. Başka soru türleri: öğrencinin "
+                       "çizimde bir bölgeye DOKUNARAK işaretlemesi ya da etiketleri çizimdeki yerine SÜRÜKLEMESİ için tahta "
+                       "aracında şablonlu draw komutuna isaretle:{soru,dogru?} ya da etiket_surukle:{etiketler,soru?} ekle; "
+                       "tabloda öğrencinin hücreyi doldurması için table komutunda hücreye '?' yaz. Bu cevaplar sana "
+                       "öğrencinin sözü olarak gelir.",
         "inputSchema": {"type": "object", "properties": {
             "soru": {"type": "string"},
             "secenekler": {"type": "array", "minItems": 2, "maxItems": 6, "items": {"type": "string"}},

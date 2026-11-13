@@ -398,7 +398,7 @@ class Canli:
             self.claude_bekliyor -= 1
             self.kosul.notify_all()
 
-    def soyle(self, metin, ham_metin=None, motor=None):
+    def soyle(self, metin, ham_metin=None, motor=None, guven=None):
         """Sayfa: kullanıcının mikrofonla söylediği (ya da yazdığı) metin. ham_metin: tanıyıcının terim
         sözlüğünden önceki çıktısı; motor: duyu | tarayici | yazi."""
         metin = (metin or "").strip()
@@ -409,6 +409,13 @@ class Canli:
                     x["motor"] = str(motor)[:20]
                 if ham_metin and ham_metin.strip():
                     x["ham_metin"] = ham_metin.strip()[:2000]
+                try:
+                    g = float(guven) if guven is not None else None
+                except (TypeError, ValueError):
+                    g = None
+                if g is not None and 0 < g < DIKTE_GUVEN_ESIGI and motor in ("tarayici", "duyu"):
+                    x["belirsiz"] = True
+                    x["guven"] = round(g, 2)
                 self.konusmalar.append(x)
                 self.konusmalar = self.konusmalar[-20:]
                 self.konusmalar[-1]["t"] = time.time()
@@ -905,7 +912,7 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
                                                 sayfa_uyandirma=q.get("uy")))
             if yol == "soyle":
                 return self._json(200, CANLI.soyle(str(veri.get("metin", ""))[:2000], veri.get("ham_metin"),
-                                                   veri.get("motor")))
+                                                   veri.get("motor"), veri.get("guven")))
             if yol == "duzelt":
                 return self._json(200, TERIMLER.duzelt(str(veri.get("metin", ""))[:4000]))
             if yol == "dinle":
@@ -1389,6 +1396,9 @@ def kur_duyu():
         return 1
     print("Duyu hazır. Ses bilgisayardan çıkmaz; bundan sonra internetsiz çalışır.")
     return 0
+
+
+DIKTE_GUVEN_ESIGI = 0.6  # tarayıcı tanıyıcısının güveni bunun altındaysa söz "belirsiz" işaretlenir
 
 
 def ortak_kilidi_tazele():

@@ -569,6 +569,69 @@ def baslikla_esle(ilk_sayfa, adaylar, esik=0.8):
     return uyan[0] if len(uyan) == 1 else None
 
 
+def _ilk_sayfalar(ders, kid, n=2):
+    try:
+        yollar = sorted(glob.glob(os.path.join(metin_klasoru(ders, kid), "sayfa-*.txt")))[:n]
+    except ValueError:
+        return ""
+    out = []
+    for y in yollar:
+        try:
+            with open(y, encoding="utf-8") as f:
+                out.append(f.read())
+        except OSError:
+            pass
+    return "\n".join(out)
+
+
+def _ders_makale_adaylari(ders):
+    """Bir dersin dayandığı makaleler: kaynaklar.json + egitmen.json kaynak + ders.json source. Atıf metni de
+    başlık adayı olur (cümlelere bölünür; en az 4 sözcüklü her parça ayrı denenir)."""
+    adaylar = [dict(k) for k in kaynaklar(ders)]
+    eg = _json_oku(os.path.join(ders_klasoru(ders), "egitmen.json"), {}) or {}
+    d = _json_oku(os.path.join(ders_klasoru(ders), "ders.json"), {}) or {}
+    for kay in (eg.get("kaynak") or {}, d.get("source") or {}):
+        if not isinstance(kay, dict):
+            continue
+        metin = kay.get("baslik") or kay.get("title") or kay.get("citation") or kay.get("atif") or ""
+        parcalar = [p.strip() for p in re.split(r"(?<=[a-z0-9\)])\.\s+", metin) if len(p.split()) >= 4] or [metin]
+        for p in parcalar:
+            adaylar.append({"baslik": p, "doi": kay.get("doi")})
+    for k in list(adaylar):
+        if k.get("atif") and not k.get("baslik"):
+            k["baslik"] = k["atif"]
+    return adaylar
+
+
+def hazir_ders_bul(kid, ders_listesi=None):
+    """Kendi makalelerimdeki bir makalenin hazır (sunumlu) dersi varsa {ders, baslik, eslesme: doi|baslik}.
+    Önce DOI (kayıttan ya da PDF metninden), yoksa makale başlığının PDF'in ilk sayfasında geçmesi."""
+    durum = durum_oku(KENDI)
+    kayit = durum["kaynaklar"].get(kid) or {}
+    ek = next((e for e in durum["ekler"] if e.get("id") == kid), {})
+    metin = _ilk_sayfalar(KENDI, kid)
+    doi = doi_temizle(kayit.get("doi") or ek.get("doi"))
+    if not doi:
+        m = DOI_KALIBI.search(metin or "")
+        doi = doi_temizle(m.group(1)) if m else None
+    if ders_listesi is None:
+        ders_listesi = sorted({os.path.basename(os.path.dirname(y)) for ad in ("ders.json", "egitmen.json")
+                               for y in glob.glob(os.path.join(KOK, "lessons", "*", ad))})
+    baslikla = None
+    for ders in ders_listesi:
+        if ders == KENDI:
+            continue
+        try:
+            adaylar = _ders_makale_adaylari(ders)
+        except ValueError:
+            continue
+        if doi and any(doi_temizle(a.get("doi")) == doi for a in adaylar):
+            return {"ders": ders, "baslik": ders_basligi(ders), "eslesme": "doi"}
+        if metin and not baslikla and baslikla_esle(metin, [a for a in adaylar if a.get("baslik")]):
+            baslikla = {"ders": ders, "baslik": ders_basligi(ders), "eslesme": "baslik"}
+    return baslikla
+
+
 def elle_ekle(ders, veri, ad="makale.pdf", kaynak_id=None, dizinle=True):
     """Öğrencinin elindeki PDF. kaynak_id verilmezse PDF'teki DOI listedeki bir makaleyle eşleştirilir;
     eşleşmezse "öğrencinin eklediği" ayrı bir kaynak olur."""
@@ -718,6 +781,13 @@ def ozet(ders):
         s.setdefault("durum", "denenmedi")
         if s.get("pdf") and not os.path.isfile(s["pdf"]):
             s["durum"], s["neden"] = "eksik", "PDF dosyası yerinden kaldırılmış."
+        if ders == KENDI and s["durum"] == "hazir":
+            try:
+                hd = hazir_ders_bul(str(k["id"]))
+            except Exception:
+                hd = None
+            if hd:
+                s["hazir_ders"] = hd
         satirlar.append(s)
     sayi = {}
     for s in satirlar:
