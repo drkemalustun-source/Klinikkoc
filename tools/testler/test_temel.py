@@ -235,6 +235,19 @@ class Karne(unittest.TestCase):
         self.assertIn("Çözümle", md)
         self.assertIn("zarar verebilecek", md)
 
+    def test_secenekli_cevaplar_ayri(self):
+        """v5: seçenekten seçilen doğru cevap, düzeyin kendi kurulan cevap başarısını şişirmez."""
+        kayit = {"ogrenci": "D", "ders": "x", "hedefler": {}, "cevaplar": [
+            {"soru": "a", "hedef": "H1", "bloom": "cozumle", "puan": 0, "en_yuksek": 1},
+            {"soru": "a", "hedef": "H1", "bloom": "cozumle", "puan": 1, "en_yuksek": 1, "secenekli": True},
+            {"soru": "b", "hedef": "H1", "bloom": "cozumle", "puan": 1, "en_yuksek": 1, "tur": "secmeli"}]}
+        k = karne.hesapla(kayit, [{"id": "H1", "bloom": "cozumle"}])
+        b = k["bloom"][0]
+        self.assertEqual((b["serbest"]["cevap"], b["serbest"]["oran"]), (1, 0.0))
+        self.assertEqual((b["secenekli"]["cevap"], b["secenekli"]["oran"]), (2, 1.0))
+        md = karne.markdown(k)
+        self.assertIn("| Çözümle | %0 (1 soru) | %100 (2 soru) |", md)
+
 
 class McpSunucusu(unittest.TestCase):
     def test_araclar_ve_karne(self):

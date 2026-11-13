@@ -264,9 +264,18 @@
       hd.addEventListener('change', () => degistir('oge', { ders, liste: 'sorular', oge: { id: s.id, hedef: hd.value } }));
       const li = el('li', {}, el('div', { class: 'sh-satir' }, metin), el('div', { class: 'sh-satir' }, bl, hd, kademeSecimi('sorular', s),
         el('button', { class: 'btn small ghost', onclick: () => sil('sorular', s.id) }, 'Sil')));
-      if (s.tur === 'secmeli' && s.secenekler) {
-        li.append(el('ol', { class: 'mk-not', type: 'A' }, s.secenekler.map((x, i) => el('li', { class: i === s.dogru ? 'sh-tamam' : '' }, x))));
-      }
+      // Seçenekler: her satıra bir; doğrunun başına * konur. Açık uçlu soruda öğrenci takılınca gösterilir.
+      const secMetin = el('textarea', { rows: 3, class: 'sh-secenek', placeholder: s.tur === 'secmeli'
+        ? 'Seçenekler: her satıra bir, doğrunun başına * koyun'
+        : 'Takılırsa gösterilecek seçenekler (isteğe bağlı): her satıra bir, doğrunun başına * koyun' });
+      secMetin.value = (s.secenekler || []).map((x, i) => (i === s.dogru ? '* ' : '') + x).join('\n');
+      secMetin.addEventListener('change', () => {
+        const satirlar = secMetin.value.split('\n').map((x) => x.trim()).filter(Boolean);
+        const dogru = satirlar.findIndex((x) => x.startsWith('*'));
+        const secenekler = satirlar.map((x) => x.replace(/^\*\s*/, ''));
+        degistir('oge', { ders, liste: 'sorular', oge: { id: s.id, secenekler, dogru: dogru < 0 ? null : dogru } });
+      });
+      li.append(el('div', { class: 'sh-gerekce' }, s.tur === 'secmeli' ? 'Seçmeli soru' : 'Açık uçlu: önce seçeneksiz sorulur'), secMetin);
       const ornek = el('textarea', { rows: 2, placeholder: 'Örnek cevap (açık uçlu soruda eğitmen buna göre geri bildirim verir)' });
       ornek.value = s.ornek_cevap || '';
       ornek.addEventListener('change', () => degistir('oge', { ders, liste: 'sorular', oge: { id: s.id, ornek_cevap: ornek.value } }));

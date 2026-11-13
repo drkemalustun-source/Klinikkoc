@@ -760,7 +760,21 @@
   // ---------- Ders (görseller için) ----------
   let ders = { assets: {} };
   let dersId = null;
-  let board = new AT.Board(boardEl, ders);
+  // Tablodaki "?" hücresine verilen cevap Claude'a öğrencinin sözü olarak gider.
+  function tabloYanitiBagla(b) {
+    b.onTabloYanit = (y) => {
+      const yer = [y.tablo, y.satir, y.sutun].filter(Boolean).join(' · ');
+      if (y.yaz) {
+        yaziEl.value = 'Tablo yanıtı · ' + yer + ': ';
+        yaziEl.focus();
+        gonderBtn.disabled = false;
+        return;
+      }
+      sozGonder('Tablo yanıtı · ' + yer + ': ' + y.yanit + (y.secenekli ? ' (seçenekten)' : ''), { motor: 'yazi' });
+    };
+    return b;
+  }
+  let board = tabloYanitiBagla(new AT.Board(boardEl, ders));
 
   async function egitmenDersi(id, base, ilkHata) {
     const r = await fetch(base + 'egitmen.json', { cache: 'no-store' });
@@ -793,7 +807,7 @@
       ders = await egitmenDersi(id, giris.path.replace(/\/?$/, '/'), e);
     }
     dersId = id;
-    board = new AT.Board(boardEl, ders);
+    board = tabloYanitiBagla(new AT.Board(boardEl, ders));
     dersAdiEl.textContent = 'Canlı tahta · ' + (ders.title || id);
   }
 

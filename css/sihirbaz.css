@@ -88,3 +88,5 @@ body.kil.gomulu .sh-kabuk { padding: 4px; }
   .sh-icerik { overflow: visible; }
   .sh-cizim, .sh-video-form, .sh-ust .sh-yeni { grid-template-columns: minmax(0, 1fr); }
 }
+#soruListe .sh-secenek { width: 100%; font-size: .9em; margin-top: .3em; }
+#soruListe .sh-gerekce { font-size: .82em; color: var(--chalk-dim); margin-top: .4em; }

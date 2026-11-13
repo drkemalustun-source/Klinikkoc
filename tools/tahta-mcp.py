@@ -866,8 +866,7 @@ def ar_rapor_yaz(a):
                 t.get("emin_ama_yanlis", "-"), ", ".join(t.get("secilen_yanilgilar") or []) or "-"))
     if k.get("cevaplar"):
         kr = karne_.hesapla(k, karne_.ders_hedefleri(ders_yolu(ders)), bugun())
-        y += ["", "## Bloom düzeyine göre başarı", "", "| Düzey | Cevap | Başarı |", "| --- | --- | --- |"]
-        y += ["| %s | %d | %s |" % (karne_.BLOOM_AD[b["duzey"]], b["cevap"], karne_.yuzde(b["oran"])) for b in kr["bloom"]]
+        y += ["", "## Bloom düzeyine göre başarı", ""] + karne_.bloom_tablosu(kr["bloom"])
         if kr["tehlikeli_secimler"]:
             y += ["", "Vakalarda hastaya zarar verebilecek seçim sayısı: %d" % len(kr["tehlikeli_secimler"])]
     for baslik, alan in (("Öğrenme güçlükleri", "guclukler"), ("Eğitmen için iyileştirme önerileri", "oneriler"),

@@ -213,6 +213,19 @@ def oge_kaydet(ders, liste_adi, oge):
         for a in ("baslangic", "bitis"):
             if a in oge:
                 oge[a] = saniye(oge[a])
+    if liste_adi == "sorular" and "secenekler" in oge:
+        # Seçenekler: seçmeli soruda asıl seçenekler; açık uçlu soruda öğrenci takılınca gösterilecek yedek seçenekler.
+        sec = [str(x).strip() for x in (oge.get("secenekler") or []) if str(x).strip()]
+        if sec and len(sec) < 2:
+            raise ValueError("En az iki seçenek gerekir.")
+        oge["secenekler"] = sec[:6]
+        if oge.get("dogru") is not None:
+            try:
+                oge["dogru"] = int(oge["dogru"])
+            except (TypeError, ValueError):
+                oge["dogru"] = None
+            if oge["dogru"] is not None and not 0 <= oge["dogru"] < len(oge["secenekler"]):
+                raise ValueError("Doğru seçenek listede yok.")
     if liste_adi == "cizimler" and "sure_sn" in oge:
         try:
             oge["sure_sn"] = max(1, min(20, int(float(oge["sure_sn"]))))
@@ -856,9 +869,11 @@ ONERI_TALIMAT = """Öğretmen için ÖNERİ yaz; karar öğretmenindir. sihirbaz
   özetlerinde olan konular. Onaylı hedeflerin aynısını yeniden önerme.
 - terimler: [terim] — öğrencinin bilmesi ve konuşma tanımanın doğru yazması gereken alan terimleri (Türkçe; gerekirse
   İngilizcesi ayrı terim olarak).
-- sorular: [{metin, tur (secmeli|acik), bloom, hedef_baslik, secenekler [metin] (seçmelide), dogru (seçenek sırası,
-  0'dan), ornek_cevap (açıkta), rubrik [{olcut, zorunlu}] (açıkta), gerekce}] — her hedefe en az bir soru;
-  vaka/klinik senaryo soruları uygula ve üstü düzeyler için.
+- sorular: [{metin, tur (secmeli|acik), bloom, hedef_baslik, secenekler [metin], dogru (seçenek sırası, 0'dan),
+  ornek_cevap (açıkta), rubrik [{olcut, zorunlu}] (açıkta), gerekce}] — her hedefe en az bir soru;
+  vaka/klinik senaryo soruları uygula ve üstü düzeyler için. AÇIK UÇLU SORULARA DA 3–4 seçenek ve doğru yaz: eğitmen
+  önce soruyu seçeneksiz sorar (serbest hatırlama), öğrenci takılırsa bu seçenekleri gösterir. Çeldiriciler bilinen
+  yanılgılardan ve dikkat edilecekler listesinden gelsin; "hepsi/hiçbiri" kullanma.
 - yanilgilar: [{metin, hedef_baslik}] — öğrencilerin bu konuda sık düştüğü yanlışlar (notta ya da dikkat
   edilecekler listesinde dayanağı olanlar).
 - onemli: [{metin, hedef_baslik}] — dersin sonunda öğrencinin aklında kalması gereken önemli noktalar; her biri tek,
@@ -907,6 +922,8 @@ def denetle(ders):
             uyarilar.append("Soru %s: açık uçlu ama örnek cevap yok." % s.get("id"))
         if s.get("tur") == "secmeli" and (s.get("dogru") is None or not s.get("secenekler")):
             hatalar.append("Soru %s: seçmeli ama seçenekleri ya da doğru cevabı eksik." % s.get("id"))
+        if s.get("tur") != "secmeli" and s.get("secenekler") and s.get("dogru") is None:
+            uyarilar.append("Soru %s: yedek seçenekleri var ama doğrusu işaretli değil." % s.get("id"))
     for c in t.get("cizimler", []):
         if not c.get("sablon"):
             hatalar.append("Çizim %s için şablon seçilmemiş." % c.get("id"))

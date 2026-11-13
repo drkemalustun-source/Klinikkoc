@@ -498,16 +498,59 @@
       for (const h of c.headers) hr.appendChild(rich(el('th'), h));
       thead.appendChild(hr);
       const tb = el('tbody');
-      for (const row of c.rows) {
+      c.rows.forEach((row, r) => {
         const tr = el('tr');
-        for (const cell of row) tr.appendChild(rich(el('td'), cell));
+        row.forEach((cell, k) => {
+          const td = rich(el('td'), cell);
+          // "?" hücresi: öğrenci dokunup seçenekten seçer (ya da yazar). Seçim this.onTabloYanit ile canlı tahtaya gider.
+          if (String(cell).trim() === '?') this._soruHucresi(td, c, r, k);
+          tr.appendChild(td);
+        });
         tb.appendChild(tr);
-      }
+      });
       t.append(thead, tb);
       wrap.appendChild(t);
       if (c.caption) wrap.appendChild(rich(el('p', 'table-caption'), c.caption));
       this._setVisual(wrap);
       return wrap;
+    }
+
+    _soruHucresi(td, c, r, k) {
+      const anahtar = r + ',' + k;
+      const secenekler = ((c.secenekler || {})[anahtar] || (c.sutun_secenekleri || {})[String(k)] || []).map(String);
+      const dogru = (c.dogru || {})[anahtar];
+      const satirAdi = String((c.rows[r] || [])[0] || '').replace(/[*_`]/g, '');
+      const sutunAdi = String((c.headers || [])[k] || '').replace(/[*_`]/g, '');
+      td.textContent = '';
+      const btn = el('button', 'tablo-soru', '?');
+      btn.type = 'button';
+      btn.title = 'Dokunup cevaplayın';
+      td.appendChild(btn);
+      td.classList.add('soru-hucresi');
+      const kapat = () => { const p = td.querySelector('.tablo-secenekler'); if (p) p.remove(); };
+      const sec = (yanit) => {
+        kapat();
+        btn.textContent = yanit;
+        btn.classList.add('secildi');
+        if (dogru != null) btn.classList.add(String(dogru).trim() === yanit.trim() ? 'dogru' : 'yanlis');
+        if (this.onTabloYanit) this.onTabloYanit({ satir: satirAdi, sutun: sutunAdi, yanit, secenekli: secenekler.length > 0, tablo: c.title || '' });
+      };
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (td.querySelector('.tablo-secenekler')) return kapat();
+        if (!secenekler.length) {
+          if (this.onTabloYanit) this.onTabloYanit({ satir: satirAdi, sutun: sutunAdi, yaz: true, tablo: c.title || '' });
+          return;
+        }
+        const pop = el('div', 'tablo-secenekler');
+        for (const s of secenekler) {
+          const b = el('button', 'tablo-secenek', s);
+          b.type = 'button';
+          b.addEventListener('click', (ev) => { ev.stopPropagation(); sec(s); });
+          pop.appendChild(b);
+        }
+        td.appendChild(pop);
+      });
     }
 
     cmd_flow(c) {
