@@ -653,20 +653,145 @@
           wrap._etiketler = etiketKumesi(c);
         }
       }
+      // Serbest şekillerde gecis: önceki çizimde aynı id'li şekil varsa yeni hâline akarak geçer.
+      const oncekiCizim = this.visual.querySelector('.board-draw');
+      const gecisSure = Math.min(Math.max(Number(c.gecis) || 0, 0), 10);
+      const eskiSekiller = !instant && gecisSure > 0 && oncekiCizim && oncekiCizim._sekiller &&
+        (oncekiCizim.dataset.viewBox || '') === (c.viewBox || '0 0 160 90') ? oncekiCizim._sekiller : null;
+      wrap.dataset.viewBox = c.viewBox || '0 0 160 90';
+      wrap._sekiller = new Map();
       this._setVisual(wrap);
 
       let delay = 0;
+      const akis = [];
+      const yeniIdler = new Set();
       for (const sh of c.shapes || []) {
+        if (sh && sh.id != null) { wrap._sekiller.set(String(sh.id), sh); yeniIdler.add(String(sh.id)); }
+        const eski = eskiSekiller && sh && sh.id != null ? eskiSekiller.get(String(sh.id)) : null;
+        if (eski && eski.kind === sh.kind) {
+          const node = this._shape(eski);
+          if (!node) continue;
+          s.appendChild(node);
+          akis.push({ node, eski, yeni: sh });
+          continue;
+        }
         const node = this._shape(sh);
         if (!node) continue;
         s.appendChild(node);
         if (!instant) {
-          node.style.animationDelay = delay + 's';
+          node.style.animationDelay = (eskiSekiller ? gecisSure * 0.5 : 0) + delay + 's';
           node.classList.add(sh.kind === 'text' ? 'fade-in' : 'stroke-in');
           delay += sh.kind === 'text' ? 0.2 : 0.5;
         }
       }
+      if (eskiSekiller) {
+        // Yeni çizimde olmayan eski şekiller yavaşça solar.
+        for (const [id, eski] of eskiSekiller) {
+          if (yeniIdler.has(id)) continue;
+          const node = this._shape(eski);
+          if (!node) continue;
+          s.appendChild(node);
+          akis.push({ node, eski, yeni: null });
+        }
+      }
+      if (akis.length) {
+        const a = this._sekilAkisi(akis, gecisSure);
+        this._anim = this._anim ? Promise.all([this._anim, a]) : a;
+      }
       return wrap;
+    }
+
+    // Serbest şekil geçişi: aynı türdeki şeklin sayısal öznitelikleri (konum, boyut, eğrinin noktaları) `sure`
+    // saniyede ara değerlerle çizilir; renkler CSS geçişiyle değişir. Eğrilerin komut yapısı farklıysa (ör. 3 noktalı
+    // eğriden 5 noktalıya) eski şekil solar, yenisi belirir. Duraklatılınca bekler.
+    _sekilAkisi(akis, sure) {
+      const ATTR = { line: ['x1', 'y1', 'x2', 'y2'], arrow: ['x1', 'y1', 'x2', 'y2'], rect: ['x', 'y', 'w', 'h', 'r'],
+        ellipse: ['cx', 'cy', 'rx', 'ry'], text: ['x', 'y', 'size'] };
+      const AD = { w: 'width', h: 'height', r: 'rx', size: 'font-size' };
+      const sayilar = (d) => String(d || '').match(/-?\d*\.?\d+(?:e-?\d+)?/gi) || [];
+      const iskelet = (d) => String(d || '').replace(/-?\d*\.?\d+(?:e-?\d+)?/gi, '#').replace(/[\s,]+/g, ' ').trim();
+      const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
+      const isler = [];
+      for (const a of akis) {
+        const { node, eski, yeni } = a;
+        if (!yeni) { a.tur = 'sol'; continue; }
+        if (eski.kind === 'path') {
+          const s0 = sayilar(eski.d), s1 = sayilar(yeni.d);
+          if (iskelet(eski.d) === iskelet(yeni.d) && s0.length === s1.length) {
+            const parca = String(yeni.d).split(/-?\d*\.?\d+(?:e-?\d+)?/gi);
+            a.tur = 'yol'; a.s0 = s0.map(Number); a.s1 = s1.map(Number); a.parca = parca;
+          } else {
+            a.tur = 'capraz';
+            a.yeniNode = this._shape(yeni);
+            if (a.yeniNode) { a.yeniNode.style.opacity = '0'; node.after(a.yeniNode); }
+          }
+        } else {
+          a.tur = 'sayi';
+          a.alanlar = (ATTR[eski.kind] || []).filter((k) => Number.isFinite(Number(eski[k])) || Number.isFinite(Number(yeni[k])));
+          if (eski.kind === 'ellipse' && eski.ry == null) eski.ry = eski.rx;
+          if (yeni.kind === 'ellipse' && yeni.ry == null) yeni.ry = yeni.rx;
+        }
+        // Renk, kalınlık, saydamlık: hedef şeklin stilleri CSS geçişiyle uygulanır.
+        const hedef = this._shape(yeni);
+        if (hedef && a.tur !== 'capraz') {
+          node.style.transition = ['fill', 'stroke', 'fill-opacity', 'stroke-width'].map((p) => p + ' ' + sure + 's ease-in-out').join(',');
+          a.stil = hedef;
+        }
+      }
+      const kare = (t) => {
+        const e = ease(t);
+        for (const a of akis) {
+          if (a.tur === 'sol') a.node.style.opacity = String(1 - t);
+          else if (a.tur === 'capraz') {
+            a.node.style.opacity = String(1 - e);
+            if (a.yeniNode) a.yeniNode.style.opacity = String(e);
+          } else if (a.tur === 'yol') {
+            let d = a.parca[0];
+            for (let i = 0; i < a.s0.length; i++) d += +(a.s0[i] + (a.s1[i] - a.s0[i]) * e).toFixed(3) + a.parca[i + 1];
+            a.node.setAttribute('d', d);
+          } else if (a.tur === 'sayi') {
+            for (const k of a.alanlar) {
+              const v0 = Number(a.eski[k]), v1 = Number(a.yeni[k]);
+              const v = Number.isFinite(v0) && Number.isFinite(v1) ? v0 + (v1 - v0) * e : (Number.isFinite(v1) ? v1 : v0);
+              a.node.setAttribute(AD[k] || k, +v.toFixed(3));
+            }
+            if (a.eski.kind === 'text' && t >= 0.5 && a.node.textContent !== String(a.yeni.text)) a.node.textContent = a.yeni.text;
+          }
+        }
+      };
+      const son = () => {
+        kare(1);
+        for (const a of akis) {
+          if (a.tur === 'sol' || a.tur === 'capraz') a.node.remove();
+          if (a.yeniNode) a.yeniNode.style.opacity = '';
+          if (a.stil) {
+            a.node.style.transition = '';
+            for (const p of ['fill', 'stroke', 'fillOpacity', 'strokeWidth']) a.node.style[p] = a.stil.style[p];
+            a.node.setAttribute('class', a.stil.getAttribute('class'));
+          }
+        }
+      };
+      kare(0);
+      requestAnimationFrame(() => {
+        for (const a of akis) {
+          if (!a.stil) continue;
+          for (const p of ['fill', 'stroke', 'fillOpacity', 'strokeWidth']) a.node.style[p] = a.stil.style[p];
+        }
+      });
+      return new Promise((bitti) => {
+        let gecen = 0, onceki = performance.now();
+        const adim = (simdi) => {
+          const bagli = akis.some((a) => a.node.isConnected);
+          if (!bagli) { son(); return bitti(); }
+          if (!Board.animDurdu) gecen += simdi - onceki;
+          onceki = simdi;
+          const t = Math.min(gecen / (sure * 1000), 1);
+          if (t >= 1) { son(); return bitti(); }
+          kare(t);
+          requestAnimationFrame(adim);
+        };
+        requestAnimationFrame(adim);
+      });
     }
 
     // Şablonu prev'in durumundan c'nin durumuna `sure` saniyede kare kare çizer. Duraklatılınca

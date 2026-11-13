@@ -1522,7 +1522,29 @@ def ar_soru_sor(a):
     return metin(gonder(komut))
 
 
+def tahta_goruntusu(en_fazla=1400):
+    """Tahtanın o anki görüntüsü (PNG). Sayfa komutu sırasını beklemeden çıkarır (js/tahta-goruntu.js)."""
+    y = istek("gonder", {"komut": {"tur": "goruntu", "en_fazla": int(en_fazla)}, "bekle": 15}, zaman=35)
+    if isinstance(y, dict) and y.get("durum") == "sürüyor" and y.get("no"):
+        y = istek("sonuc?no=%d&bekle=10" % int(y["no"]), zaman=30)
+    return y
+
+
 def ar_tahta_durumu(a):
+    if a.get("goruntu"):
+        try:
+            y = tahta_goruntusu(a.get("en_fazla") or 1400)
+        except urllib.error.URLError:
+            return metin({"durum": "bağlı değil", "not": "tahtayi_ac ile aç."})
+        png = (y or {}).get("png") if isinstance(y, dict) else None
+        if not png or not str(png).startswith("data:image/png;base64,"):
+            return metin({"durum": "görüntü alınamadı", "ayrinti": y,
+                          "not": "Tahta sayfası açık mı ve güncel mi? Sayfayı yenileyip yeniden dene."})
+        bilgi = {"baslik": y.get("baslik", ""), "boyut": "%sx%s" % (y.get("en"), y.get("boy")),
+                 "not": "Tahtanın şu anki görüntüsü. Kendi çiziminde taşan, üst üste binen, okunmayan ya da yanlış "
+                        "yerde duran bir şey varsa düzelt; öğrenciye bundan söz etmen gerekmez."}
+        return {"content": [{"type": "image", "data": png.split(",", 1)[1], "mimeType": "image/png"},
+                            {"type": "text", "text": json.dumps(bilgi, ensure_ascii=False)}]}
     if a.get("no"):
         try:
             return metin(_suruyor_notu(uzun_bekle(int(a["no"]))))

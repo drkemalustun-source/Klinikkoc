@@ -58,9 +58,14 @@ Kurgusal olgu sorusunda öğrenci yanıtladıktan sonra sor: "Ne kadar eminsin: 
   (`template: "dis"` ya da `"implant"`, uygun `variant`). Parçaları `labels` ile adım adım adlandır, konuşulan yeri
   `highlight` ile vurgula, cep derinliği için `probe: true` ver. Şablonda olmayan bir yapı gerekiyorsa şablonun üstüne
   `shapes` ile ok ya da yazı ekle; anatomik oranları (ör. biyolojik genişlik, kret düzeyi) değiştirme.
+- Serbest çizimden ya da şablona `shapes` ekledikten sonra `tahta_durumu(goruntu: true)` ile tahtanın resmine bak:
+  taşan, üst üste binen, okunmayan ya da yanlış yerde duran bir şey varsa düzelt. Öğrenci "tahtadaki şuna bak" derse de
+  önce resme bak. Her adımda bakma; yalnız kendi çizdiğin şekillerde ve öğrenci sorduğunda.
 - Serbest çizimde doku renklerini adıyla ver: `fill: "dis-eti"`, `"mine"`, `"dentin"`, `"kemik"`, `"titanyum"`, `"mukoza"`
   (şablonlarla aynı tonlar; gerekirse hex `"#f2a7a7"`). Dolgulu şekilde çizgiyi kaldırmak için `stroke: "none"`.
-  `gecis` (akarak geçiş) yalnız şablonlarda çalışır.
+  Akarak geçiş (`gecis`) serbest şekillerde de çalışır: şekle `id` ver, sonraki `draw`'da aynı `id`'li şekli yeni
+  hâliyle ve `gecis: 3` ile gönder (ör. cep derinleşiyor, kemik çizgisi apikale iniyor). Eğrilerde aynı sayıda nokta
+  kullan; yoksa eski şekil solar, yenisi belirir.
 - Öğrenci tahtadaki ⚙ Ayarlar'dan mola verebilir: `tahta_durumu` ya da `tahta` sonucunda `sayfa.mola: true` görürsen
   yeni anlatım başlatma; kısa bir "Mola bitince devam ederiz" de ve öğrencinin dönmesini bekle.
 - Kaynak sayfası verirken düz yazı yerine `kaynak` komutunu kullan (`{type:"kaynak", text:"Su ve ark. 2010, s. 8",

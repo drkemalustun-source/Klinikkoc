@@ -89,7 +89,10 @@ KOMUT_SEMASI = {
                    "stroke = çizgi rengi ya da 'none', width = çizgi kalınlığı. Renk: tahta adları chalk|accent|ok|warn|info|muted, "
                    "doku adları dis-eti|iltihap|mukoza|epitel|mine|dentin|sement|pulpa|pdl|kemik|kortikal|greft|titanyum|"
                    "dayanak|kron|plak|kan (şablonlarla aynı tonlar) ya da hex '#f2a7a7'. style alanı yoktur. "
-                   "gecis yalnız şablonlarda çalışır; serbest çizim yeni durumu doğrudan çizer) | "
+                   "Serbest şekillerde de gecis çalışır: şekle id ver (ör. id:'cep'), sonraki draw'da aynı id'li şekli yeni "
+                   "konum/boyut/renkle ve gecis:<sn> ile gönder; şekil akarak değişir (aynı viewBox gerekir). Eğri (path) "
+                   "ancak komut yapısı aynıysa (aynı harfler, aynı sayıda nokta) akar; değilse eskisi solar, yenisi belirir. "
+                   "Yeni çizimde olmayan id'li şekiller solar) | "
                    "tree{title?,nodes[{id,text,parent?,edge?,state?:ok|warn|accent|danger|dim}],path?[id],caption?} "
                    "(klinik karar ağacı: kök düğümün parent'ı yok; edge dala yazılan koşuldur, ör. 'ateş var'; path öğrencinin "
                    "seçtiği yolu vurgular. Aynı title ile düğüm ekleyerek yeniden gönderirsen ağaç adım adım büyür). "
@@ -612,8 +615,14 @@ ARACLAR = [
         "description": "Tahtanın durumunu verir. no verilirse o komutun (anlatım ya da soru) bitmesini bekler (bekle(no) ile aynı) "
                        "ve sonucunu döndürür; kullanıcı konuşursa beklemeden 'kullanici_konustu' döner. "
                        "'duraklatildi': kullanıcı anlatımı duraklattı; aynı no ile beklemeyi sürdür. no verilmezse "
-                       "kullanıcının bekleyen sözünü de 'kullanici_konustu' alanında verir (kullanıcı 'tahtaya bak' derse).",
-        "inputSchema": {"type": "object", "properties": {"no": {"type": "integer"}}},
+                       "kullanıcının bekleyen sözünü de 'kullanici_konustu' alanında verir (kullanıcı 'tahtaya bak' derse). "
+                       "goruntu: true verilirse tahtanın O ANKİ RESMİNİ döndürür (anlatımı bölmez): serbest çizim ya da "
+                       "şablon gösterdikten sonra taşma, üst üste binme, okunmayan etiket var mı diye bakmak, öğrenci "
+                       "'tahtadaki şuna bak' dediğinde ne gördüğünü bilmek için kullan.",
+        "inputSchema": {"type": "object", "properties": {
+            "no": {"type": "integer"},
+            "goruntu": {"type": "boolean", "description": "true: tahtanın resmini (PNG) döndür"},
+            "en_fazla": {"type": "integer", "description": "resmin en fazla genişliği, piksel (varsayılan 1400)"}}},
     },
     {
         "name": "bekle",

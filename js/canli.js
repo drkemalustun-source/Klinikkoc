@@ -1100,6 +1100,20 @@
     if (k) api('bitti', { no: k.no, sonuc, durum: durum() }).catch(() => {});
   }
 
+  // Tahtanın o anki görüntüsü (tahta_durumu goruntu:true). Anlatımı bölmez; sıradaki komutları beklemez.
+  async function goruntuVer(k) {
+    let sonuc;
+    try {
+      if (!AT.tahtaGoruntu) throw new Error('tahta-goruntu.js yüklenmedi');
+      const g = await AT.tahtaGoruntu(document.getElementById('board'), { enFazla: k.en_fazla || 1400 });
+      sonuc = { durum: 'bitti', png: g.png, en: g.en, boy: g.boy,
+        baslik: (document.querySelector('#board .board-title') || {}).textContent || '' };
+    } catch (e) {
+      sonuc = { durum: 'hata', hata: String(e && e.message || e) };
+    }
+    api('bitti', { no: k.no, sonuc, durum: durum() }).catch(() => {});
+  }
+
   function durdur(k) {
     ses.dur();
     if (board.video) board.video.duraklat();
@@ -1255,6 +1269,7 @@
         for (const k of komutlar || []) {
           son = Math.max(son, k.no);
           if (k.tur === 'dur') durdur(k);
+          else if (k.tur === 'goruntu') goruntuVer(k); // Claude tahtaya bakmak istiyor: sırayı beklemez
           else if (k.tur === 'devam') {
             if (araCalisan || araSira.length) { araSira.push(k); araIsle(); } else anlatimaDon(k);
           } else if (calisan && calisan.tur === 'adimlar' && (durak.soz || durak.aktif || calisan.askida)) {

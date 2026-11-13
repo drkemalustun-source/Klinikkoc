@@ -481,7 +481,7 @@ class Canli:
                 return {"durum": "bağlı değil",
                         "hata": "Tahta sayfası açık değil. tahtayi_ac aracını çağırın ya da "
                                 "tarayıcıda http://localhost:8810/canli.html adresini açın."}
-            if self.konusmalar and komut.get("tur") not in ("dur", "devam"):
+            if self.konusmalar and komut.get("tur") not in ("dur", "devam", "goruntu"):
                 # Kullanıcının cevaplanmamış sözü var: yeni anlatım onu ezmesin, önce o cevaplansın.
                 return self._konusma_ekle({
                     "durum": "kullanici_konustu", "gonderilmedi": True,
