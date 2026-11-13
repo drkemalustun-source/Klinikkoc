@@ -84,7 +84,12 @@ KOMUT_SEMASI = {
                    "unhighlight{id?} | zoom{region} | unzoom | table{title?,headers[],rows[][],caption?} | "
                    "flow{title?,nodes[],direction?:row|column} | compare{title?,columns[{title,items?[],asset?,caption?,color?}]} "
                    "(asset verilen sütunda o ders görseli gösterilir: iki fotoğrafı yan yana karşılaştırmak için) | "
-                   "draw{title?,viewBox?='0 0 160 90',shapes[{kind:line|arrow|rect|ellipse|path|text, ...}]} | "
+                   "draw{title?,viewBox?='0 0 160 90',shapes[{kind:line|arrow|rect|ellipse|path|text, ...}]} "
+                   "(şekil renkleri: color = çizgi/yazı rengi, fill = true | renk, opacity = dolgu saydamlığı 0–1, "
+                   "stroke = çizgi rengi ya da 'none', width = çizgi kalınlığı. Renk: tahta adları chalk|accent|ok|warn|info|muted, "
+                   "doku adları dis-eti|iltihap|mukoza|epitel|mine|dentin|sement|pulpa|pdl|kemik|kortikal|greft|titanyum|"
+                   "dayanak|kron|plak|kan (şablonlarla aynı tonlar) ya da hex '#f2a7a7'. style alanı yoktur. "
+                   "gecis yalnız şablonlarda çalışır; serbest çizim yeni durumu doğrudan çizer) | "
                    "tree{title?,nodes[{id,text,parent?,edge?,state?:ok|warn|accent|danger|dim}],path?[id],caption?} "
                    "(klinik karar ağacı: kök düğümün parent'ı yok; edge dala yazılan koşuldur, ör. 'ateş var'; path öğrencinin "
                    "seçtiği yolu vurgular. Aynı title ile düğüm ekleyerek yeniden gönderirsen ağaç adım adım büyür). "
@@ -148,10 +153,13 @@ KOMUT_SEMASI = {
                    "VIDEO: video{video?:videolar aracındaki kimlik | youtube?:bağlantı ya da kimlik, baslangic?:sn, "
                    "bitis?:sn, oynat?=true, bekle?=true, sessiz?, caption?} görsel alanını kaplar; bekle=true iken o adımın "
                    "anlatımı video bitince başlar (videonun üstüne konuşma); kısa klip için baslangic/bitis ver. "
-                   "video_kontrol{eylem:oynat|duraklat|git, saniye?} tahtadaki videoyu yönetir.",
+                   "video_kontrol{eylem:oynat|duraklat|git, saniye?} tahtadaki videoyu yönetir. "
+                   "KAYNAK: kaynak{text:'Su ve ark. 2010, s. 8', makale?:makaleler aracındaki id ya da kısa ad, sayfa:PDF sayfa "
+                   "sırası} tahtaya dokunulabilir bir kaynak yazar; öğrenci dokununca o sayfa kendi PDF'inden büyük açılır. "
+                   "Sayfa numarası verdiğin her yerde bunu kullan (yalnız yazıyla 's. 336' deme).",
     "properties": {"type": {"type": "string", "enum": [
         "clear", "title", "bullets", "point", "text", "term", "image", "highlight", "unhighlight",
-        "zoom", "unzoom", "table", "flow", "compare", "draw", "tree", "video", "video_kontrol"]}},
+        "zoom", "unzoom", "table", "flow", "compare", "draw", "tree", "video", "video_kontrol", "kaynak"]}},
     "required": ["type"],
     "additionalProperties": True,
 }
@@ -551,11 +559,15 @@ ARACLAR = [
         "name": "ders_oku",
         "description": "Bir dersin içeriğini okur. bolum verilmezse ders planı (hedefler, bölümler, görseller); "
                        "bolum verilirse o bölümün anlatım metni, tahta komutları ve soruları; sayfa verilirse "
-                       "kaynağın (ders notu ya da makale) o sayfasının metni.",
+                       "kaynağın (ders notu ya da makale) o sayfasının metni. Derste birden çok makale varsa "
+                       "makale alanıyla hangisi olduğunu söyle.",
         "inputSchema": {"type": "object", "properties": {
             "ders": {"type": "string", "description": "ders kimliği, ör. peri-implantitis-cerrahi"},
             "bolum": {"type": "string", "description": "bölüm kimliği (isteğe bağlı)"},
-            "sayfa": {"type": "integer", "description": "kaynağın bu sayfasının metnini ve o sayfaya ait öğretmen notlarını oku"}},
+            "sayfa": {"type": "integer", "description": "kaynağın bu sayfasının metnini ve o sayfaya ait öğretmen notlarını oku"},
+            "makale": {"type": "string", "description": "sayfa bir makaleden okunacaksa makalenin kimliği ya da kısa adı "
+                                                         "(makaleler aracındaki id/kisa; ör. kendi-makalelerim kitaplığında). "
+                                                         "Sayfa = PDF'in sayfa sırası."}},
             "required": ["ders"]},
     },
     {

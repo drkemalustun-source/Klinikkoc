@@ -205,6 +205,7 @@
     sesEl.textContent = 'Ses: ' + b.yazi;
     sesEl.title = b.ayrinti || b.yazi;
     sesEl.classList.toggle('yedek', b.motor !== 'pocket');
+    sesEl.classList.toggle('yukleniyor', /yükleniyor/i.test(b.yazi || '')); // asıl ses (Pocket) hâlâ yükleniyor
   }
 
   // Tarayıcı otomatik oynatmayı engellediyse büyük "Sesi açmak için dokunun" düğmesi. true: dokunuldu;
@@ -351,14 +352,18 @@
         this.duyu = { kurulu: false, neden: 'Sunucuya ulaşılamadı.' };
       }
       this.goster();
-      if (this.duyu.kurulu && !this.duyu.hazir && this.motor() === 'duyu') {
-        fetch('/api/duyu/yukle', { method: 'POST' }).then(() => this.yenile()).catch(() => {}); // model ilk konuşmadan önce ısınsın
+      if (this.duyu.kurulu && !this.duyu.hazir && this.motor() === 'duyu' && !this.yukleniyor) {
+        // Model ilk konuşmadan önce ısınsın. İlk kez kullanılıyorsa internetten iner: tahtada göster.
+        this.yukleniyor = true;
+        if (!this.duyu.model_indirildi) toast('Dikte modeli (Duyu) ilk kez indiriliyor, ~56 MB. Bir iki dakika sürebilir; bu sırada yazarak sorabilirsiniz.', 9000);
+        this.goster();
+        fetch('/api/duyu/yukle', { method: 'POST' }).catch(() => {}).then(() => { this.yukleniyor = false; this.yenile(); });
       }
     },
     goster() {
       const m = this.motor();
       const yedek = this.secim === 'duyu' && m !== 'duyu';
-      motorBtn.textContent = m === 'duyu' ? 'Duyu' : m === 'tarayici' ? 'Tarayıcı' : 'Yok';
+      motorBtn.textContent = m === 'duyu' ? (this.yukleniyor ? 'Duyu ⏳' : 'Duyu') : m === 'tarayici' ? 'Tarayıcı' : 'Yok';
       motorBtn.classList.toggle('uyari', yedek || !m);
       motorBtn.title = (m === 'duyu' ? 'Dikte: Duyu-small, bu bilgisayarda (ses dışarı çıkmaz)'
         : m === 'tarayici' ? 'Dikte: tarayıcının tanıyıcısı' + (yedek ? ' (Duyu kurulu değil)' : '')
@@ -370,7 +375,7 @@
       $('#motorTarayici').disabled = !SR;
       const d = this.duyu || {};
       $('#motorDuyuDurum').textContent = d.kurulu
-        ? (d.hazir ? 'Hazır.' : d.model_indirildi ? 'Kurulu; ilk konuşmada yüklenir.' : 'Kurulu; model ilk kullanımda bir kez indirilir.')
+        ? (d.hazir ? 'Hazır.' : this.yukleniyor ? (d.model_indirildi ? 'Model yükleniyor…' : 'Model ilk kez iniyor (~56 MB)…') : d.model_indirildi ? 'Kurulu; ilk konuşmada yüklenir.' : 'Kurulu; model ilk kullanımda bir kez indirilir.')
         : 'Duyu kurulu değil. Kurmak için bir kez şu komutu çalıştırın:';
       $('#motorKomut').hidden = !!d.kurulu;
       $('#motorKomutYazi').textContent = this.komut();
@@ -412,7 +417,8 @@
       this.aktif = true;
       this.metin = '';
       mikBtn.classList.add('dinliyor');
-      durumEl.textContent = 'Dinleniyor · susunca yazıya çevrilir (bitirmek için yeniden dokunun)';
+      durumEl.textContent = motor === 'duyu' ? 'Dinleniyor · susunca yazıya çevrilir (bitirmek için yeniden dokunun)'
+        : 'Dinleniyor · susunca ya da “bitirdim” deyince gönderilir (bitirmek için yeniden dokunun)';
       dokEl.classList.add('dinleniyor');
       this.onceki = yaziEl.value.trim(); // kutuda yazılmış bir şey varsa söylenen onun arkasına eklenir
       yaziEl.placeholder = 'Dinliyorum… susunca yazıya çevrilir';
@@ -445,9 +451,17 @@
           else ara += r[0].transcript;
         }
         this.metin = finals.join(' ').trim();
+        // "Bitirdim" ya da "gönder" diye bitirilirse beklemeden gönderilir (söz yazıya girmez).
+        const son = /[\s,.]*\b(bitirdim|gönder|gonder)[.!]?\s*$/i;
+        if (son.test(this.metin)) {
+          this.metin = this.metin.replace(son, '').trim();
+          yaziEl.value = [this.onceki, this.metin].join(' ').replace(/\s+/g, ' ').trim();
+          return this.bitir();
+        }
         yaziEl.value = [this.onceki, this.metin, ara].join(' ').replace(/\s+/g, ' ').trim();
         gonderBtn.disabled = !yaziEl.value.trim();
-        this.sure(2500); // 2,5 sn susunca bitir
+        // Tarayıcı uzun cümleyi kısa duraklarda böler: 3,5 sn susunca bitir ("bitirdim" deyince hemen).
+        this.sure(3500);
       };
       rec.onerror = (ev) => {
         if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
@@ -541,7 +555,9 @@
       const ses16 = yenidenOrnekle(hepsi, k.oran, 16000);
       this.isleniyor = true;
       yaziEl.placeholder = 'Yazıya çevriliyor…';
-      durumEl.textContent = 'Duyu yazıya çeviriyor (' + Math.round(ses16.length / 16000) + ' sn ses)…';
+      durumEl.textContent = (dikte.duyu && !dikte.duyu.hazir
+        ? (dikte.duyu.model_indirildi ? 'Duyu modeli yükleniyor, ilk seferde biraz sürer… ' : 'Duyu modeli ilk kez iniyor (~56 MB), lütfen bekleyin… ')
+        : 'Duyu yazıya çeviriyor ') + '(' + Math.round(ses16.length / 16000) + ' sn ses)';
       try {
         const r = await fetch('/api/duyu/yaz?duzelt=1&lang=mix&beam=5&mode=auto', {
           method: 'POST', headers: { 'Content-Type': 'application/octet-stream' },
@@ -1188,12 +1204,32 @@
     return claudeDinliyor ? 'Claude dinliyor · mikrofona dokunup konuşabilirsiniz' : 'Hazır · Claude\'dan komut bekleniyor';
   }
 
+  // Sayfanın sürümü (config.js) sunucununkinden farklıysa tarayıcı eski dosyaları vermiştir: bir kez yenile.
+  // Yine farklıysa (ör. program açıkken güncellendi, sunucu eski) yalnız uyar.
+  const SAYFA_SURUM = (AT.config && AT.config.version) || '';
+  function surumDenetle(sunucu) {
+    const et = $('#surumEtiket');
+    if (et) { et.textContent = SAYFA_SURUM ? 'v' + SAYFA_SURUM : ''; et.classList.remove('uyumsuz'); }
+    if (!sunucu || !SAYFA_SURUM || sunucu === SAYFA_SURUM) return false;
+    const anahtar = 'klinikkoc.surumYenile.' + sunucu;
+    let denendi = false;
+    try { denendi = sessionStorage.getItem(anahtar) === '1'; sessionStorage.setItem(anahtar, '1'); } catch (e) { denendi = true; }
+    if (!denendi) { location.reload(); return true; }
+    if (et) {
+      et.textContent = 'v' + SAYFA_SURUM + ' ≠ ' + sunucu;
+      et.classList.add('uyumsuz');
+      et.title = 'Sayfa ile program sürümü farklı. Tahtayı kapatıp KlinikKoç\'u yeniden başlatın.';
+    }
+    return false;
+  }
+
   let son = 0;
   async function yokla() {
     try {
       const r = await api('merhaba', { durum: durum() });
       const j = await r.json();
       son = j.sayac || 0;
+      if (surumDenetle(j.surum)) return; // sayfa eski sürümün dosyalarıyla açılmış: kendini yeniliyor
       sesGoster(j.ses);
       if (j.ogretmen && AT.sihirbazDugmesiGoster) AT.sihirbazDugmesiGoster();
       if (j.uyandirma) uyandirmaGoster(j.uyandirma);
@@ -1220,12 +1256,18 @@
           if (k.tur === 'dur') durdur(k);
           else if (k.tur === 'devam') {
             if (araCalisan || araSira.length) { araSira.push(k); araIsle(); } else anlatimaDon(k);
-          } else if (calisan && calisan.tur === 'adimlar' && (durak.soz || calisan.askida)) {
+          } else if (calisan && calisan.tur === 'adimlar' && (durak.soz || durak.aktif || calisan.askida)) {
+            // Elle duraklatılmışken (⏸) gelen yeni cevap da beklemez: duraklayan anlatım askıya alınır,
+            // cevap hemen tahtaya gelir; ▶ ile anlatım kaldığı yerden sürer.
             // Söz alınıp duraklayan bir cevap varsa o bırakılır; yeni cevap onun yerine geçer.
-            if (araCalisan && durak.soz) { araCalisan.iptal = true; ses.dur(); durak.sifirla(); }
+            if (araCalisan && (durak.soz || durak.aktif)) { araCalisan.iptal = true; ses.dur(); durak.sifirla(); }
             araSira.push(k);
             araIsle();
-          } else sira.push(k);
+          } else {
+            // Duraklatma bir anlatıma bağlı değilse (ör. video) yeni komut onu beklemesin.
+            if (durak.aktif && !(calisan && calisan.tur === 'adimlar')) durak.sifirla();
+            sira.push(k);
+          }
         }
         isle();
       } catch (e) {

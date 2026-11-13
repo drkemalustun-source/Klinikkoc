@@ -316,3 +316,33 @@ class PaketTest(OrtamliTest):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(PYPDF, "pypdf yok")
+class SonradanEklenenMakaleTest(OrtamliTest):
+    """4.0.2: ders bir kez dizinlendikten sonra eklenen PDF de aramaya girmeli (Kemal'in Mac testi, Sanz 2020)."""
+
+    def test_sonradan_eklenen_pdf_aranir(self):
+        yol = os.path.join(self.tmp.name, "dizin.sqlite")
+        mb.kendi_kitaplik_hazirla()
+        bilgi_bankasi.dizinle([mb.KENDI], sessiz=True, yol=yol)  # kitaplık boşken dizinlendi
+        d = mb.elle_ekle(mb.KENDI, makale_pdf("10.5/stage", "staging grading"), "Sanz 2020.pdf", dizinle=False)
+        self.assertEqual(d["durum"], "hazir")
+        rapor = bilgi_bankasi.dizinle([mb.KENDI], sessiz=True, yol=yol)
+        self.assertEqual(rapor[0]["durum"], "dizinlendi")
+        sonuc = bilgi_bankasi.ara("staging", mb.KENDI, yol=yol)
+        self.assertTrue(sonuc, "makale metni aramada yok")
+        self.assertIn(d["kisa"], sonuc[0]["kaynak"])
+        self.assertEqual(bilgi_bankasi.makale_parca_sayilari(mb.KENDI, yol=yol).get(d["kisa"], 0) > 0, True)
+
+    def test_anlamsiz_dizinleme_vektorleri_silmez(self):
+        yol = os.path.join(self.tmp.name, "dizin.sqlite")
+        self.ders_kur("deneme", [])
+        bilgi_bankasi.dizinle(["deneme"], sessiz=True, yol=yol)
+        db = bilgi_bankasi.baglan(yol)
+        taban = bilgi_bankasi.ders_imzasi("deneme")
+        db.execute("INSERT OR REPLACE INTO bilgi VALUES (?,?)", ("imza:deneme", taban + "+anlam"))
+        db.commit()
+        db.close()
+        rapor = bilgi_bankasi.dizinle(["deneme"], sessiz=True, yol=yol)  # model yok: anlamlı dizin güncel sayılır
+        self.assertEqual(rapor[0]["durum"], "güncel")

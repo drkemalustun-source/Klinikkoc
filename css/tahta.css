@@ -233,6 +233,8 @@ strong { color: var(--accent); font-weight: 700; }
 .stroke-in.dashed { stroke-dasharray: 2 1.5; stroke-dashoffset: 0; animation: fade .6s ease-out both; }
 @keyframes stroke { to { stroke-dashoffset: 0; } }
 .fade-in { animation: fade .5s ease-out both; }
+/* Gerçek renkli dolgu: çizgi çizilirken dolgu yavaşça belirir (yalnız saydamlık; fill-opacity korunur). */
+.stroke-in.dolgu-belir { animation: stroke 0.8s ease-out forwards, fade .9s ease-out both; }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 
 /* Kaynak işareti: makale mi, öğretici yorumu mu, kurgusal örnek mi */
@@ -614,3 +616,19 @@ strong { color: var(--accent); font-weight: 700; }
 .an-apse { fill: #d9d36a; stroke: #f4efa6; stroke-width: .45; }
 .an-yayilim { fill: none; stroke: #f4efa6; stroke-width: .7; stroke-dasharray: 1.3 .9; stroke-linecap: round; }
 .an-mm-kortikal { stroke-width: 1.1; } .an-mm-pdl { stroke-width: .8; }
+
+/* Tıklanabilir kaynak (kaynak komutu) ve sayfa penceresi */
+.note-kaynak { display: inline-flex; align-items: center; gap: .45em; margin: .3em 0; padding: .3em .8em; border-radius: 999px;
+  font: inherit; font-size: .72em; color: var(--chalk); background: rgba(255,255,255,.08); border: 1px solid var(--board-line);
+  cursor: pointer; text-align: left; }
+.note-kaynak:hover, .note-kaynak:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.note-kaynak:disabled { opacity: .55; cursor: default; outline: none; }
+.kaynak-pencere { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; padding: 2vh 2vw;
+  background: rgba(8,14,30,.82); backdrop-filter: blur(3px); }
+.kaynak-pencere-ust { display: flex; justify-content: space-between; align-items: center; gap: 1em; color: #fff;
+  font-size: 18px; padding: 0 0 8px; }
+.kaynak-kapat { font: inherit; font-size: 16px; padding: .35em .9em; border-radius: 999px; border: 0; cursor: pointer;
+  background: #EAE5DC; color: #1B367B; font-weight: 700; }
+.kaynak-pencere-govde { flex: 1; min-height: 0; overflow: auto; display: flex; justify-content: center; align-items: flex-start; }
+.kaynak-pencere-govde img { max-width: 100%; background: #fff; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+.kaynak-hata { color: #fff; font-size: 18px; }

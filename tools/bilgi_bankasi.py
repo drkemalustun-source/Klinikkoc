@@ -44,7 +44,7 @@ DIZIN = os.environ.get("KLINIK_KOC_DIZIN") or os.path.join(KOK, ".dizin", "bilgi
 MODEL_KLASORU = os.environ.get("KLINIK_KOC_MODEL") or os.path.join(KOK, ".modeller", "multilingual-e5-small")
 MODEL_ADRESI = "https://huggingface.co/Xenova/multilingual-e5-small/resolve/main/"
 MODEL_DOSYALARI = {"model.onnx": "onnx/model_quantized.onnx", "tokenizer.json": "tokenizer.json"}
-SURUM = 2              # parçalama kuralı değişince artır: bütün dersler yeniden dizinlenir
+SURUM = 3              # parçalama kuralı değişince artır: bütün dersler yeniden dizinlenir
 PARCA_SOZCUK = 110      # bir parçadaki yaklaşık sözcük sayısı
 ORTUSME = 25            # komşu parçalar arasında ortak sözcük (bağlam kopmasın)
 RRF_K = 60
@@ -364,24 +364,34 @@ def ders_imzasi(ders):
     """Dersin dizine giren dosyalarının değişip değişmediğini anlamak için kısa bir özet."""
     h = hashlib.sha1(("surum %d;" % SURUM).encode())
     klasor = os.path.join(KOK, "lessons", ders)
+    # makale-metin: öğrencinin bilgisayarında PDF'ten çıkarılan makale sayfaları. Eskiden imzaya girmiyordu; ders
+    # bir kez dizinlendikten sonra eklenen makale "değişmedi" sanılıp aramaya hiç girmiyordu (4.0.2'de düzeltildi).
     for yol in sorted(glob.glob(os.path.join(klasor, "*.json")) + glob.glob(os.path.join(klasor, "kaynak", "*.txt")) +
-                      glob.glob(os.path.join(klasor, "vakalar", "*.json"))):
+                      glob.glob(os.path.join(klasor, "vakalar", "*.json")) +
+                      glob.glob(os.path.join(klasor, "makale-metin", "*", "*.txt")) +
+                      glob.glob(os.path.join(klasor, "makale-metin", "*", "bilgi.json"))):
         st = os.stat(yol)
         h.update(("%s|%d|%d;" % (os.path.relpath(yol, klasor), st.st_size, int(st.st_mtime))).encode())
     return h.hexdigest()
 
 
 def dizinle(dersler=None, model=None, yol=DIZIN, sessiz=False):
-    """Dersleri dizinler. Değişmemiş dersler atlanır. model verilirse anlam vektörleri de hesaplanır."""
+    """Dersleri dizinler. Değişmemiş dersler atlanır. model verilirse anlam vektörleri de hesaplanır.
+    model verilmezse (hızlı sözcük dizini) anlam vektörleriyle dizinlenmiş güncel bir ders de güncel sayılır:
+    vektörleri silinmez. Her ders ayrı kaydedilir; uzun süren anlam işlemesi aramaları kilitlemez."""
     db = baglan(yol)
     rapor = []
     hepsi = ders_kimlikleri()
+    anlamli = bool(model and model.hazir)
+    degisti = False
     for ders in (dersler or hepsi):
-        imza = ders_imzasi(ders) + ("+anlam" if model and model.hazir else "")
+        taban = ders_imzasi(ders)
+        imza = taban + ("+anlam" if anlamli else "")
         eski = db.execute("SELECT deger FROM bilgi WHERE anahtar=?", ("imza:" + ders,)).fetchone()
-        if eski and eski[0] == imza:
+        if eski and (eski[0] == imza or (not anlamli and eski[0] == taban + "+anlam")):
             rapor.append({"ders": ders, "durum": "güncel"})
             continue
+        degisti = True
         parcalar = ders_parcalari(ders)
         vektorler = model.vektorler([p["metin"] for p in parcalar]) if (model and model.hazir and parcalar) else None
         db.execute("DELETE FROM parca WHERE ders=?", (ders,))
@@ -392,14 +402,20 @@ def dizinle(dersler=None, model=None, yol=DIZIN, sessiz=False):
                            (ders, p["tur"], p.get("baslik"), p["metin"], p.get("sayfa"), p.get("bolum"), p.get("adim"),
                             p.get("hedef"), p.get("vaka"), p.get("kaynak"), vek))
         db.execute("INSERT OR REPLACE INTO bilgi VALUES (?,?)", ("imza:" + ders, imza))
+        # Sözcük dizini her dersten sonra yenilenir (birkaç bin parça için bir saniyenin altında): arka planda
+        # süren anlam işlemesi sırasında yapılan aramalar da tutarlı sonuç alır.
+        db.execute("INSERT INTO parca_fts(parca_fts) VALUES('rebuild')")
+        db.commit()
         rapor.append({"ders": ders, "durum": "dizinlendi", "parca": len(parcalar), "anlam": bool(vektorler)})
     # Silinmiş derslerin parçalarını temizle
     for (ders,) in db.execute("SELECT DISTINCT ders FROM parca").fetchall():
         if ders not in hepsi:
             db.execute("DELETE FROM parca WHERE ders=?", (ders,))
             db.execute("DELETE FROM bilgi WHERE anahtar=?", ("imza:" + ders,))
-    # Sözcük dizini parça tablosundan baştan kurulur (birkaç bin parça için bir saniyenin altında).
-    db.execute("INSERT INTO parca_fts(parca_fts) VALUES('rebuild')")
+            degisti = True
+    eski_surum = db.execute("SELECT deger FROM bilgi WHERE anahtar='surum'").fetchone()
+    if degisti or not eski_surum or eski_surum[0] != str(SURUM):
+        db.execute("INSERT INTO parca_fts(parca_fts) VALUES('rebuild')")
     db.execute("INSERT OR REPLACE INTO bilgi VALUES ('surum', ?)", (str(SURUM),))
     db.execute("INSERT OR REPLACE INTO bilgi VALUES ('tarih', ?)", (time.strftime("%Y-%m-%d %H:%M"),))
     if model and model.hazir:
@@ -411,6 +427,21 @@ def dizinle(dersler=None, model=None, yol=DIZIN, sessiz=False):
             print("%-32s %s%s" % (r["ders"], r["durum"], (" (%d parça%s)" % (r["parca"], ", anlam" if r["anlam"] else ""))
                                   if r.get("parca") is not None else ""))
     return rapor
+
+
+def makale_parca_sayilari(ders, yol=DIZIN):
+    """Dersin makale metinlerinden kaç parçanın aramada olduğu: {makale kısa adı: parça sayısı}."""
+    out = {}
+    if not os.path.exists(yol):
+        return out
+    db = baglan(yol)
+    try:
+        for (kaynak,) in db.execute("SELECT kaynak FROM parca WHERE ders=? AND tur='kaynak'", (ders,)):
+            ad = re.sub(r", s\. \d+$", "", kaynak or "")
+            out[ad] = out.get(ad, 0) + 1
+    finally:
+        db.close()
+    return out
 
 
 def _filtre(ders, tur):

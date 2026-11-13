@@ -58,6 +58,11 @@ Kurgusal olgu sorusunda öğrenci yanıtladıktan sonra sor: "Ne kadar eminsin: 
   (`template: "dis"` ya da `"implant"`, uygun `variant`). Parçaları `labels` ile adım adım adlandır, konuşulan yeri
   `highlight` ile vurgula, cep derinliği için `probe: true` ver. Şablonda olmayan bir yapı gerekiyorsa şablonun üstüne
   `shapes` ile ok ya da yazı ekle; anatomik oranları (ör. biyolojik genişlik, kret düzeyi) değiştirme.
+- Serbest çizimde doku renklerini adıyla ver: `fill: "dis-eti"`, `"mine"`, `"dentin"`, `"kemik"`, `"titanyum"`, `"mukoza"`
+  (şablonlarla aynı tonlar; gerekirse hex `"#f2a7a7"`). Dolgulu şekilde çizgiyi kaldırmak için `stroke: "none"`.
+  `gecis` (akarak geçiş) yalnız şablonlarda çalışır.
+- Kaynak sayfası verirken düz yazı yerine `kaynak` komutunu kullan (`{type:"kaynak", text:"Su ve ark. 2010, s. 8",
+  makale:"<makaleler aracındaki id>", sayfa:8}`): öğrenci dokununca o sayfa kendi PDF'inden açılır.
 - Hazır şablonlar yalnız diş ve implant değildir: sondalama ölçümü (`sondalama`), plak ve gingival indeksler (`plak-indeksi`,
   `gingival-indeks`, `kayit-cizelgesi`), furkasyon (`furkasyon`, `furkasyon-ust`), kemik içi defektler (`kemik-ici`), dişeti
   çekilmesi (`cekilme`), çekim soketi (`soket`), sinüs ve mandibula kesitleri (`sinus`, `mandibula`), ön bölge kesitleri ve

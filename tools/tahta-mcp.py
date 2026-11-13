@@ -334,6 +334,51 @@ def ar_dersler(_):
     return metin(out)
 
 
+def makale_metinleri(ders):
+    """Dersin PDF'ten metne çevrilmiş makaleleri: [{id, kisa, sayfalar: [no..]}]."""
+    out = []
+    for mk in sorted(glob.glob(os.path.join(ders_yolu(ders), "makale-metin", "*"))):
+        bilgi = {}
+        try:
+            with open(os.path.join(mk, "bilgi.json"), encoding="utf-8") as f:
+                bilgi = json.load(f) or {}
+        except (OSError, ValueError):
+            pass
+        sayfalar = sorted(int(x[-6:-4]) for x in glob.glob(os.path.join(mk, "sayfa-*.txt")) if x[-6:-4].isdigit())
+        out.append({"id": bilgi.get("id") or os.path.basename(mk), "kisa": bilgi.get("kisa") or os.path.basename(mk),
+                    "klasor": os.path.basename(mk), "sayfalar": sayfalar})
+    return out
+
+
+def makale_metni_sec(ders, istenen=None):
+    """istenen (kimlik ya da kısa adının bir parçası) verilirse o makale; verilmezse ders tek makaleliyse o."""
+    liste = makale_metinleri(ders)
+    if istenen:
+        i = str(istenen).strip().lower()
+        for m in liste:
+            if m["id"].lower() == i:
+                return m
+        uyan = [m for m in liste if i in m["kisa"].lower() or i in m["id"].lower()]
+        return uyan[0] if len(uyan) == 1 else None
+    return liste[0] if len(liste) == 1 else None
+
+
+def makale_sayfasi_oku(ders, makale, n, istenen=None):
+    if not makale:
+        return {"sayfa": n, "durum": "makale seçilmedi" if not istenen else "makale bulunamadı",
+                "makaleler": [{"makale": m["id"], "kisa": m["kisa"], "sayfa_sayisi": len(m["sayfalar"])}
+                              for m in makale_metinleri(ders)],
+                "not": "ders_oku'yu makale (yukarıdaki kimliklerden biri) ve sayfa ile yeniden çağır."}
+    yol = os.path.join(ders_yolu(ders), "makale-metin", makale["klasor"], "sayfa-%02d.txt" % n)
+    if not os.path.exists(yol):
+        return {"makale": makale["id"], "kisa": makale["kisa"], "sayfa": n, "durum": "okunamadı",
+                "metinli_sayfalar": makale["sayfalar"],
+                "not": "Bu sayfanın metni yok (sayfa aralık dışında, kaynakça sonrası ya da resim olabilir). "
+                       "Görüntü olarak bakmak için makale_sayfasi_bak'ı kullan."}
+    return {"makale": makale["id"], "kisa": makale["kisa"], "sayfa": n, "metin": _metin_oku(yol),
+            "not": "Sayfa numarası PDF'in sayfa sırasıdır (derginin sayfa numarası değil)."}
+
+
 def ar_ders_oku(a):
     ders = a.get("ders")
     d = ders_json(ders)
@@ -344,6 +389,10 @@ def ar_ders_oku(a):
             n = int(a["sayfa"])
         except (TypeError, ValueError):
             raise ValueError("sayfa bir sayı olmalı")
+        makale = makale_metni_sec(ders, a.get("makale"))
+        if a.get("makale") or (makale and not os.path.exists(ders_yolu(
+                ders, *(kay.get("sayfaMetni") or "kaynak/sayfa-{nn}.txt").replace("{nn}", "%02d" % n).split("/")))):
+            return metin(makale_sayfasi_oku(ders, makale, n, a.get("makale")))
         sablon = kay.get("sayfaMetni") or "kaynak/sayfa-{nn}.txt"
         yol = ders_yolu(ders, *sablon.replace("{nn}", "%02d" % n).split("/"))
         if not os.path.exists(yol):
@@ -847,6 +896,29 @@ def anlam_modeli():
     return _MODEL
 
 
+_DIZIN_KILIDI = threading.Lock()
+_ANLAM_IS = {"calisiyor": False, "hata": None}
+
+
+def anlam_dizini_arka_planda(model):
+    """Anlam vektörü eksik dersleri arka planda işler (aynı anda tek iş)."""
+    if _ANLAM_IS["calisiyor"]:
+        return
+
+    def is_():
+        try:
+            with _DIZIN_KILIDI:
+                bilgi_bankasi.dizinle(model=model, sessiz=True)
+            _ANLAM_IS["hata"] = None
+        except Exception as e:  # arama sözcükle sürer
+            _ANLAM_IS["hata"] = str(e)
+        finally:
+            _ANLAM_IS["calisiyor"] = False
+
+    _ANLAM_IS["calisiyor"] = True
+    threading.Thread(target=is_, daemon=True, name="anlam-dizini").start()
+
+
 def ar_bilgi_ara(a):
     sorgu = (a.get("sorgu") or "").strip()
     if not sorgu:
@@ -854,12 +926,22 @@ def ar_bilgi_ara(a):
     if a.get("ders"):
         ders_yolu(a["ders"])
     model = anlam_modeli()
-    # Değişen dersler her aramadan önce yeniden dizinlenir (değişmeyenler saniyenin altında atlanır).
-    bilgi_bankasi.dizinle(model=model, sessiz=True)
+    # Değişen dersler her aramadan önce sözcük dizinine eklenir (hızlı; değişmeyenler atlanır). Anlam vektörleri
+    # uzun sürebilir (büyük bir makale paketinde dakikalar): onlar arka planda hesaplanır, arama beklemez.
+    if _DIZIN_KILIDI.acquire(timeout=2):  # arka plandaki anlam işi sürüyorsa beklemeden mevcut dizinde ara
+        try:
+            bilgi_bankasi.dizinle(sessiz=True)
+        finally:
+            _DIZIN_KILIDI.release()
+    if model.hazir:
+        anlam_dizini_arka_planda(model)
     k = max(1, min(int(a.get("k") or 6), 15))
     sonuclar, oz = bilgi_bankasi.ara_ve_dayanak(sorgu, a.get("ders"), a.get("tur"), k, model=model)
     out = {"sorgu": sorgu, "anlam_aramasi": "açık" if model.hazir else "kapalı (yalnız sözcük araması)",
            "dayanak": oz["dayanak"]}
+    if model.hazir and _ANLAM_IS["calisiyor"]:
+        out["anlam_dizini"] = ("hazırlanıyor: yeni eklenen metinler şimdilik yalnız sözcük aramasında; birkaç dakika "
+                               "sonra anlam aramasına da girer")
     if DAYANAK_TALIMAT.get(oz["dayanak"]):
         out["talimat"] = DAYANAK_TALIMAT[oz["dayanak"]]
     out["dayanak_olcumu"] = {x: oz[x] for x in ("en_iyi_benzerlik", "en_iyi_kapsam", "sozcuk_eslesen_sayi")}
@@ -1368,11 +1450,31 @@ def ar_tahtayi_ac(_):
                 break
     if not d.get("bagli"):
         return metin({"durum": "bekleniyor", "not": "Tarayıcıda canli.html açılıyor; birkaç saniye sonra tekrar dene."})
-    return metin({"durum": "hazır", "tahta": d.get("sayfa"), "ses": d.get("ses"), "dikte": dikte_durumu(d),
+    return metin({"durum": "hazır", "surum": surum_bilgisi(d), "tahta": d.get("sayfa"), "ses": d.get("ses"),
+                  "dikte": dikte_durumu(d),
                   "not": "Tahta açık. 'ses' alanı gerçekten kullanılacak sesi söyler (yedek sese düşüldüyse kullanıcıya bir "
                          "cümleyle söyle). Kullanıcı ilk açılışta sayfada 'başlat' düğmesine bir kez dokunmalı. Tarayıcı sesi "
                          "engellerse anlatım o cümlede bekler ve tahta_durumu'nda sayfa.ses_engelli true olur: kullanıcıdan "
                          "ekrandaki 'Sesi açmak için dokunun' düğmesine basmasını iste."})
+
+
+def surum_bilgisi(d=None):
+    """Çalışan program sürümü; yeni sürüm varsa (ya da sunucu başka sürümse) Claude'un söyleyeceği uyarı."""
+    out = {"program": SURUM}
+    sunucu = (d or {}).get("surum")
+    if sunucu and sunucu != SURUM:
+        out["sunucu"] = sunucu
+        out["uyari"] = ("Tahta sunucusu %s, bu araç %s. Kullanıcıdan KlinikKoç'u kapatıp yeniden başlatmasını iste." %
+                        (sunucu, SURUM))
+    try:
+        g = surum_.denetle()
+        if g.get("var") and not g.get("gelistirici"):
+            out["yeni_surum"] = g.get("yeni_surum")
+            out["uyari"] = ("Yeni sürüm var (%s; kurulu %s). Kullanıcıya bir cümleyle söyle: ana ekrandaki "
+                            "'Güncelle' düğmesiyle tek tuşla güncellenir." % (g.get("yeni_surum"), SURUM))
+    except Exception:
+        pass
+    return out
 
 
 def dikte_durumu(d):
@@ -1581,6 +1683,7 @@ def ar_makaleler(a):
         return metin({"dersler": makale_bulucu.makaleli_dersler()})
     ders_yolu(ders)
     out = makale_bulucu.ozet(ders)
+    aramada_durumu(ders, out)
     if a.get("ac"):
         if not sunucu_acik():
             sunucuyu_baslat()
@@ -1592,11 +1695,46 @@ def ar_makaleler(a):
         out["sayfa"] = "Makaleler sayfası tarayıcıda açıldı."
     if not out["pdf_okuyucu"]:
         out["uyari"] = "PDF okuyucu kurulu değil; inen makaleler metne çevrilemez. KUR dosyasını yeniden çalıştırın."
-    eksik = [m["kisa"] for m in out["makaleler"] if m["durum"] in ("eksik", "hata")]
+    eksik = [m["kisa"] for m in out["makaleler"] if m["durum"] in ("eksik", "hata", "aramada_degil")]
     if eksik:
         out["not"] = ("Eksik makaleler aramada yok. Öğrenciye söyle; makaleler sayfasında yayıncı bağlantısı var, "
                       "PDF'i indirip sayfaya sürükleyebilir.")
     return metin(out)
+
+
+def aramada_durumu(ders, out):
+    """'hazir' görünen her makalenin metni gerçekten aramada mı? Değilse durumu dürüstçe değiştirir."""
+    try:
+        if _DIZIN_KILIDI.acquire(timeout=2):
+            try:
+                bilgi_bankasi.dizinle([ders], sessiz=True)
+            finally:
+                _DIZIN_KILIDI.release()
+        sayilar = bilgi_bankasi.makale_parca_sayilari(ders)
+    except Exception as e:
+        out["arama_dizini"] = "okunamadı: %s" % e
+        return out
+    for m in out.get("makaleler") or []:
+        if m.get("durum") != "hazir" or m.get("nereden") == "ders":
+            continue
+        klasor = makale_bulucu.metin_klasoru(ders, m["id"])
+        bilgi = {}
+        try:
+            with open(os.path.join(klasor, "bilgi.json"), encoding="utf-8") as f:
+                bilgi = json.load(f)
+        except (OSError, ValueError):
+            pass
+        n = sayilar.get(bilgi.get("kisa") or m.get("kisa"), 0)
+        m["aramada"] = n
+        if not n:
+            m["durum"] = "aramada_degil"
+            m["neden"] = ("PDF var ama metni aramaya girmedi. Makaleler sayfasında bu makaleyi yeniden ekleyin; yine "
+                          "olmazsa PDF taranmış (resim) olabilir. Şimdilik makale_sayfasi_bak ile sayfaya bakabilirsin.")
+    sayi = {}
+    for m in out.get("makaleler") or []:
+        sayi[m["durum"]] = sayi.get(m["durum"], 0) + 1
+    out["sayilar"] = sayi
+    return out
 
 
 def ar_ders_paketi_ekle(a):

@@ -25,6 +25,60 @@
     return new Set([].concat(c.labels || []).map((x) => (typeof x === 'string' ? x : x && x.part)));
   }
 
+  // Serbest çizim renkleri. Tahta adları (sınıfla boyanır, temaya uyar) + doku adları (anatomik şablonlarla aynı
+  // tonlar) + hex/rgb renk. Başka her şey (url(), ifade vb.) yok sayılır: ders paketleri güvenilmez olabilir.
+  const TAHTA_RENK = new Set(['chalk', 'accent', 'ok', 'warn', 'info', 'muted']);
+  const DOKU_RENK = {
+    'dis-eti': '#e7979b', 'iltihap': '#d75a64', 'mukoza': '#b4475a', 'epitel': '#f2b8bd',
+    'mine': '#f4f1e6', 'dentin': '#e8d29c', 'sement': '#c99a4a', 'pulpa': '#c9576a', 'pdl': '#5a3b3f',
+    'kemik': '#cdb688', 'kortikal': '#efe2bf', 'greft': '#d9c79a',
+    'titanyum': '#8f99a4', 'dayanak': '#a9b2bb', 'kron': '#f1eee6', 'plak': '#d8cf6a', 'kan': '#e0293b'
+  };
+  const RENK_KALIBI = /^(#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})|rgba?\(\s*[\d.]+%?\s*,\s*[\d.]+%?\s*,\s*[\d.]+%?\s*(?:,\s*[\d.]+\s*)?\)|hsla?\(\s*[\d.]+\s*,\s*[\d.]+%\s*,\s*[\d.]+%\s*(?:,\s*[\d.]+\s*)?\))$/i;
+  // Renk değerini çözer: { sinif } (tahta adı) | { deger } (gerçek renk) | null (tanınmadı).
+  function renkCoz(r) {
+    if (typeof r !== 'string') return null;
+    const k = r.trim().toLowerCase().replace(/ı/g, 'i').replace(/[\s_]+/g, '-');
+    if (TAHTA_RENK.has(k)) return { sinif: k };
+    if (DOKU_RENK[k]) return { deger: DOKU_RENK[k] };
+    if (k === 'diseti' || k === 'gingiva') return { deger: DOKU_RENK['dis-eti'] };
+    if (k === 'implant' || k === 'titan') return { deger: DOKU_RENK.titanyum };
+    if (RENK_KALIBI.test(r.trim())) return { deger: r.trim() };
+    return null;
+  }
+  function oran(x, varsayilan) {
+    const n = Number(x);
+    return Number.isFinite(n) ? Math.min(Math.max(n, 0), 1) : varsayilan;
+  }
+
+  // Kaynak sayfası penceresi (tahtanın üstünde; dokununca ya da Esc ile kapanır).
+  function kaynakAc(src, baslik) {
+    const eski = document.querySelector('.kaynak-pencere');
+    if (eski) eski.remove();
+    const p = el('div', 'kaynak-pencere');
+    p.setAttribute('role', 'dialog');
+    const ust = el('div', 'kaynak-pencere-ust');
+    ust.appendChild(el('span', null, baslik));
+    const kapat = el('button', 'kaynak-kapat', '✕ Kapat');
+    kapat.type = 'button';
+    ust.appendChild(kapat);
+    const govde = el('div', 'kaynak-pencere-govde');
+    const img = el('img');
+    img.alt = baslik;
+    img.src = src;
+    const hata = el('p', 'kaynak-hata', 'Sayfa açılamadı: makalenin PDF\'i bu bilgisayarda olmayabilir (Makaleler sayfasından ekleyin).');
+    hata.hidden = true;
+    img.addEventListener('error', () => { img.hidden = true; hata.hidden = false; });
+    govde.append(img, hata);
+    p.append(ust, govde);
+    const kapa = () => { p.remove(); document.removeEventListener('keydown', tus, true); };
+    const tus = (e) => { if (e.key === 'Escape') { e.stopPropagation(); kapa(); } };
+    kapat.addEventListener('click', kapa);
+    p.addEventListener('click', (e) => { if (e.target === p) kapa(); });
+    document.addEventListener('keydown', tus, true);
+    document.body.appendChild(p);
+  }
+
   function rich(parent, text) {
     const parts = String(text).split(/(\*\*[^*]+\*\*|_[^_]+_)/g);
     for (const p of parts) {
@@ -289,6 +343,32 @@
       const p = rich(el('div', 'note-text ' + (c.style || 'note')), c.text);
       this.notes.appendChild(p);
       return p;
+    }
+
+    // Tıklanabilir kaynak: {type:'kaynak', text:'Su ve ark. 2010, s. 8', makale?:'<kaynak kimliği ya da kısa adı>',
+    // sayfa:8}. Dokununca makalenin o sayfası (öğrencinin kendi PDF'inden) büyük açılır. makale verilmezse dersin
+    // kendi kaynak sayfa görseli (sayfa-NN) kullanılır.
+    cmd_kaynak(c) {
+      const sayfa = parseInt(c.sayfa, 10);
+      const b = el('button', 'note-kaynak');
+      b.type = 'button';
+      b.appendChild(el('span', 'note-kaynak-ikon', '📄'));
+      b.appendChild(rich(el('span'), c.text || ('Kaynak, s. ' + (sayfa || '?'))));
+      const ders = this.lesson && this.lesson.id;
+      let src = null;
+      if (c.makale && ders && sayfa > 0) {
+        src = '/api/makale/sayfa?' + new URLSearchParams({ ders, kaynak: String(c.makale), sayfa: String(sayfa) });
+      } else if (sayfa > 0) {
+        const a = (this.lesson.assets || {})['sayfa-' + String(sayfa).padStart(2, '0')];
+        if (a) src = a.src;
+      }
+      if (!src) { b.disabled = true; b.title = 'Bu sayfanın görüntüsü yok'; }
+      else {
+        b.title = 'Sayfayı aç';
+        b.addEventListener('click', () => kaynakAc(src, c.text || ''));
+      }
+      this.notes.appendChild(b);
+      return b;
     }
 
     cmd_term(c) {
@@ -639,8 +719,43 @@
       return a ? a.then(() => { if (this._anim === a) this._anim = null; }) : Promise.resolve();
     }
 
+    // Şekil rengi: color (çizgi ve yazı), fill (true | renk adı | doku adı | hex), opacity (dolgunun saydamlığı,
+    // 0–1), stroke (çizgi rengi ya da "none"), width (çizgi kalınlığı).
     _shape(sh) {
-      const cls = 'shape ' + (sh.color || 'chalk') + (sh.dashed ? ' dashed' : '') + (sh.fill ? ' filled' : '');
+      const node = this._shapeNode(sh);
+      if (!node) return null;
+      const renk = renkCoz(sh.color);
+      const ozel = renk && renk.deger;
+      if (sh.kind === 'text') {
+        if (ozel) node.style.fill = renk.deger;
+        return node;
+      }
+      if (ozel) node.style.stroke = renk.deger;
+      const cizgi = sh.stroke === 'none' || sh.stroke === false ? { deger: 'none' } : renkCoz(sh.stroke);
+      if (cizgi) node.style.stroke = cizgi.sinif ? 'var(--' + (cizgi.sinif === 'muted' ? 'chalk-dim' : cizgi.sinif) + ')' : cizgi.deger;
+      const w = Number(sh.width);
+      if (Number.isFinite(w) && w > 0) node.style.strokeWidth = String(Math.min(w, 6));
+      if (sh.fill && sh.fill !== true) {
+        const d = renkCoz(sh.fill);
+        if (d && d.deger) {
+          node.style.fill = d.deger;
+          node.style.fillOpacity = String(oran(sh.opacity, 1));
+        } else if (d && d.sinif) {
+          node.style.fill = 'var(--' + (d.sinif === 'muted' ? 'chalk-dim' : d.sinif) + ')';
+          node.style.fillOpacity = String(oran(sh.opacity, 0.35));
+        }
+      } else if (sh.fill === true && sh.opacity != null && ozel) {
+        node.style.fill = renk.deger;
+        node.style.fillOpacity = String(oran(sh.opacity, 0.2));
+      }
+      if (node.style.fill && sh.kind !== 'line' && sh.kind !== 'arrow') node.classList.add('dolgu-belir');
+      return node;
+    }
+
+    _shapeNode(sh) {
+      const r = renkCoz(sh.color);
+      const sinif = r && r.sinif ? r.sinif : 'chalk';
+      const cls = 'shape ' + sinif + (sh.dashed ? ' dashed' : '') + (sh.fill ? ' filled' : '');
       switch (sh.kind) {
         case 'line':
         case 'arrow':
@@ -655,7 +770,7 @@
         case 'path':
           return svg('path', { d: sh.d, class: cls, pathLength: 1 });
         case 'text': {
-          const t = svg('text', { x: sh.x, y: sh.y, class: 'shape-text ' + (sh.color || 'chalk'), 'text-anchor': sh.anchor || 'middle', 'font-size': sh.size || 5 });
+          const t = svg('text', { x: sh.x, y: sh.y, class: 'shape-text ' + sinif, 'text-anchor': sh.anchor || 'middle', 'font-size': sh.size || 5 });
           t.textContent = sh.text;
           return t;
         }
@@ -666,6 +781,8 @@
     }
   }
 
+  Board.renkCoz = renkCoz; // testler ve belge için
+  Board.DOKU_RENK = DOKU_RENK;
   Board.animDurdu = false; // canlı tahtada Duraklat tuşu canlandırmayı da bekletir
   AT.Board = Board;
 })(window.AT = window.AT || {});

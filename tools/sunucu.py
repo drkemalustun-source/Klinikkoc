@@ -622,7 +622,7 @@ class Canli:
             self.sayfa_durumu = durum or {}
             self.son_gorulme = time.time()
             self.kosul.notify_all()
-            return {"sayac": self.sayac, "ses": self.ses_bilgisi(),
+            return {"sayac": self.sayac, "ses": self.ses_bilgisi(), "surum": degerlendirme.program_surumu(),
                     "uyandirma": dict(self.uyandirma, acik=self.uyandirma_acik(), destek=uyandirma.destekleniyor())}
 
     def bitti(self, no, sonuc, durum):
@@ -920,6 +920,28 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             return self._json(500, {"hata": "%s: %s" % (type(e).__name__, e)})
 
+    def _makale_sayfasi(self, q):
+        import makale_sekil
+        ders = makale_bulucu.ders_gecerli(q.get("ders", ""))
+        kaynak = q.get("kaynak", "")
+        pdf = makale_sekil._pdf_yolu(ders, kaynak)
+        if not pdf:  # kısa adıyla da bulunsun (Claude 'Su 2010' yazabilir)
+            for m in makale_bulucu.ozet(ders)["makaleler"]:
+                if m.get("durum") == "hazir" and kaynak and kaynak.lower() in (m.get("kisa") or "").lower():
+                    pdf = makale_sekil._pdf_yolu(ders, m["id"])
+                    break
+        if not pdf:
+            return self._json(404, {"hata": "Bu makalenin PDF'i bu bilgisayarda yok. Makaleler sayfasından ekleyin."})
+        if not makale_sekil.cizici_var():
+            return self._json(503, {"hata": "Sayfa çizici (pypdfium2) kurulu değil: KUR dosyasını yeniden çalıştırın."})
+        veri = makale_sekil.onizleme(pdf, max(1, int(q.get("sayfa") or 1)), None, 2.0)
+        self.send_response(200)
+        self.send_header("Content-Type", "image/png")
+        self.send_header("Content-Length", str(len(veri)))
+        self.end_headers()
+        self.wfile.write(veri)
+        return None
+
     def _makale(self, govde=b""):
         """Makaleler sayfası: durum, makale bulma, elle PDF ekleme, ders paketi kurma."""
         u = urllib.parse.urlparse(self.path)
@@ -935,6 +957,8 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
                 return self._json(200, makale_bulucu.ozet(q.get("ders", "")))
             if yol == "depolama":
                 return self._json(200, ders_sonu.depolama())
+            if yol == "sayfa":  # tahtadaki kaynak bağlantısı: öğrencinin kendi PDF'inden bir sayfa (PNG)
+                return self._makale_sayfasi(q)
             if yol == "degerlendirme":
                 return self._json(200, degerlendirme.form(q.get("ders", ""), q.get("ogrenci") or None))
             if self.command != "POST":

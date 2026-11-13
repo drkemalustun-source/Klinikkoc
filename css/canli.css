@@ -317,3 +317,15 @@ body:has(.canli) { background: #EAE5DC; }
 .canli-buyuk-dugme small { color: #6b6658; }
 .canli .question { background: rgba(12,22,54,.86); }
 .canli .board.case-mode .question { background: rgba(12,22,54,.92); }
+
+/* Sürüm etiketi (üst çubuk): her zaman görünür; sayfa ile program uyuşmazsa kırmızı. */
+.canli-surum { flex: none; align-self: center; margin-left: .5em; padding: .1em .5em; border-radius: 6px;
+  font-size: .62em; font-weight: 600; color: #5b6478; background: rgba(27,54,123,.08); white-space: nowrap; }
+.canli-surum:empty { display: none; }
+.canli-surum.uyumsuz { color: #fff; background: #c0392b; }
+.canli-ses.yukleniyor::after { content: " ⏳"; animation: canli-yanip 1.4s ease-in-out infinite; }
+@keyframes canli-yanip { 50% { opacity: .35; } }
+
+/* Canlı tahtada tablo, akış, ağaç gibi içerikler tahtanın üstünden başlar (eskiden ortalanıp üst yarı boş kalıyordu). */
+.canli .board-visual { justify-content: flex-start; }
+.canli .board-visual > .board-draw, .canli .board-visual > .board-figure { flex: 1 1 auto; }
