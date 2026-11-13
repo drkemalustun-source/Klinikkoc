@@ -36,8 +36,10 @@
   const PAP_DURUM = {
     'dis-dis':         { ...PAP_TEMEL, impR: 0, d: 5, h: 5 },
     duz:               { ...PAP_TEMEL },
-    konkav:            { ...PAP_TEMEL, sub: 1, h: 5.2 },
-    konveks:           { ...PAP_TEMEL, sub: -1, h: 3.8 },
+    // Su ve ark. 2010: ara yüzde kritik altı kontur dış bükey yapılınca papil desteklenir, tepesi koronale kayar
+    // (≈ 0,5–1 mm, gözlem; etki ince-skalloplu biyotipte belirgin). İç bükey için ayrı bir sonuç gösterilmez.
+    konkav:            { ...PAP_TEMEL, sub: 1 },
+    konveks:           { ...PAP_TEMEL, sub: -1, h: 5.2 },
     'kare-kron':       { ...PAP_TEMEL, kare: 1, crit: 0.6, d: 4, h: 4.5 },
     'ince-biyotip':    { ...PAP_TEMEL, b: 0, h: 4 },
     'implant-implant': { ...PAP_TEMEL, impL: 1, d: 5, h: 3.4 }
@@ -169,8 +171,7 @@
         kritik:        { ad: p.kare > 0.5 ? 'Kritik kontur: geniş (kare kron)' : 'Kritik kontur (≈ 1 mm)', at: yuzR(kritikBas + 0.5) }
       });
     } else parts['kuron-sag'] = { ad: 'Komşu doğal diş', at: [X(4), Y(8)] };
-    if (p.sub > 0.5) parts.kazanc = { ad: 'Papil ≈ 0,5–1 mm koronale (yaklaşık)', at: [80.3, Y(yT) + 0.4] };
-    if (p.sub < -0.5) parts.baski = { ad: 'Doku apikale itilir (yaklaşık)', at: [X(-0.3), Y(yT) - 2] };
+    if (p.sub < -0.5) parts.kazanc = { ad: 'Papil ≈ 0,5–1 mm koronale (yaklaşık)', at: [80.3, Y(yT) + 0.4] };
     if (p.b < 0.5) parts.biyotip = { ad: 'İnce biyotip: sivri papil', at: [80, Y(yT) - 1.2] };
     return parts;
   }
