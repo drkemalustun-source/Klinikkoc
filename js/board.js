@@ -25,6 +25,60 @@
     return new Set([].concat(c.labels || []).map((x) => (typeof x === 'string' ? x : x && x.part)));
   }
 
+  // Serbest çizim renkleri. Tahta adları (sınıfla boyanır, temaya uyar) + doku adları (anatomik şablonlarla aynı
+  // tonlar) + hex/rgb renk. Başka her şey (url(), ifade vb.) yok sayılır: ders paketleri güvenilmez olabilir.
+  const TAHTA_RENK = new Set(['chalk', 'accent', 'ok', 'warn', 'info', 'muted']);
+  const DOKU_RENK = {
+    'dis-eti': '#e7979b', 'iltihap': '#d75a64', 'mukoza': '#b4475a', 'epitel': '#f2b8bd',
+    'mine': '#f4f1e6', 'dentin': '#e8d29c', 'sement': '#c99a4a', 'pulpa': '#c9576a', 'pdl': '#5a3b3f',
+    'kemik': '#cdb688', 'kortikal': '#efe2bf', 'greft': '#d9c79a',
+    'titanyum': '#8f99a4', 'dayanak': '#a9b2bb', 'kron': '#f1eee6', 'plak': '#d8cf6a', 'kan': '#e0293b'
+  };
+  const RENK_KALIBI = /^(#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})|rgba?\(\s*[\d.]+%?\s*,\s*[\d.]+%?\s*,\s*[\d.]+%?\s*(?:,\s*[\d.]+\s*)?\)|hsla?\(\s*[\d.]+\s*,\s*[\d.]+%\s*,\s*[\d.]+%\s*(?:,\s*[\d.]+\s*)?\))$/i;
+  // Renk değerini çözer: { sinif } (tahta adı) | { deger } (gerçek renk) | null (tanınmadı).
+  function renkCoz(r) {
+    if (typeof r !== 'string') return null;
+    const k = r.trim().toLowerCase().replace(/ı/g, 'i').replace(/[\s_]+/g, '-');
+    if (TAHTA_RENK.has(k)) return { sinif: k };
+    if (DOKU_RENK[k]) return { deger: DOKU_RENK[k] };
+    if (k === 'diseti' || k === 'gingiva') return { deger: DOKU_RENK['dis-eti'] };
+    if (k === 'implant' || k === 'titan') return { deger: DOKU_RENK.titanyum };
+    if (RENK_KALIBI.test(r.trim())) return { deger: r.trim() };
+    return null;
+  }
+  function oran(x, varsayilan) {
+    const n = Number(x);
+    return Number.isFinite(n) ? Math.min(Math.max(n, 0), 1) : varsayilan;
+  }
+
+  // Kaynak sayfası penceresi (tahtanın üstünde; dokununca ya da Esc ile kapanır).
+  function kaynakAc(src, baslik) {
+    const eski = document.querySelector('.kaynak-pencere');
+    if (eski) eski.remove();
+    const p = el('div', 'kaynak-pencere');
+    p.setAttribute('role', 'dialog');
+    const ust = el('div', 'kaynak-pencere-ust');
+    ust.appendChild(el('span', null, baslik));
+    const kapat = el('button', 'kaynak-kapat', '✕ Kapat');
+    kapat.type = 'button';
+    ust.appendChild(kapat);
+    const govde = el('div', 'kaynak-pencere-govde');
+    const img = el('img');
+    img.alt = baslik;
+    img.src = src;
+    const hata = el('p', 'kaynak-hata', 'Sayfa açılamadı: makalenin PDF\'i bu bilgisayarda olmayabilir (Makaleler sayfasından ekleyin).');
+    hata.hidden = true;
+    img.addEventListener('error', () => { img.hidden = true; hata.hidden = false; });
+    govde.append(img, hata);
+    p.append(ust, govde);
+    const kapa = () => { p.remove(); document.removeEventListener('keydown', tus, true); };
+    const tus = (e) => { if (e.key === 'Escape') { e.stopPropagation(); kapa(); } };
+    kapat.addEventListener('click', kapa);
+    p.addEventListener('click', (e) => { if (e.target === p) kapa(); });
+    document.addEventListener('keydown', tus, true);
+    document.body.appendChild(p);
+  }
+
   function rich(parent, text) {
     const parts = String(text).split(/(\*\*[^*]+\*\*|_[^_]+_)/g);
     for (const p of parts) {
@@ -291,6 +345,32 @@
       return p;
     }
 
+    // Tıklanabilir kaynak: {type:'kaynak', text:'Su ve ark. 2010, s. 8', makale?:'<kaynak kimliği ya da kısa adı>',
+    // sayfa:8}. Dokununca makalenin o sayfası (öğrencinin kendi PDF'inden) büyük açılır. makale verilmezse dersin
+    // kendi kaynak sayfa görseli (sayfa-NN) kullanılır.
+    cmd_kaynak(c) {
+      const sayfa = parseInt(c.sayfa, 10);
+      const b = el('button', 'note-kaynak');
+      b.type = 'button';
+      b.appendChild(el('span', 'note-kaynak-ikon', '📄'));
+      b.appendChild(rich(el('span'), c.text || ('Kaynak, s. ' + (sayfa || '?'))));
+      const ders = this.lesson && this.lesson.id;
+      let src = null;
+      if (c.makale && ders && sayfa > 0) {
+        src = '/api/makale/sayfa?' + new URLSearchParams({ ders, kaynak: String(c.makale), sayfa: String(sayfa) });
+      } else if (sayfa > 0) {
+        const a = (this.lesson.assets || {})['sayfa-' + String(sayfa).padStart(2, '0')];
+        if (a) src = a.src;
+      }
+      if (!src) { b.disabled = true; b.title = 'Bu sayfanın görüntüsü yok'; }
+      else {
+        b.title = 'Sayfayı aç';
+        b.addEventListener('click', () => kaynakAc(src, c.text || ''));
+      }
+      this.notes.appendChild(b);
+      return b;
+    }
+
     cmd_term(c) {
       const d = el('div', 'note-term');
       d.appendChild(rich(el('dt'), c.term));
@@ -418,16 +498,59 @@
       for (const h of c.headers) hr.appendChild(rich(el('th'), h));
       thead.appendChild(hr);
       const tb = el('tbody');
-      for (const row of c.rows) {
+      c.rows.forEach((row, r) => {
         const tr = el('tr');
-        for (const cell of row) tr.appendChild(rich(el('td'), cell));
+        row.forEach((cell, k) => {
+          const td = rich(el('td'), cell);
+          // "?" hücresi: öğrenci dokunup seçenekten seçer (ya da yazar). Seçim this.onTabloYanit ile canlı tahtaya gider.
+          if (String(cell).trim() === '?') this._soruHucresi(td, c, r, k);
+          tr.appendChild(td);
+        });
         tb.appendChild(tr);
-      }
+      });
       t.append(thead, tb);
       wrap.appendChild(t);
       if (c.caption) wrap.appendChild(rich(el('p', 'table-caption'), c.caption));
       this._setVisual(wrap);
       return wrap;
+    }
+
+    _soruHucresi(td, c, r, k) {
+      const anahtar = r + ',' + k;
+      const secenekler = ((c.secenekler || {})[anahtar] || (c.sutun_secenekleri || {})[String(k)] || []).map(String);
+      const dogru = (c.dogru || {})[anahtar];
+      const satirAdi = String((c.rows[r] || [])[0] || '').replace(/[*_`]/g, '');
+      const sutunAdi = String((c.headers || [])[k] || '').replace(/[*_`]/g, '');
+      td.textContent = '';
+      const btn = el('button', 'tablo-soru', '?');
+      btn.type = 'button';
+      btn.title = 'Dokunup cevaplayın';
+      td.appendChild(btn);
+      td.classList.add('soru-hucresi');
+      const kapat = () => { const p = td.querySelector('.tablo-secenekler'); if (p) p.remove(); };
+      const sec = (yanit) => {
+        kapat();
+        btn.textContent = yanit;
+        btn.classList.add('secildi');
+        if (dogru != null) btn.classList.add(String(dogru).trim() === yanit.trim() ? 'dogru' : 'yanlis');
+        if (this.onTabloYanit) this.onTabloYanit({ satir: satirAdi, sutun: sutunAdi, yanit, secenekli: secenekler.length > 0, tablo: c.title || '' });
+      };
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (td.querySelector('.tablo-secenekler')) return kapat();
+        if (!secenekler.length) {
+          if (this.onTabloYanit) this.onTabloYanit({ satir: satirAdi, sutun: sutunAdi, yaz: true, tablo: c.title || '' });
+          return;
+        }
+        const pop = el('div', 'tablo-secenekler');
+        for (const s of secenekler) {
+          const b = el('button', 'tablo-secenek', s);
+          b.type = 'button';
+          b.addEventListener('click', (ev) => { ev.stopPropagation(); sec(s); });
+          pop.appendChild(b);
+        }
+        td.appendChild(pop);
+      });
     }
 
     cmd_flow(c) {
@@ -540,6 +663,8 @@
     // Anatomik şablonda gecis (sn) verilirse ve tahtada aynı şablon varsa, çizim eski durumdan yenisine
     // akarak geçer (ör. sağlıklı → gingivitis): dişeti şişer, cep derinleşir, kemik geriler.
     cmd_draw(c, instant) {
+      // Etiket sürüklemede şablonun kendi etiketleri çizilmez; öğrenci yerleştirir.
+      if (c.etiket_surukle) c = Object.assign({}, c, { labels: [] });
       const wrap = el('div', 'board-draw');
       if (c.title) wrap.appendChild(rich(el('h3'), c.title));
       const s = svg('svg', { viewBox: c.viewBox || '0 0 160 90', class: 'draw-svg' });
@@ -573,20 +698,150 @@
           wrap._etiketler = etiketKumesi(c);
         }
       }
+      // Serbest şekillerde gecis: önceki çizimde aynı id'li şekil varsa yeni hâline akarak geçer.
+      const oncekiCizim = this.visual.querySelector('.board-draw');
+      const gecisSure = Math.min(Math.max(Number(c.gecis) || 0, 0), 10);
+      const eskiSekiller = !instant && gecisSure > 0 && oncekiCizim && oncekiCizim._sekiller &&
+        (oncekiCizim.dataset.viewBox || '') === (c.viewBox || '0 0 160 90') ? oncekiCizim._sekiller : null;
+      wrap.dataset.viewBox = c.viewBox || '0 0 160 90';
+      wrap._sekiller = new Map();
       this._setVisual(wrap);
 
       let delay = 0;
+      const akis = [];
+      const yeniIdler = new Set();
       for (const sh of c.shapes || []) {
+        if (sh && sh.id != null) { wrap._sekiller.set(String(sh.id), sh); yeniIdler.add(String(sh.id)); }
+        const eski = eskiSekiller && sh && sh.id != null ? eskiSekiller.get(String(sh.id)) : null;
+        if (eski && eski.kind === sh.kind) {
+          const node = this._shape(eski);
+          if (!node) continue;
+          s.appendChild(node);
+          akis.push({ node, eski, yeni: sh });
+          continue;
+        }
         const node = this._shape(sh);
         if (!node) continue;
         s.appendChild(node);
         if (!instant) {
-          node.style.animationDelay = delay + 's';
+          node.style.animationDelay = (eskiSekiller ? gecisSure * 0.5 : 0) + delay + 's';
           node.classList.add(sh.kind === 'text' ? 'fade-in' : 'stroke-in');
           delay += sh.kind === 'text' ? 0.2 : 0.5;
         }
       }
+      if (eskiSekiller) {
+        // Yeni çizimde olmayan eski şekiller yavaşça solar.
+        for (const [id, eski] of eskiSekiller) {
+          if (yeniIdler.has(id)) continue;
+          const node = this._shape(eski);
+          if (!node) continue;
+          s.appendChild(node);
+          akis.push({ node, eski, yeni: null });
+        }
+      }
+      if (akis.length) {
+        const a = this._sekilAkisi(akis, gecisSure);
+        this._anim = this._anim ? Promise.all([this._anim, a]) : a;
+      }
+      // E aşaması: şablonda dokunarak işaretleme ve etiket sürükleme (js/board-etkilesim.js).
+      if (c.template && (c.isaretle || c.etiket_surukle) && this._etkilesim) {
+        const bekle = this._anim || Promise.resolve();
+        bekle.then(() => { if (wrap.isConnected) this._etkilesim(wrap, s, c); });
+      }
       return wrap;
+    }
+
+    // Serbest şekil geçişi: aynı türdeki şeklin sayısal öznitelikleri (konum, boyut, eğrinin noktaları) `sure`
+    // saniyede ara değerlerle çizilir; renkler CSS geçişiyle değişir. Eğrilerin komut yapısı farklıysa (ör. 3 noktalı
+    // eğriden 5 noktalıya) eski şekil solar, yenisi belirir. Duraklatılınca bekler.
+    _sekilAkisi(akis, sure) {
+      const ATTR = { line: ['x1', 'y1', 'x2', 'y2'], arrow: ['x1', 'y1', 'x2', 'y2'], rect: ['x', 'y', 'w', 'h', 'r'],
+        ellipse: ['cx', 'cy', 'rx', 'ry'], text: ['x', 'y', 'size'] };
+      const AD = { w: 'width', h: 'height', r: 'rx', size: 'font-size' };
+      const sayilar = (d) => String(d || '').match(/-?\d*\.?\d+(?:e-?\d+)?/gi) || [];
+      const iskelet = (d) => String(d || '').replace(/-?\d*\.?\d+(?:e-?\d+)?/gi, '#').replace(/[\s,]+/g, ' ').trim();
+      const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
+      const isler = [];
+      for (const a of akis) {
+        const { node, eski, yeni } = a;
+        if (!yeni) { a.tur = 'sol'; continue; }
+        if (eski.kind === 'path') {
+          const s0 = sayilar(eski.d), s1 = sayilar(yeni.d);
+          if (iskelet(eski.d) === iskelet(yeni.d) && s0.length === s1.length) {
+            const parca = String(yeni.d).split(/-?\d*\.?\d+(?:e-?\d+)?/gi);
+            a.tur = 'yol'; a.s0 = s0.map(Number); a.s1 = s1.map(Number); a.parca = parca;
+          } else {
+            a.tur = 'capraz';
+            a.yeniNode = this._shape(yeni);
+            if (a.yeniNode) { a.yeniNode.style.opacity = '0'; node.after(a.yeniNode); }
+          }
+        } else {
+          a.tur = 'sayi';
+          a.alanlar = (ATTR[eski.kind] || []).filter((k) => Number.isFinite(Number(eski[k])) || Number.isFinite(Number(yeni[k])));
+          if (eski.kind === 'ellipse' && eski.ry == null) eski.ry = eski.rx;
+          if (yeni.kind === 'ellipse' && yeni.ry == null) yeni.ry = yeni.rx;
+        }
+        // Renk, kalınlık, saydamlık: hedef şeklin stilleri CSS geçişiyle uygulanır.
+        const hedef = this._shape(yeni);
+        if (hedef && a.tur !== 'capraz') {
+          node.style.transition = ['fill', 'stroke', 'fill-opacity', 'stroke-width'].map((p) => p + ' ' + sure + 's ease-in-out').join(',');
+          a.stil = hedef;
+        }
+      }
+      const kare = (t) => {
+        const e = ease(t);
+        for (const a of akis) {
+          if (a.tur === 'sol') a.node.style.opacity = String(1 - t);
+          else if (a.tur === 'capraz') {
+            a.node.style.opacity = String(1 - e);
+            if (a.yeniNode) a.yeniNode.style.opacity = String(e);
+          } else if (a.tur === 'yol') {
+            let d = a.parca[0];
+            for (let i = 0; i < a.s0.length; i++) d += +(a.s0[i] + (a.s1[i] - a.s0[i]) * e).toFixed(3) + a.parca[i + 1];
+            a.node.setAttribute('d', d);
+          } else if (a.tur === 'sayi') {
+            for (const k of a.alanlar) {
+              const v0 = Number(a.eski[k]), v1 = Number(a.yeni[k]);
+              const v = Number.isFinite(v0) && Number.isFinite(v1) ? v0 + (v1 - v0) * e : (Number.isFinite(v1) ? v1 : v0);
+              a.node.setAttribute(AD[k] || k, +v.toFixed(3));
+            }
+            if (a.eski.kind === 'text' && t >= 0.5 && a.node.textContent !== String(a.yeni.text)) a.node.textContent = a.yeni.text;
+          }
+        }
+      };
+      const son = () => {
+        kare(1);
+        for (const a of akis) {
+          if (a.tur === 'sol' || a.tur === 'capraz') a.node.remove();
+          if (a.yeniNode) a.yeniNode.style.opacity = '';
+          if (a.stil) {
+            a.node.style.transition = '';
+            for (const p of ['fill', 'stroke', 'fillOpacity', 'strokeWidth']) a.node.style[p] = a.stil.style[p];
+            a.node.setAttribute('class', a.stil.getAttribute('class'));
+          }
+        }
+      };
+      kare(0);
+      requestAnimationFrame(() => {
+        for (const a of akis) {
+          if (!a.stil) continue;
+          for (const p of ['fill', 'stroke', 'fillOpacity', 'strokeWidth']) a.node.style[p] = a.stil.style[p];
+        }
+      });
+      return new Promise((bitti) => {
+        let gecen = 0, onceki = performance.now();
+        const adim = (simdi) => {
+          const bagli = akis.some((a) => a.node.isConnected);
+          if (!bagli) { son(); return bitti(); }
+          if (!Board.animDurdu) gecen += simdi - onceki;
+          onceki = simdi;
+          const t = Math.min(gecen / (sure * 1000), 1);
+          if (t >= 1) { son(); return bitti(); }
+          kare(t);
+          requestAnimationFrame(adim);
+        };
+        requestAnimationFrame(adim);
+      });
     }
 
     // Şablonu prev'in durumundan c'nin durumuna `sure` saniyede kare kare çizer. Duraklatılınca
@@ -639,8 +894,43 @@
       return a ? a.then(() => { if (this._anim === a) this._anim = null; }) : Promise.resolve();
     }
 
+    // Şekil rengi: color (çizgi ve yazı), fill (true | renk adı | doku adı | hex), opacity (dolgunun saydamlığı,
+    // 0–1), stroke (çizgi rengi ya da "none"), width (çizgi kalınlığı).
     _shape(sh) {
-      const cls = 'shape ' + (sh.color || 'chalk') + (sh.dashed ? ' dashed' : '') + (sh.fill ? ' filled' : '');
+      const node = this._shapeNode(sh);
+      if (!node) return null;
+      const renk = renkCoz(sh.color);
+      const ozel = renk && renk.deger;
+      if (sh.kind === 'text') {
+        if (ozel) node.style.fill = renk.deger;
+        return node;
+      }
+      if (ozel) node.style.stroke = renk.deger;
+      const cizgi = sh.stroke === 'none' || sh.stroke === false ? { deger: 'none' } : renkCoz(sh.stroke);
+      if (cizgi) node.style.stroke = cizgi.sinif ? 'var(--' + (cizgi.sinif === 'muted' ? 'chalk-dim' : cizgi.sinif) + ')' : cizgi.deger;
+      const w = Number(sh.width);
+      if (Number.isFinite(w) && w > 0) node.style.strokeWidth = String(Math.min(w, 6));
+      if (sh.fill && sh.fill !== true) {
+        const d = renkCoz(sh.fill);
+        if (d && d.deger) {
+          node.style.fill = d.deger;
+          node.style.fillOpacity = String(oran(sh.opacity, 1));
+        } else if (d && d.sinif) {
+          node.style.fill = 'var(--' + (d.sinif === 'muted' ? 'chalk-dim' : d.sinif) + ')';
+          node.style.fillOpacity = String(oran(sh.opacity, 0.35));
+        }
+      } else if (sh.fill === true && sh.opacity != null && ozel) {
+        node.style.fill = renk.deger;
+        node.style.fillOpacity = String(oran(sh.opacity, 0.2));
+      }
+      if (node.style.fill && sh.kind !== 'line' && sh.kind !== 'arrow') node.classList.add('dolgu-belir');
+      return node;
+    }
+
+    _shapeNode(sh) {
+      const r = renkCoz(sh.color);
+      const sinif = r && r.sinif ? r.sinif : 'chalk';
+      const cls = 'shape ' + sinif + (sh.dashed ? ' dashed' : '') + (sh.fill ? ' filled' : '');
       switch (sh.kind) {
         case 'line':
         case 'arrow':
@@ -655,7 +945,7 @@
         case 'path':
           return svg('path', { d: sh.d, class: cls, pathLength: 1 });
         case 'text': {
-          const t = svg('text', { x: sh.x, y: sh.y, class: 'shape-text ' + (sh.color || 'chalk'), 'text-anchor': sh.anchor || 'middle', 'font-size': sh.size || 5 });
+          const t = svg('text', { x: sh.x, y: sh.y, class: 'shape-text ' + sinif, 'text-anchor': sh.anchor || 'middle', 'font-size': sh.size || 5 });
           t.textContent = sh.text;
           return t;
         }
@@ -666,6 +956,8 @@
     }
   }
 
+  Board.renkCoz = renkCoz; // testler ve belge için
+  Board.DOKU_RENK = DOKU_RENK;
   Board.animDurdu = false; // canlı tahtada Duraklat tuşu canlandırmayı da bekletir
   AT.Board = Board;
 })(window.AT = window.AT || {});

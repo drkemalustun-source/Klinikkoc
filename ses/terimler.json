@@ -4,7 +4,9 @@
   {"bozuk": "nekrotizangin gibi test", "dogru": "nekrotizan gingivitis"},
   {"bozuk": "nekro tizangin gibi testi", "dogru": "nekrotizan gingivitis"},
   {"bozuk": "nekro tizangin gibi test", "dogru": "nekrotizan gingivitis"},
-  {"bozuk": "birleşim epiteliği", "dogru": "birleşim epiteli"}
+  {"bozuk": "birleşim epiteliği", "dogru": "birleşim epiteli"},
+  {"bozuk": "sunumlu kalesini", "dogru": "sunumlu hâlini"},
+  {"bozuk": "sunumlu kalesi", "dogru": "sunumlu hâli"}
  ],
  "terimler": [
   "nekrotizan gingivitis", "nekrotizan periodontitis", "nekrotizan stomatitis", "nekrotizan periodontal hastalıklar",

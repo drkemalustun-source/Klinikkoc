@@ -16,7 +16,7 @@
     <header class="topbar">
       <span class="canli-dot" id="dot" title="Bağlantı"></span>
       <div class="topbar-titles">
-        <div class="lesson-name" id="dersAdi">Canlı tahta · Claude</div>
+        <div class="lesson-name" id="dersAdi">Canlı tahta · Claude</div><span class="canli-surum" id="surumEtiket" title="KlinikKoç sürümü"></span>
         <div class="section-name" id="durum">Bağlanıyor…</div>
       </div>
       <span class="canli-ses" id="sesMotor" role="status" hidden></span>
@@ -25,10 +25,28 @@
       <button class="ctrl-btn speed canli-sihirbaz-dugme" id="sihirbazAc" aria-pressed="false" hidden
               title="Öğretmen: ders hazırlama sihirbazını tahtadan çıkmadan açar (tahta olduğu gibi kalır)">Sihirbaz</button>
       <button class="ctrl-btn speed" id="hiz" aria-label="Anlatım hızı" title="Anlatım hızı">1,2×</button>
+      <button class="icon-btn canli-ayar-dugme" id="ayarAc" aria-haspopup="dialog" aria-controls="ayarMenu" aria-expanded="false"
+              title="Ayarlar: tahta zemini, yan paneller, mola">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8"/></svg>
+      </button>
       <button class="icon-btn" id="tamEkran" aria-label="Tam ekran" title="Tam ekran (F)">
         <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
       </button>
     </header>
+
+    <div class="canli-menu canli-ayar" id="ayarMenu" role="dialog" aria-label="Ayarlar" hidden>
+      <div class="canli-menu-baslik">Tahta zemini</div>
+      <div class="canli-ayar-secim" role="radiogroup" aria-label="Tahta zemini">
+        <label><input type="radio" name="zemin" value="acik" id="zeminAcik"> <span>Açık (kırık beyaz)</span></label>
+        <label><input type="radio" name="zemin" value="koyu" id="zeminKoyu"> <span>Koyu (lacivert)</span></label>
+      </div>
+      <div class="canli-menu-baslik">Yan paneller</div>
+      <label class="canli-ayar-kutu"><input type="checkbox" id="panelAkis"> <span><b>Ders akışı</b><small>Bu oturumda tahtaya gelen konular ve anlatımın neresinde olduğunuz</small></span></label>
+      <label class="canli-ayar-kutu"><input type="checkbox" id="panelIlerleme"> <span><b>İlerleme</b><small>Dersin hedefleri ve her birinde nerede olduğunuz</small></span></label>
+      <div class="canli-menu-baslik">Mola</div>
+      <button class="btn" id="molaVer" type="button">☕ Mola ver</button>
+      <div class="canli-menu-not">Seçimleriniz bu bilgisayarda hatırlanır.</div>
+    </div>
 
     <div class="canli-sihirbaz" id="sihirbazKat" hidden>
       <iframe id="sihirbazCerceve" title="Ders hazırlama sihirbazı"></iframe>
@@ -42,6 +60,20 @@
       </div>
       <div class="question" id="question" hidden></div>
     </div>
+
+    <aside class="canli-panel" id="yanPanel" aria-label="Yan panel" hidden>
+      <section class="canli-panel-bolum" id="akisBolum" hidden>
+        <h3>Ders akışı</h3>
+        <div class="canli-panel-adim" id="akisAdim"></div>
+        <ol class="canli-akis" id="akisListe"></ol>
+        <p class="canli-panel-bos" id="akisBos">Konular tahtaya geldikçe burada sıralanır.</p>
+      </section>
+      <section class="canli-panel-bolum" id="ilerlemeBolum" hidden>
+        <h3>İlerleme</h3>
+        <ul class="canli-ilerleme" id="ilerlemeListe"></ul>
+        <p class="canli-panel-bos" id="ilerlemeBos">Bir ders açılınca hedefleri burada görünür.</p>
+      </section>
+    </aside>
 
     <!-- Alt bölüm: konuşma şeridi (son iki ileti) ve yazma kutusu. Mikrofonla söylenen de bu kutuya yazılır. -->
     <footer class="canli-alt">
@@ -134,6 +166,17 @@
     </div>
   </div>
 
+  <!-- Mola: anlatım bekler, süre görünür; Devam ile kaldığı yerden sürer. -->
+  <div class="canli-baslat canli-mola" id="mola" hidden>
+    <div class="q-card">
+      <div class="q-tag">Mola</div>
+      <h3 class="q-prompt">Biraz dinlenin.</h3>
+      <p class="canli-mola-sure" id="molaSure">0:00</p>
+      <p class="canli-not">Anlatım kaldığı yerde bekliyor. Hazır olunca devam edin.</p>
+      <div class="q-actions"><button class="btn primary" id="molaBitir" type="button">▶ Devam</button></div>
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status" hidden></div>
 
   <script src="config.js"></script>
@@ -141,7 +184,10 @@
   <script src="js/speech.js"></script>
   <script src="js/anatomi.js"></script>
   <script src="js/anatomi-bolge.js"></script>
+  <script src="js/anatomi-kontur.js"></script>
   <script src="js/board.js"></script>
+  <script src="js/board-etkilesim.js"></script>
+  <script src="js/tahta-goruntu.js"></script>
   <script src="js/canli.js"></script>
 </body>
 </html>

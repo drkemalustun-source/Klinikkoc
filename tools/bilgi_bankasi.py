@@ -5,7 +5,7 @@ vaka kartlarını tek bir SQLite dosyasında arar.
 İki arama birlikte çalışır (karma arama):
   1. Sözcük araması (SQLite FTS5). Hiçbir kurulum gerektirmez, her zaman açıktır.
      Türkçe ekler için sözcüklerin ilk 5 harfiyle önek araması yapılır: "iltihabı" → "iltih*".
-  2. Anlam araması (isteğe bağlı). Küçük, çevrimdışı çalışan çok dilli bir model
+  2. Anlam araması (kurulumla gelir; kurulamazsa kapalı kalır). Küçük, çevrimdışı çalışan çok dilli bir model
      (multilingual-e5-small, MIT lisanslı, ~120 MB) her parçayı bir sayı dizisine çevirir;
      sorguya anlamca yakın parçalar, aynı sözcükleri içermese de bulunur.
   İki sıralama "karşılıklı sıra birleştirme" (RRF) ile tek listeye indirilir.
@@ -13,7 +13,7 @@ vaka kartlarını tek bir SQLite dosyasında arar.
 Kullanım:
   python tools/bilgi_bankasi.py --dizinle            bütün dersleri dizinler (.dizin/bilgi.sqlite)
   python tools/bilgi_bankasi.py --ara "nekrotizan"   arama yapar
-  python tools/bilgi_bankasi.py --kur-anlam          anlam araması için paketleri ve modeli kurar (bir kez)
+  python tools/bilgi_bankasi.py --kur-anlam          anlam araması için paketleri ve modeli kurar (kurulum betiği çağırır)
   python tools/bilgi_bankasi.py --durum              dizinin ve modelin durumunu gösterir
 
 Dizin her bilgisayarda yeniden üretilir; depoya girmez. Yalnız Python'un kendi kitaplığı
@@ -44,7 +44,7 @@ DIZIN = os.environ.get("KLINIK_KOC_DIZIN") or os.path.join(KOK, ".dizin", "bilgi
 MODEL_KLASORU = os.environ.get("KLINIK_KOC_MODEL") or os.path.join(KOK, ".modeller", "multilingual-e5-small")
 MODEL_ADRESI = "https://huggingface.co/Xenova/multilingual-e5-small/resolve/main/"
 MODEL_DOSYALARI = {"model.onnx": "onnx/model_quantized.onnx", "tokenizer.json": "tokenizer.json"}
-SURUM = 2              # parçalama kuralı değişince artır: bütün dersler yeniden dizinlenir
+SURUM = 3              # parçalama kuralı değişince artır: bütün dersler yeniden dizinlenir
 PARCA_SOZCUK = 110      # bir parçadaki yaklaşık sözcük sayısı
 ORTUSME = 25            # komşu parçalar arasında ortak sözcük (bağlam kopmasın)
 RRF_K = 60
@@ -146,14 +146,90 @@ def onekler(w):
     return sonuc
 
 
+# ---------- Türkçe–İngilizce terim eşlemesi ----------
+# Makalelerin çoğu İngilizcedir; Türkçe soru ("diş eti cebi") İngilizce metinde ("periodontal pocket") sözcük
+# aramasıyla bulunamaz. ses/terimler-tr-en.json (ve kalıcı veri klasöründeki aynı adlı dosya) Türkçe terimleri
+# İngilizce karşılıklarına eşler; sözcük araması ikisini birlikte arar. Anlam araması kurulu olmasa da çalışır.
+ESLESME_DOSYASI = os.path.join(KOK, "ses", "terimler-tr-en.json")
+_ESLESME = {"anahtar": None, "liste": []}
+
+
+def _eslesme_dosyalari():
+    yollar = [ESLESME_DOSYASI]
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import veri_yeri
+        yollar.append(os.path.join(veri_yeri.veri_kok(), "terimler-tr-en.json"))
+    except Exception:
+        pass
+    return yollar
+
+
+def eslesme_listesi():
+    """[(türkçe sözcükler, [ingilizce sözcük dizileri])], uzun terim önce. Dosya değişince yeniden okunur."""
+    yollar = _eslesme_dosyalari()
+    anahtar = tuple((y, os.path.getmtime(y)) for y in yollar if os.path.exists(y))
+    if anahtar == _ESLESME["anahtar"]:
+        return _ESLESME["liste"]
+    sozluk = {}
+    for y, _ in anahtar:
+        try:
+            with open(y, encoding="utf-8") as f:
+                veri = json.load(f).get("eslesmeler") or {}
+        except (OSError, ValueError, AttributeError):
+            continue
+        for tr, en in veri.items():
+            tw = tuple(sozcukler(tr))
+            enler = [sozcukler(e) for e in ([en] if isinstance(en, str) else en or [])]
+            if tw and enler:
+                sozluk.setdefault(tw, [])
+                sozluk[tw] += [e for e in enler if e and e not in sozluk[tw]]
+    _ESLESME.update(anahtar=anahtar, liste=sorted(sozluk.items(), key=lambda x: -len(x[0])))
+    return _ESLESME["liste"]
+
+
+def _ayni_sozcuk(q, t):
+    """Sorgudaki sözcük (ek almış olabilir) terimin sözcüğü mü? "cebi" ~ "cep", "çekilmesinin" ~ "çekilmesi"."""
+    if q == t or kok(q) == kok(t):
+        return True
+    return len(t) >= 3 and q.startswith(t) and len(q) - len(t) <= 5 or \
+        len(t) >= 3 and t[-1] in YUMUSAMA.values() and q.startswith(t[:-1]) and len(q) - len(t) <= 4 and \
+        q[len(t) - 1] in YUMUSAMA and YUMUSAMA[q[len(t) - 1]] == t[-1]
+
+
+def ingilizce_karsiliklar(sorgu):
+    """Sorgudaki Türkçe terimlerin İngilizce karşılıkları: {sorgu sözcüğü: [ingilizce sözcük dizileri]}.
+    Çok sözcüklü terim önce eşlenir; terimin her sözcüğü bütün karşılıkları alır (dayanak ölçümü için)."""
+    q = sozcukler(sorgu)
+    kullanildi = [False] * len(q)
+    out = {}
+    for tw, enler in eslesme_listesi():
+        n = len(tw)
+        for i in range(len(q) - n + 1):
+            if any(kullanildi[i:i + n]) or not all(_ayni_sozcuk(q[i + j], tw[j]) for j in range(n)):
+                continue
+            for j in range(n):
+                kullanildi[i + j] = True
+                out.setdefault(q[i + j], [])
+                out[q[i + j]] += [e for e in enler if e not in out[q[i + j]]]
+    return out
+
+
+def _ifade_en(e):
+    return '"%s"*' % " ".join(x.replace('"', "") for x in e)
+
+
 def fts_sorgusu(sorgu):
-    """Kullanıcının sorgusunu FTS5 ifadesine çevirir. Sözcükler köküne yakın bir önekle aranır."""
+    """Kullanıcının sorgusunu FTS5 ifadesine çevirir. Sözcükler köküne yakın bir önekle aranır; Türkçe terimlerin
+    İngilizce karşılıkları da (öbek olarak) eklenir."""
     parca = []
     for w in sozcukler(sorgu):
         if len(w) < 2:
             continue
         w = w.replace('"', "")
         parca += ['"%s"*' % x for x in onekler(w)]
+    for enler in ingilizce_karsiliklar(sorgu).values():
+        parca += [_ifade_en(e) for e in enler]
     return " OR ".join(dict.fromkeys(parca))
 
 
@@ -364,24 +440,34 @@ def ders_imzasi(ders):
     """Dersin dizine giren dosyalarının değişip değişmediğini anlamak için kısa bir özet."""
     h = hashlib.sha1(("surum %d;" % SURUM).encode())
     klasor = os.path.join(KOK, "lessons", ders)
+    # makale-metin: öğrencinin bilgisayarında PDF'ten çıkarılan makale sayfaları. Eskiden imzaya girmiyordu; ders
+    # bir kez dizinlendikten sonra eklenen makale "değişmedi" sanılıp aramaya hiç girmiyordu (4.0.2'de düzeltildi).
     for yol in sorted(glob.glob(os.path.join(klasor, "*.json")) + glob.glob(os.path.join(klasor, "kaynak", "*.txt")) +
-                      glob.glob(os.path.join(klasor, "vakalar", "*.json"))):
+                      glob.glob(os.path.join(klasor, "vakalar", "*.json")) +
+                      glob.glob(os.path.join(klasor, "makale-metin", "*", "*.txt")) +
+                      glob.glob(os.path.join(klasor, "makale-metin", "*", "bilgi.json"))):
         st = os.stat(yol)
         h.update(("%s|%d|%d;" % (os.path.relpath(yol, klasor), st.st_size, int(st.st_mtime))).encode())
     return h.hexdigest()
 
 
 def dizinle(dersler=None, model=None, yol=DIZIN, sessiz=False):
-    """Dersleri dizinler. Değişmemiş dersler atlanır. model verilirse anlam vektörleri de hesaplanır."""
+    """Dersleri dizinler. Değişmemiş dersler atlanır. model verilirse anlam vektörleri de hesaplanır.
+    model verilmezse (hızlı sözcük dizini) anlam vektörleriyle dizinlenmiş güncel bir ders de güncel sayılır:
+    vektörleri silinmez. Her ders ayrı kaydedilir; uzun süren anlam işlemesi aramaları kilitlemez."""
     db = baglan(yol)
     rapor = []
     hepsi = ders_kimlikleri()
+    anlamli = bool(model and model.hazir)
+    degisti = False
     for ders in (dersler or hepsi):
-        imza = ders_imzasi(ders) + ("+anlam" if model and model.hazir else "")
+        taban = ders_imzasi(ders)
+        imza = taban + ("+anlam" if anlamli else "")
         eski = db.execute("SELECT deger FROM bilgi WHERE anahtar=?", ("imza:" + ders,)).fetchone()
-        if eski and eski[0] == imza:
+        if eski and (eski[0] == imza or (not anlamli and eski[0] == taban + "+anlam")):
             rapor.append({"ders": ders, "durum": "güncel"})
             continue
+        degisti = True
         parcalar = ders_parcalari(ders)
         vektorler = model.vektorler([p["metin"] for p in parcalar]) if (model and model.hazir and parcalar) else None
         db.execute("DELETE FROM parca WHERE ders=?", (ders,))
@@ -392,14 +478,20 @@ def dizinle(dersler=None, model=None, yol=DIZIN, sessiz=False):
                            (ders, p["tur"], p.get("baslik"), p["metin"], p.get("sayfa"), p.get("bolum"), p.get("adim"),
                             p.get("hedef"), p.get("vaka"), p.get("kaynak"), vek))
         db.execute("INSERT OR REPLACE INTO bilgi VALUES (?,?)", ("imza:" + ders, imza))
+        # Sözcük dizini her dersten sonra yenilenir (birkaç bin parça için bir saniyenin altında): arka planda
+        # süren anlam işlemesi sırasında yapılan aramalar da tutarlı sonuç alır.
+        db.execute("INSERT INTO parca_fts(parca_fts) VALUES('rebuild')")
+        db.commit()
         rapor.append({"ders": ders, "durum": "dizinlendi", "parca": len(parcalar), "anlam": bool(vektorler)})
     # Silinmiş derslerin parçalarını temizle
     for (ders,) in db.execute("SELECT DISTINCT ders FROM parca").fetchall():
         if ders not in hepsi:
             db.execute("DELETE FROM parca WHERE ders=?", (ders,))
             db.execute("DELETE FROM bilgi WHERE anahtar=?", ("imza:" + ders,))
-    # Sözcük dizini parça tablosundan baştan kurulur (birkaç bin parça için bir saniyenin altında).
-    db.execute("INSERT INTO parca_fts(parca_fts) VALUES('rebuild')")
+            degisti = True
+    eski_surum = db.execute("SELECT deger FROM bilgi WHERE anahtar='surum'").fetchone()
+    if degisti or not eski_surum or eski_surum[0] != str(SURUM):
+        db.execute("INSERT INTO parca_fts(parca_fts) VALUES('rebuild')")
     db.execute("INSERT OR REPLACE INTO bilgi VALUES ('surum', ?)", (str(SURUM),))
     db.execute("INSERT OR REPLACE INTO bilgi VALUES ('tarih', ?)", (time.strftime("%Y-%m-%d %H:%M"),))
     if model and model.hazir:
@@ -411,6 +503,21 @@ def dizinle(dersler=None, model=None, yol=DIZIN, sessiz=False):
             print("%-32s %s%s" % (r["ders"], r["durum"], (" (%d parça%s)" % (r["parca"], ", anlam" if r["anlam"] else ""))
                                   if r.get("parca") is not None else ""))
     return rapor
+
+
+def makale_parca_sayilari(ders, yol=DIZIN):
+    """Dersin makale metinlerinden kaç parçanın aramada olduğu: {makale kısa adı: parça sayısı}."""
+    out = {}
+    if not os.path.exists(yol):
+        return out
+    db = baglan(yol)
+    try:
+        for (kaynak,) in db.execute("SELECT kaynak FROM parca WHERE ders=? AND tur='kaynak'", (ders,)):
+            ad = re.sub(r", s\. \d+$", "", kaynak or "")
+            out[ad] = out.get(ad, 0) + 1
+    finally:
+        db.close()
+    return out
 
 
 def _filtre(ders, tur):
@@ -434,27 +541,39 @@ def _onek(w):
     return onekler(w)[0]
 
 
-def _agirliklar(db, sozler):
-    """Nadir sözcük ağır sayılır (IDF). Dizinde hiç geçmeyen sözcük en ağırdır."""
+def _agirliklar(db, sozler, esler=None):
+    """Nadir sözcük ağır sayılır (IDF). Dizinde hiç geçmeyen sözcük en ağırdır. İngilizce karşılığı olan Türkçe
+    sözcüğün sıklığı karşılıklarıyla birlikte sayılır."""
     n = db.execute("SELECT COUNT(*) FROM parca").fetchone()[0] or 1
     out = {}
+    esler = esler or {}
     for w in sozler:
+        ifade = ['"%s"*' % o.replace('"', "") for o in onekler(w)] + [_ifade_en(e) for e in esler.get(w, ())]
         try:
             df = db.execute("SELECT COUNT(*) FROM parca_fts WHERE parca_fts MATCH ?",
-                            [" OR ".join('"%s"*' % o.replace('"', "") for o in onekler(w))]).fetchone()[0]
+                            [" OR ".join(ifade)]).fetchone()[0]
         except sqlite3.OperationalError:
             df = 0
         out[w] = math.log((n + 1) / (df + 1)) + 1
     return out
 
 
-def sozcuk_kapsami(metin, agirlik):
-    """Sorgunun anlamlı sözcüklerinden metinde (önekle) geçenlerin ağırlıklı payı: 0–1."""
+def sozcuk_kapsami(metin, agirlik, esler=None):
+    """Sorgunun anlamlı sözcüklerinden metinde (önekle ya da İngilizce karşılığıyla) geçenlerin ağırlıklı payı: 0–1."""
     if not agirlik:
         return None
-    var = set(sozcukler(metin))
+    sirali = sozcukler(metin)
+    var = set(sirali)
+    metin_duz = " " + " ".join(sirali)
+    esler = esler or {}
+
+    def geciyor(w):
+        if any(x.startswith(o) for o in onekler(w) for x in var):
+            return True
+        return any((" " + " ".join(e)) in metin_duz for e in esler.get(w, ()))
+
     toplam = sum(agirlik.values())
-    bulunan = sum(a for w, a in agirlik.items() if any(x.startswith(o) for o in onekler(w) for x in var))
+    bulunan = sum(a for w, a in agirlik.items() if geciyor(w))
     return round(bulunan / toplam, 3) if toplam else None
 
 
@@ -530,7 +649,8 @@ def ara_ve_dayanak(sorgu, ders=None, tur=None, k=6, model=None, yol=DIZIN):
             sira[no] = sira.get(no, 0) + 1.0 / (RRF_K + r + 1)
             yontem.setdefault(no, set()).add("anlam")
     sozler = anlamli_sozcukler(sorgu)
-    agirlik = _agirliklar(db, sozler)
+    esler = ingilizce_karsiliklar(sorgu)
+    agirlik = _agirliklar(db, sozler, esler)
     alanlar = ("ders", "tur", "baslik", "metin", "kaynak", "sayfa", "bolum", "adim", "hedef", "vaka")
 
     def satir(no):
@@ -538,7 +658,7 @@ def ara_ve_dayanak(sorgu, ders=None, tur=None, k=6, model=None, yol=DIZIN):
         return dict(zip(alanlar, r))
 
     def sinyaller(no, metin):
-        x = {"sozcuk_eslesti": "sözcük" in yontem.get(no, ()), "sozcuk_kapsami": sozcuk_kapsami(metin, agirlik)}
+        x = {"sozcuk_eslesti": "sözcük" in yontem.get(no, ()), "sozcuk_kapsami": sozcuk_kapsami(metin, agirlik, esler)}
         if no in benzer:
             x["anlam_benzerligi"] = round(benzer[no], 4)
         return x
@@ -574,33 +694,52 @@ def durum(yol=DIZIN, model=None):
 
 # ---------- Kurulum ----------
 def kur_anlam():
-    print("1/2 Paketler kuruluyor: onnxruntime, tokenizers, numpy ...")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "--user", "--upgrade",
-                           "onnxruntime", "tokenizers", "numpy"])
-    print("2/2 Model indiriliyor (~120 MB, bir kez): multilingual-e5-small (MIT lisanslı)")
+    """Anlam aramasını kurar (kurulum betiği her seferinde çağırır; kurulu olan adımlar hızlı geçer).
+    Başarısızlıkta 1 döner; program yine çalışır, yalnız sözcük araması (ve terim eşlemesi) kullanılır."""
+    try:
+        import onnxruntime, tokenizers, numpy  # noqa: F401
+        print("1/3 Paketler kurulu (onnxruntime, tokenizers, numpy).")
+    except ImportError:
+        print("1/3 Paketler kuruluyor: onnxruntime, tokenizers, numpy ...")
+        if subprocess.call([sys.executable, "-m", "pip", "install", "--upgrade",
+                            "onnxruntime", "tokenizers", "numpy"]) != 0:
+            print("Paketler kurulamadı. Arama yine çalışır (sözcük araması + Türkçe–İngilizce terim eşlemesi).")
+            return 1
+    print("2/3 Model (~120 MB, bir kez): multilingual-e5-small (MIT lisanslı)")
     os.makedirs(MODEL_KLASORU, exist_ok=True)
-    for yerel, uzak in MODEL_DOSYALARI.items():
-        hedef = os.path.join(MODEL_KLASORU, yerel)
-        if os.path.exists(hedef) and os.path.getsize(hedef) > 0:
-            print("   var:", yerel)
-            continue
-        gecici = hedef + ".indiriliyor"
-        with urllib.request.urlopen(MODEL_ADRESI + uzak, timeout=60) as y, open(gecici, "wb") as f:
-            toplam = int(y.headers.get("Content-Length") or 0)
-            alinan = 0
-            while True:
-                b = y.read(1 << 20)
-                if not b:
-                    break
-                f.write(b)
-                alinan += len(b)
-                if toplam:
-                    print("\r   %s: %%%d" % (yerel, alinan * 100 // toplam), end="", flush=True)
-        os.replace(gecici, hedef)
-        print()
-    _metin_yaz(os.path.join(MODEL_KLASORU, "LISANS.txt"), 
-        "intfloat/multilingual-e5-small (ONNX: Xenova/multilingual-e5-small), MIT lisansı.\n")
-    print("Hazır. Şimdi dizini yenileyin:  python tools/bilgi_bankasi.py --dizinle")
+    try:
+        for yerel, uzak in MODEL_DOSYALARI.items():
+            hedef = os.path.join(MODEL_KLASORU, yerel)
+            if os.path.exists(hedef) and os.path.getsize(hedef) > 0:
+                print("   var:", yerel)
+                continue
+            gecici = hedef + ".indiriliyor"
+            with urllib.request.urlopen(MODEL_ADRESI + uzak, timeout=60) as y, open(gecici, "wb") as f:
+                toplam = int(y.headers.get("Content-Length") or 0)
+                alinan = 0
+                while True:
+                    b = y.read(1 << 20)
+                    if not b:
+                        break
+                    f.write(b)
+                    alinan += len(b)
+                    if toplam:
+                        print("\r   %s: %%%d" % (yerel, alinan * 100 // toplam), end="", flush=True)
+            os.replace(gecici, hedef)
+            print()
+    except Exception as e:  # ağ yok, sertifika vb.
+        print("\nModel indirilemedi (%s). İnternet bağlantısını denetleyip kurulumu yeniden çalıştırın." % e)
+        return 1
+    _metin_yaz(os.path.join(MODEL_KLASORU, "LISANS.txt"),
+               "intfloat/multilingual-e5-small (ONNX: Xenova/multilingual-e5-small), MIT lisansı.\n")
+    model = AnlamModeli()
+    if not model.hazir:
+        print("Model açılamadı: %s" % model.neden)
+        return 1
+    print("3/3 Dersler anlam aramasına ekleniyor (ders ve makale sayısına göre birkaç dakika sürebilir)...")
+    dizinle(model=model, sessiz=True)
+    print("Anlam araması hazır.")
+    return 0
 
 
 def main():
@@ -615,8 +754,7 @@ def main():
     ap.add_argument("--durum", action="store_true")
     a = ap.parse_args()
     if a.kur_anlam:
-        kur_anlam()
-        return
+        sys.exit(kur_anlam())
     model = AnlamModeli()
     if a.yeniden and os.path.exists(DIZIN):
         os.remove(DIZIN)

@@ -122,6 +122,10 @@
     const g = OZ.guncelleme || {};
     $('#guncelle').hidden = !(g.var && !g.gelistirici);
     $('#guncelleSurum').textContent = g.yeni_surum || '';
+    const ou = $('#ortakUyari'), od = OZ.ortak || {};
+    ou.hidden = !od.uyari;
+    ou.innerHTML = '';
+    if (od.uyari) ou.append(el('b', {}, 'Ortak klasör: '), od.uyari);
     return OZ;
   }
 
@@ -423,6 +427,7 @@
       [...sekmeler.children].forEach((b) => b.classList.toggle('sade', b.dataset.id !== hangi));
       govde.innerHTML = '';
       if (hangi === 'arsiv') cerceve(govde, 'makaleler.html?gomulu=1&bolum=depolama', 'Depolama ve arşiv');
+      else if (hangi === 'ortak') ortakKlasor(govde);
       else if (hangi === 'form') {
         const dl = OZ.dersler;
         if (!dl.length) { govde.append(el('div', { class: 'k-kaydir' }, el('div', { class: 'k-bos' }, 'Değerlendirme formu için önce bir ders gerekir.'))); return; }
@@ -449,11 +454,63 @@
           'Raporlar yalnız bu bilgisayarda durur ve not için değil, kendinizi görmeniz içindir.'));
       }
     };
-    for (const [id, ad] of [['ilerleme', 'İlerlemem'], ['form', 'Ders değerlendirme formu'], ['arsiv', 'Depolama ve arşiv']]) {
+    for (const [id, ad] of [['ilerleme', 'İlerlemem'], ['form', 'Ders değerlendirme formu'], ['arsiv', 'Depolama ve arşiv'], ['ortak', 'İki bilgisayarda çalışma']]) {
       sekmeler.append(el('button', { class: 'k-btn kucuk mavi', 'data-id': id, type: 'button', onclick: () => goster(id) }, ad));
     }
     h.append(el('span', {}, 'İlerleme, değerlendirme ve arşiv'));
     goster(ek || 'ilerleme');
+  }
+
+  // ---------- İki bilgisayarda çalışma: ortak (bulut) klasör ----------
+  async function ortakKlasor(govde) {
+    const kutu = el('div', { class: 'k-kaydir' });
+    govde.append(kutu);
+    let d;
+    try { d = await api('ana/ortak'); } catch (e) { kutu.append(el('div', { class: 'k-bos' }, e.message)); return; }
+    const mesaj = el('p', { class: 'k-mesaj', 'aria-live': 'polite' });
+    const bitti = async (r, metin) => { mesaj.className = 'k-mesaj iyi'; mesaj.textContent = metin; await ozetYukle(); setTimeout(() => { govde.innerHTML = ''; ortakKlasor(govde); }, 2500); };
+    kutu.append(el('div', { class: 'k-oyuk k-bilgi' },
+      el('p', {}, el('b', {}, 'Mac\'te başladığınız çalışmaya Windows\'ta devam etmek için '),
+        'iki bilgisayarda da aynı bulut klasörünü (OneDrive, Google Drive, iCloud Drive ya da Dropbox) seçin. ',
+        'Öğrenci kayıtlarınız ve makale PDF\'leriniz oraya taşınır; dersler, ayarlar ve sesler her bilgisayarda ayrı kalır.'),
+      el('p', {}, el('b', {}, 'Aynı anda iki bilgisayarda çalışmayın. '),
+        'Bir bilgisayarda bitirip bulut eşitlemesi tamamlanınca öbüründe açın. Öbür bilgisayar açıkken KlinikKoç sizi uyarır. ',
+        'Dersleri (ders paketlerini) iki bilgisayara da ayrıca kurmanız gerekir.')));
+    if (d.acik) {
+      const durum = d.erisilebilir === false ? 'Şu an ulaşılamıyor' : (d.baska_bilgisayar ? `“${d.baska_bilgisayar.ad}” bilgisayarında da açık görünüyor` : 'Kullanılıyor');
+      kutu.append(el('div', { class: 'k-satir' }, el('div', { class: 'k-orta' }, el('b', {}, 'Ortak klasör'),
+        el('div', { class: 'k-alt-yazi' }, d.yol), el('div', { class: 'k-alt-yazi' }, `${durum} · bu bilgisayar: ${d.bilgisayar}`))));
+      if (d.uyari) kutu.append(el('p', { class: 'k-mesaj kotu' }, d.uyari));
+      const birak = el('button', { class: 'k-btn sade', type: 'button' }, 'Ortak klasörü bırak');
+      birak.addEventListener('click', async () => {
+        if (birak.dataset.emin !== '1') { birak.dataset.emin = '1'; birak.textContent = 'Emin misiniz? Kayıtlar bu bilgisayara kopyalanıp ortak klasör bırakılacak'; return; }
+        birak.disabled = true;
+        try { await api('ana/ortak_kapat', {}); bitti(null, 'Ortak klasör bırakıldı. Kayıtlarınız ve makaleleriniz bu bilgisayara kopyalandı; bulut klasöründekiler de silinmedi.'); }
+        catch (e) { mesaj.className = 'k-mesaj kotu'; mesaj.textContent = e.message; birak.disabled = false; }
+      });
+      kutu.append(el('div', { class: 'k-alt' }, birak), mesaj);
+      return;
+    }
+    const sec = async (yol, dugme) => {
+      if (dugme) dugme.disabled = true;
+      mesaj.className = 'k-mesaj'; mesaj.textContent = 'Kayıtlarınız ve makaleleriniz ortak klasöre kopyalanıyor…';
+      try {
+        const r = await api('ana/ortak_ayarla', { yol });
+        const n = Object.values(r.kopyalanan || {}).reduce((a, b) => a + b, 0);
+        bitti(r, `Ortak klasör hazır: ${r.ortak_klasor}. ${n} dosya kopyalandı. Öbür bilgisayarda da aynı bulut klasörünü seçin. (Önceki kayıtlarınızın yedeği: ${r.yedek})`);
+      } catch (e) { mesaj.className = 'k-mesaj kotu'; mesaj.textContent = e.message; if (dugme) dugme.disabled = false; }
+    };
+    kutu.append(el('div', { class: 'k-bolum' }, 'Bu bilgisayarda bulunan bulut klasörleri'));
+    if (!d.adaylar.length) kutu.append(el('p', { class: 'k-soluk' }, 'Bulut klasörü bulunamadı. Bulut uygulamanızı (OneDrive, Google Drive…) kurup açın ya da klasörün yolunu aşağıya yazın.'));
+    for (const a of d.adaylar) {
+      const b = el('button', { class: 'k-btn kucuk mavi', type: 'button' }, 'Bunu kullan');
+      b.addEventListener('click', () => sec(a.yol, b));
+      kutu.append(el('div', { class: 'k-satir' }, el('div', { class: 'k-orta' }, el('b', {}, a.ad), el('div', { class: 'k-alt-yazi' }, a.yol)), el('div', { class: 'k-sag' }, b)));
+    }
+    const girdi = el('input', { class: 'k-alan', type: 'text', placeholder: 'ya da klasörün yolunu yapıştırın', style: 'flex:1;min-width:0' });
+    const elle = el('button', { class: 'k-btn kucuk', type: 'button' }, 'Bu klasörü kullan');
+    elle.addEventListener('click', () => { if (girdi.value.trim()) sec(girdi.value.trim(), elle); });
+    kutu.append(el('div', { class: 'k-alt' }, girdi, elle), el('p', { class: 'k-soluk' }, 'Seçilen klasörün içinde “KlinikKoç Ortak” adlı bir klasör açılır.'), mesaj);
   }
 
   // ---------- Geri bildirim (Claude'un programa önerileri) ----------

@@ -1,5 +1,5 @@
 {
-  "version": "1d55798bd870",
+  "version": "c8a9a6c50c88",
   "files": [
     "./",
     "index.html",
@@ -10,6 +10,7 @@
     "js/speech.js",
     "js/anatomi.js",
     "js/anatomi-bolge.js",
+    "js/anatomi-kontur.js",
     "js/board.js",
     "js/player.js",
     "js/karne.js",

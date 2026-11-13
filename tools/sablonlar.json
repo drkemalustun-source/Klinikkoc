@@ -1,0 +1,1377 @@
+{
+ "dis": {
+  "ad": "Diş ve periodonsiyum",
+  "varyantlar": [
+   "saglikli",
+   "gingivitis",
+   "periodontitis",
+   "cekilme"
+  ],
+  "parcalar": {
+   "mine": "Mine",
+   "dentin": "Dentin",
+   "pulpa": "Pulpa",
+   "kok-kanali": "Kök kanalı",
+   "apeks": "Apeks",
+   "mine-sement": "Mine-sement sınırı",
+   "sement": "Sement",
+   "pdl": "Periodontal ligament",
+   "kemik": "Alveol kemiği",
+   "kret": "Alveol kreti",
+   "dis-eti": "Serbest dişeti",
+   "yapisik-dis-eti": "Yapışık dişeti",
+   "mgj": "Mukogingival sınır",
+   "mukoza": "Alveol mukozası",
+   "dis-eti-epiteli": "Ağız dişeti epiteli",
+   "cep": "Dişeti oluğu (sulkus)",
+   "ba": "Birleşim epiteli",
+   "bd": "Bağ dokusu ataşmanı",
+   "dis": "Diş",
+   "keratin": "Keratin tabakası",
+   "oluk-epiteli": "Oluk epiteli",
+   "dentogingival-lif": "Dentogingival lifler",
+   "sirkuler-lif": "Sirküler lifler (kesit)",
+   "dentoperiostal-lif": "Dentoperiostal lifler",
+   "krestal-lif": "Alveol kreti lifleri",
+   "yatay-lif": "Yatay lifler",
+   "oblik-lif": "Oblik lifler",
+   "apikal-lif": "Apikal lifler",
+   "demet-kemigi": "Demet kemiği (lamina dura)",
+   "sonda": "Sondalama derinliği ≈ 1 mm",
+   "iltihap": "İltihabi hücre sızıntısı",
+   "plak": "Plak (biyofilm)",
+   "tartar": "Subgingival diştaşı",
+   "atasman-kaybi": "Ataşman kaybı",
+   "kemik-kaybi": "Kemik kaybı"
+  },
+  "ayrinti": [
+   "keratin",
+   "oluk-epiteli",
+   "dentogingival-lif",
+   "sirkuler-lif",
+   "dentoperiostal-lif",
+   "krestal-lif",
+   "yatay-lif",
+   "oblik-lif",
+   "apikal-lif",
+   "demet-kemigi"
+  ],
+  "yalniz": {
+   "iltihap": [
+    "gingivitis",
+    "periodontitis"
+   ],
+   "plak": [
+    "gingivitis",
+    "periodontitis"
+   ],
+   "tartar": [
+    "periodontitis"
+   ],
+   "atasman-kaybi": [
+    "periodontitis"
+   ],
+   "kemik-kaybi": [
+    "periodontitis"
+   ]
+  }
+ },
+ "sondalama": {
+  "ad": "Cep derinliği ve klinik ataşman ölçümü",
+  "varyantlar": [
+   "saglikli",
+   "gingivitis",
+   "periodontitis",
+   "cekilme"
+  ],
+  "parcalar": {
+   "mine": "Mine",
+   "dentin": "Dentin",
+   "pulpa": "Pulpa",
+   "kok-kanali": "Kök kanalı",
+   "apeks": "Apeks",
+   "mine-sement": "Mine-sement sınırı",
+   "sement": "Sement",
+   "pdl": "Periodontal ligament",
+   "kemik": "Alveol kemiği",
+   "kret": "Alveol kreti",
+   "dis-eti": "Serbest dişeti",
+   "yapisik-dis-eti": "Yapışık dişeti",
+   "mgj": "Mukogingival sınır",
+   "mukoza": "Alveol mukozası",
+   "dis-eti-epiteli": "Ağız dişeti epiteli",
+   "cep": "Dişeti oluğu (sulkus)",
+   "ba": "Birleşim epiteli",
+   "bd": "Bağ dokusu ataşmanı",
+   "dis": "Diş",
+   "keratin": "Keratin tabakası",
+   "oluk-epiteli": "Oluk epiteli",
+   "dentogingival-lif": "Dentogingival lifler",
+   "sirkuler-lif": "Sirküler lifler (kesit)",
+   "dentoperiostal-lif": "Dentoperiostal lifler",
+   "krestal-lif": "Alveol kreti lifleri",
+   "yatay-lif": "Yatay lifler",
+   "oblik-lif": "Oblik lifler",
+   "apikal-lif": "Apikal lifler",
+   "demet-kemigi": "Demet kemiği (lamina dura)",
+   "sonda": "Sondalama derinliği ≈ 1 mm",
+   "olcum-cd": "CD (cep derinliği) ≈ 1.2 mm",
+   "olcum-kas": "KAS (klinik ataşman) ≈ 0 mm",
+   "olcum-gm": "Kenar MSS'nin 1.8 mm koronalinde",
+   "olcum-formul": "KAS = CD − (kenar–MSS mesafesi)",
+   "iltihap": "İltihabi hücre sızıntısı",
+   "plak": "Plak (biyofilm)",
+   "tartar": "Subgingival diştaşı",
+   "atasman-kaybi": "Ataşman kaybı",
+   "kemik-kaybi": "Kemik kaybı"
+  },
+  "ayrinti": [
+   "keratin",
+   "oluk-epiteli",
+   "dentogingival-lif",
+   "sirkuler-lif",
+   "dentoperiostal-lif",
+   "krestal-lif",
+   "yatay-lif",
+   "oblik-lif",
+   "apikal-lif",
+   "demet-kemigi"
+  ],
+  "yalniz": {
+   "iltihap": [
+    "gingivitis",
+    "periodontitis"
+   ],
+   "plak": [
+    "gingivitis",
+    "periodontitis"
+   ],
+   "tartar": [
+    "periodontitis"
+   ],
+   "atasman-kaybi": [
+    "periodontitis"
+   ],
+   "kemik-kaybi": [
+    "periodontitis"
+   ]
+  }
+ },
+ "implant": {
+  "ad": "İmplant ve peri-implant dokular",
+  "varyantlar": [
+   "saglikli",
+   "mukozitis",
+   "peri-implantitis"
+  ],
+  "parcalar": {
+   "kron": "Protetik kron",
+   "dayanak": "Dayanak (abutment)",
+   "platform": "İmplant platformu",
+   "implant": "İmplant (titanyum vida)",
+   "yiv": "Yivler",
+   "mukoza": "Peri-implant mukoza",
+   "cep": "Peri-implant oluk",
+   "bariyer-epiteli": "Bariyer epiteli",
+   "bd": "Bağ dokusu (paralel lifler)",
+   "sirkuler-lif": "Çevresel lifler (kesit)",
+   "keratin": "Keratin tabakası",
+   "dis-eti-epiteli": "Ağız epiteli",
+   "oluk-epiteli": "Oluk epiteli",
+   "kemik": "Alveol kemiği",
+   "osseo": "Kemik teması (PDL yok)",
+   "kret": "Kemik kreti",
+   "alveol-mukozasi": "Alveol mukozası",
+   "sonda": "Sondalama derinliği ≈ 1 mm",
+   "iltihap": "İltihabi hücre sızıntısı",
+   "plak": "Plak (biyofilm)",
+   "kanama": "Sondalamada kanama",
+   "krater": "Krater biçimli kemik defekti",
+   "supurasyon": "Süpürasyon",
+   "acik-yiv": "Açığa çıkmış yivler"
+  },
+  "ayrinti": [
+   "sirkuler-lif",
+   "keratin",
+   "oluk-epiteli"
+  ],
+  "yalniz": {
+   "iltihap": [
+    "mukozitis",
+    "peri-implantitis"
+   ],
+   "plak": [
+    "mukozitis",
+    "peri-implantitis"
+   ],
+   "kanama": [
+    "mukozitis",
+    "peri-implantitis"
+   ],
+   "krater": [
+    "peri-implantitis"
+   ],
+   "supurasyon": [
+    "peri-implantitis"
+   ],
+   "acik-yiv": [
+    "peri-implantitis"
+   ]
+  }
+ },
+ "sinus": {
+  "ad": "Maksiller sinüs ve üst azı bölgesi (koronal)",
+  "varyantlar": [
+   "dis",
+   "cekim-sonrasi",
+   "dissiz",
+   "ileri-atrofi",
+   "sinus-lifti"
+  ],
+  "parcalar": {
+   "buyuk-palatin-sinir": "Büyük palatin sinir",
+   "buyuk-palatin-arter": "Büyük palatin arter",
+   "buyuk-palatin-ven": "Büyük palatin ven",
+   "sinus": "Maksiller sinüs",
+   "membran": "Schneider membranı",
+   "taban": "Sinüs tabanı",
+   "rezidu": "Rezidüel kemik ≈ 8.6 mm",
+   "lateral-duvar": "Sinüs lateral duvarı",
+   "medial-duvar": "Lateral burun duvarı",
+   "ostium": "Ostium (orta meatusa)",
+   "burun": "Burun boşluğu",
+   "alt-konka": "Alt konka",
+   "orta-konka": "Orta konka",
+   "septum": "Burun septumu",
+   "damak": "Sert damak",
+   "orbita": "Orbita",
+   "infraorbital": "İnfraorbital sinir",
+   "psa": "Arka üst alveol a. (duvarda)",
+   "damak-mukozasi": "Damak mukozası",
+   "alveol-mukozasi": "Alveol mukozası",
+   "vestibul": "Vestibül",
+   "yanak": "Yanak",
+   "kret": "Alveol kreti",
+   "maksilla": "Alveol çıkıntısı",
+   "dis": "Üst birinci büyük azı",
+   "bukkal-kok": "Mezyobukkal kök",
+   "palatinal-kok": "Palatinal kök",
+   "furkasyon": "Furkasyon",
+   "soket": "Çekim soketi (kan pıhtısı)",
+   "atrofi": "Kret palatinale çekilmiş",
+   "greft": "Kemik grefti",
+   "pencere": "Lateral pencere",
+   "implant": "İmplant (10 mm)"
+  },
+  "ayrinti": [
+   "buyuk-palatin-ven"
+  ],
+  "yalniz": {
+   "dis": [
+    "dis"
+   ],
+   "bukkal-kok": [
+    "dis"
+   ],
+   "palatinal-kok": [
+    "dis"
+   ],
+   "furkasyon": [
+    "dis"
+   ],
+   "soket": [
+    "cekim-sonrasi"
+   ],
+   "atrofi": [
+    "ileri-atrofi"
+   ],
+   "greft": [
+    "sinus-lifti"
+   ],
+   "pencere": [
+    "sinus-lifti"
+   ],
+   "implant": [
+    "sinus-lifti"
+   ]
+  }
+ },
+ "mandibula": {
+  "ad": "Mandibula, mandibular kanal ve komşuluklar (koronal)",
+  "varyantlar": [
+   "dis",
+   "cekim-sonrasi",
+   "cawood-3",
+   "cawood-4",
+   "cawood-5",
+   "cawood-6",
+   "implant"
+  ],
+  "parcalar": {
+   "alt-alveol-sinir": "Alt alveol sinir",
+   "alt-alveol-arter": "Alt alveol arter",
+   "alt-alveol-ven": "Alt alveol ven",
+   "mandibula": "Mandibula gövdesi",
+   "kortikal": "Bazal kortikal kemik",
+   "submandibular-cukur": "Submandibular çukur",
+   "kanal": "Mandibular kanal",
+   "lingual-sinir": "Lingual sinir",
+   "milohiyoid": "Milohiyoid kası",
+   "submandibular-bez": "Submandibular bez",
+   "sublingual-bez": "Sublingual bez",
+   "dil": "Dil",
+   "yanak": "Yanak (buksinatör)",
+   "fasiyal-arter": "Fasiyal arter",
+   "fasiyal-ven": "Fasiyal ven",
+   "dis-eti": "Çiğneme mukozası",
+   "kret": "Alveol kreti",
+   "yukseklik": "Kretten kanala ≈ 15.6 mm",
+   "eksternal-oblik": "Eksternal oblik sırt",
+   "milohiyoid-cizgi": "Milohiyoid çizgi",
+   "dis": "Alt 1. büyük azı (mezyal kök)",
+   "apeks": "Kök ucu",
+   "sinif": "Cawood-Howell sınıf II",
+   "soket": "Çekim soketi (kan pıhtısı)",
+   "implant": "İmplant (9.8 mm)",
+   "guvenlik": "Güvenlik mesafesi 2 mm"
+  },
+  "ayrinti": [
+   "alt-alveol-ven",
+   "fasiyal-ven"
+  ],
+  "yalniz": {
+   "eksternal-oblik": [
+    "dis",
+    "cekim-sonrasi",
+    "cawood-3",
+    "implant"
+   ],
+   "milohiyoid-cizgi": [
+    "dis",
+    "cekim-sonrasi",
+    "cawood-3",
+    "cawood-4",
+    "implant"
+   ],
+   "dis": [
+    "dis"
+   ],
+   "apeks": [
+    "dis"
+   ],
+   "sinif": [
+    "cekim-sonrasi",
+    "cawood-3",
+    "cawood-4",
+    "cawood-5",
+    "cawood-6"
+   ],
+   "soket": [
+    "cekim-sonrasi"
+   ],
+   "implant": [
+    "implant"
+   ],
+   "guvenlik": [
+    "implant"
+   ]
+  }
+ },
+ "furkasyon": {
+  "ad": "Furkasyon (alt birinci büyük azı)",
+  "varyantlar": [
+   "saglikli",
+   "derece-1",
+   "derece-2",
+   "derece-3"
+  ],
+  "parcalar": {
+   "mine": "Mine",
+   "kok-govdesi": "Kök gövdesi (~3 mm)",
+   "fornix": "Furkasyon tavanı (fornix)",
+   "mezyal-kok": "Mezyal kök",
+   "distal-kok": "Distal kök",
+   "kemik-duzeyi": "Kemik düzeyi",
+   "dis-eti-kenari": "Dişeti kenarı",
+   "mezyal-kok-kesit": "Mezyal kök (iki kanal)",
+   "distal-kok-kesit": "Distal kök",
+   "interradikuler-kemik": "Kökler arası kemik",
+   "kok-ici-oluk": "Kök iç yüzü oluğu",
+   "furkasyon-girisi": "Furkasyon girişi (kemikle kapalı)",
+   "sonda": "Nabers sondası",
+   "defekt": "Hamp I: yatay ≈ 2 mm"
+  },
+  "ayrinti": [
+   "kok-ici-oluk"
+  ],
+  "yalniz": {
+   "defekt": [
+    "derece-1",
+    "derece-2",
+    "derece-3"
+   ]
+  }
+ },
+ "furkasyon-ust": {
+  "ad": "Furkasyon (üst birinci büyük azı)",
+  "varyantlar": [
+   "saglikli",
+   "bukkal-1",
+   "derece-2",
+   "derece-3"
+  ],
+  "parcalar": {
+   "mine": "Mine",
+   "kok-govdesi": "Kök gövdesi (~4 mm)",
+   "fornix": "Furkasyon tavanı",
+   "mb-kok": "Mezyobukkal kök",
+   "db-kok": "Distobukkal kök",
+   "palatinal-kok": "Palatinal kök (arkada)",
+   "kemik-duzeyi": "Kemik düzeyi",
+   "dis-eti-kenari": "Dişeti kenarı",
+   "mb-kesit": "Mezyobukkal kök",
+   "db-kesit": "Distobukkal kök",
+   "p-kesit": "Palatinal kök",
+   "interradikuler-kemik": "Kökler arası kemik",
+   "mezyal-giris": "Mezyal giriş",
+   "distal-giris": "Distal giriş",
+   "bukkal-giris": "Bukkal giriş (kemikle kapalı)",
+   "sonda": "Nabers sondası",
+   "bukkal-defekt": "Bukkal: Hamp I",
+   "mezyal-defekt": "Mezyal: Hamp I",
+   "distal-defekt": "Distal: Hamp I"
+  },
+  "ayrinti": [],
+  "yalniz": {
+   "bukkal-defekt": [
+    "bukkal-1",
+    "derece-2",
+    "derece-3"
+   ],
+   "mezyal-defekt": [
+    "derece-2",
+    "derece-3"
+   ],
+   "distal-defekt": [
+    "derece-2",
+    "derece-3"
+   ]
+  }
+ },
+ "soket": {
+  "ad": "Çekim soketinin iyileşmesi",
+  "varyantlar": [
+   "taze",
+   "birinci-hafta",
+   "dorduncu-hafta",
+   "sekizinci-hafta",
+   "alti-ay",
+   "soket-koruma"
+  ],
+  "parcalar": {
+   "kemik": "Alveol kemiği",
+   "kret": "Sırt (kret) dış hattı",
+   "mukoza": "Dişeti (yara kenarı)",
+   "bukkal-duvar": "İnce bukkal duvar",
+   "lingual-duvar": "Lingual duvar",
+   "pihti": "Kan pıhtısı",
+   "demet-kemigi": "Demet kemiği (soket duvarı)",
+   "granulasyon": "Granülasyon dokusu",
+   "rezorpsiyon": "Yatay kayıp ≈ 1 mm",
+   "dikey-kayip": "Bukkal dikey kayıp ≈ 0.3 mm",
+   "eski-hat": "Çekim anındaki sırt hattı",
+   "orgu-kemik": "Geçici matris ve örgü kemik",
+   "olgun-kemik": "Olgunlaşan kemik",
+   "greft": "Kemik grefti",
+   "kollajen-ortu": "Kollajen örtü"
+  },
+  "ayrinti": [],
+  "yalniz": {
+   "pihti": [
+    "taze"
+   ],
+   "demet-kemigi": [
+    "taze",
+    "birinci-hafta"
+   ],
+   "granulasyon": [
+    "birinci-hafta"
+   ],
+   "rezorpsiyon": [
+    "birinci-hafta",
+    "dorduncu-hafta",
+    "sekizinci-hafta",
+    "alti-ay",
+    "soket-koruma"
+   ],
+   "dikey-kayip": [
+    "birinci-hafta",
+    "dorduncu-hafta",
+    "sekizinci-hafta",
+    "alti-ay",
+    "soket-koruma"
+   ],
+   "eski-hat": [
+    "birinci-hafta",
+    "dorduncu-hafta",
+    "sekizinci-hafta",
+    "alti-ay",
+    "soket-koruma"
+   ],
+   "orgu-kemik": [
+    "dorduncu-hafta",
+    "sekizinci-hafta"
+   ],
+   "olgun-kemik": [
+    "alti-ay",
+    "soket-koruma"
+   ],
+   "greft": [
+    "soket-koruma"
+   ],
+   "kollajen-ortu": [
+    "soket-koruma"
+   ]
+  }
+ },
+ "kemik-ici": {
+  "ad": "Kemik içi defektler (duvar sayısı)",
+  "varyantlar": [
+   "saglikli",
+   "uc-duvarli",
+   "iki-duvarli",
+   "tek-duvarli",
+   "krater"
+  ],
+  "parcalar": {
+   "kemik-duzeyi": "Kemik düzeyi",
+   "dis-eti-kenari": "Dişeti kenarı",
+   "kok-a": "Komşu diş kökü",
+   "kok-b": "Defektli diş kökü",
+   "septum": "Interdental septum",
+   "defekt": "Kemik içi defekt ≈ 5 mm",
+   "duvar": "Üç duvarlı defekt",
+   "bukkal-duvar": "Bukkal duvar",
+   "lingual-duvar": "Lingual duvar",
+   "proksimal-duvar": "Proksimal duvar"
+  },
+  "ayrinti": [
+   "kok-a"
+  ],
+  "yalniz": {
+   "defekt": [
+    "uc-duvarli",
+    "iki-duvarli",
+    "tek-duvarli",
+    "krater"
+   ],
+   "duvar": [
+    "uc-duvarli",
+    "iki-duvarli",
+    "tek-duvarli",
+    "krater"
+   ],
+   "bukkal-duvar": [
+    "uc-duvarli",
+    "krater"
+   ],
+   "lingual-duvar": [
+    "uc-duvarli",
+    "iki-duvarli",
+    "krater"
+   ],
+   "proksimal-duvar": [
+    "uc-duvarli",
+    "iki-duvarli",
+    "tek-duvarli"
+   ]
+  }
+ },
+ "cekilme": {
+  "ad": "Dişeti çekilmesi (Cairo) ve papilla",
+  "varyantlar": [
+   "saglikli",
+   "rt1",
+   "rt2",
+   "rt3"
+  ],
+  "parcalar": {
+   "kuron": "Orta kesici kronu",
+   "mine-sement": "Mine-sement sınırı",
+   "dis-eti": "Keratinize dişeti",
+   "mgj": "Mukogingival sınır",
+   "alveol-mukozasi": "Alveol mukozası",
+   "papilla": "Papilla (doluluk ≈ %100)",
+   "temas": "Temas noktası",
+   "kemik-duzeyi": "Kemik düzeyi (kesikli)",
+   "kret-temas": "Kret–temas ≈ 4.6 mm",
+   "cekilme": "Bukkal çekilme ≈ 3 mm",
+   "acik-kok": "Açığa çıkmış kök yüzeyi",
+   "sinif": "Cairo RT1",
+   "siyah-ucgen": "Siyah üçgen",
+   "ara-kayip": "Ara yüz kaybı ≈ 2 mm"
+  },
+  "ayrinti": [
+   "kret-temas"
+  ],
+  "yalniz": {
+   "cekilme": [
+    "rt1",
+    "rt2",
+    "rt3"
+   ],
+   "acik-kok": [
+    "rt1",
+    "rt2",
+    "rt3"
+   ],
+   "sinif": [
+    "rt1",
+    "rt2",
+    "rt3"
+   ],
+   "siyah-ucgen": [
+    "rt2",
+    "rt3"
+   ],
+   "ara-kayip": [
+    "rt2",
+    "rt3"
+   ]
+  }
+ },
+ "plak-indeksi": {
+  "ad": "Plak indeksleri (Silness–Löe, Quigley–Hein)",
+  "varyantlar": [
+   "pli-0",
+   "pli-1",
+   "pli-2",
+   "pli-3",
+   "qh-0",
+   "qh-1",
+   "qh-2",
+   "qh-3",
+   "qh-4",
+   "qh-5"
+  ],
+  "parcalar": {
+   "dis": "Puanlanan diş (üst orta kesici)",
+   "komsu": "Yan kesici",
+   "dis-eti": "Yapışık dişeti",
+   "alveol-mukozasi": "Alveol mukozası",
+   "mgj": "Mukogingival sınır",
+   "papilla": "İnterdental papilla",
+   "skor": "Silness–Löe PlI = 0",
+   "olcut": "Dişeti bölgesinde plak yok",
+   "plak": "Dental plak (biyofilm)",
+   "sonda": "Sonda ucunda plak",
+   "boya": "Plak boyası ile değerlendirilir"
+  },
+  "ayrinti": [
+   "komsu",
+   "boya"
+  ],
+  "yalniz": {
+   "plak": [
+    "pli-1",
+    "pli-2",
+    "pli-3",
+    "qh-1",
+    "qh-2",
+    "qh-3",
+    "qh-4",
+    "qh-5"
+   ],
+   "sonda": [
+    "pli-1"
+   ],
+   "boya": [
+    "qh-0",
+    "qh-1",
+    "qh-2",
+    "qh-3",
+    "qh-4",
+    "qh-5"
+   ]
+  }
+ },
+ "gingival-indeks": {
+  "ad": "Gingival indeks (Löe–Silness)",
+  "varyantlar": [
+   "gi-0",
+   "gi-1",
+   "gi-2",
+   "gi-3"
+  ],
+  "parcalar": {
+   "dis": "Puanlanan diş (üst orta kesici)",
+   "komsu": "Yan kesici",
+   "dis-eti": "Yapışık dişeti",
+   "alveol-mukozasi": "Alveol mukozası",
+   "mgj": "Mukogingival sınır",
+   "papilla": "İnterdental papilla",
+   "skor": "Löe–Silness GI = 0",
+   "olcut": "Normal dişeti",
+   "serbest-oluk": "Serbest dişeti oluğu",
+   "stippling": "Portakal kabuğu görünümü",
+   "renk": "Hafif kızarıklık",
+   "odem": "Hafif ödem",
+   "sonda": "Sonda oluk boyunca gezdirilir",
+   "parlaklik": "Parlak, gergin yüzey",
+   "kanama": "Sondalamada kanama",
+   "spontan": "Kendiliğinden kanama",
+   "ulser": "Ülserasyon"
+  },
+  "ayrinti": [
+   "komsu",
+   "serbest-oluk"
+  ],
+  "yalniz": {
+   "stippling": [
+    "gi-0",
+    "gi-1"
+   ],
+   "renk": [
+    "gi-1",
+    "gi-2",
+    "gi-3"
+   ],
+   "odem": [
+    "gi-1",
+    "gi-2",
+    "gi-3"
+   ],
+   "sonda": [
+    "gi-1",
+    "gi-2"
+   ],
+   "parlaklik": [
+    "gi-2",
+    "gi-3"
+   ],
+   "kanama": [
+    "gi-2",
+    "gi-3"
+   ],
+   "spontan": [
+    "gi-3"
+   ],
+   "ulser": [
+    "gi-3"
+   ]
+  }
+ },
+ "kayit-cizelgesi": {
+  "ad": "Plak (O’Leary) ve kanama (BOP) kayıt çizelgesi",
+  "varyantlar": [
+   "plak-dusuk",
+   "plak-orta",
+   "plak-yuksek",
+   "kanama-saglik",
+   "kanama-lokal",
+   "kanama-yaygin"
+  ],
+  "parcalar": {
+   "cizelge": "Her diş 4 yüzey (M, D, V, L/P)",
+   "isaret": "Boyanan yüzey işaretlenir",
+   "formul": "Skor = boyalı ÷ taranan yüzey × 100",
+   "sonuc": "6 / 64 yüzey = %9",
+   "yorum": "Hedef düzeyde (≤ %10)",
+   "bop-not": "Sağlam periodonsiyumda (2017 sınıflaması)"
+  },
+  "ayrinti": [
+   "bop-not"
+  ],
+  "yalniz": {
+   "bop-not": [
+    "kanama-saglik",
+    "kanama-lokal",
+    "kanama-yaygin"
+   ]
+  }
+ },
+ "on-maksilla": {
+  "ad": "Ön maksilla ve dişeti fenotipi (sagital)",
+  "varyantlar": [
+   "kalin-fenotip",
+   "ince-fenotip",
+   "dehisens",
+   "fenestrasyon",
+   "cekilme",
+   "cekim-sonrasi",
+   "implant"
+  ],
+  "parcalar": {
+   "dudak": "Üst dudak",
+   "orbikularis": "M. orbicularis oris",
+   "ust-dudak-arteri": "A. labialis superior",
+   "vestibul": "Vestibül (forniks)",
+   "alveol-mukozasi": "Alveol mukozası",
+   "mgj": "Mukogingival sınır",
+   "dis-eti": "Dişeti kalınlığı ≈ 1.5 mm",
+   "bukkal-kemik": "Labial kemik plağı ≈ 1.2 mm",
+   "ans": "Spina nasalis anterior",
+   "a-noktasi": "Subnazal çukurluk (A noktası)",
+   "burun-tabani": "Burun tabanı",
+   "nazopalatin-kanal": "Nazopalatin (insisiv) kanal",
+   "nazopalatin-sinir": "N. nasopalatinus",
+   "nazopalatin-arter": "Nazopalatin damarlar",
+   "insisiv-papilla": "İnsisiv papilla (foramen)",
+   "palatinal-kemik": "Palatinal kemik",
+   "damak-mukozasi": "Damak mukozası",
+   "mine": "Mine",
+   "kesici-kenar": "Kesici kenar",
+   "singulum": "Singulum",
+   "pulpa": "Pulpa",
+   "kok": "Kök (dentin)",
+   "kret": "Labial kret",
+   "fenotip": "Kalın fenotip",
+   "dehisens": "Dehisens ≈ 4.5 mm",
+   "fenestrasyon": "Fenestrasyon",
+   "cekilme": "Dişeti çekilmesi ≈ 3 mm",
+   "rezorpsiyon": "Kayıp en çok labial yüzde",
+   "implant": "İmplant (palatinal konumda)",
+   "kron": "İmplant üstü kron"
+  },
+  "ayrinti": [
+   "mgj",
+   "a-noktasi",
+   "nazopalatin-arter",
+   "kesici-kenar",
+   "kret"
+  ],
+  "yalniz": {
+   "mine": [
+    "kalin-fenotip",
+    "ince-fenotip",
+    "dehisens",
+    "fenestrasyon",
+    "cekilme"
+   ],
+   "kesici-kenar": [
+    "kalin-fenotip",
+    "ince-fenotip",
+    "dehisens",
+    "fenestrasyon",
+    "cekilme"
+   ],
+   "singulum": [
+    "kalin-fenotip",
+    "ince-fenotip",
+    "dehisens",
+    "fenestrasyon",
+    "cekilme"
+   ],
+   "pulpa": [
+    "kalin-fenotip",
+    "ince-fenotip",
+    "dehisens",
+    "fenestrasyon",
+    "cekilme"
+   ],
+   "kok": [
+    "kalin-fenotip",
+    "ince-fenotip",
+    "dehisens",
+    "fenestrasyon",
+    "cekilme"
+   ],
+   "fenotip": [
+    "kalin-fenotip",
+    "ince-fenotip",
+    "dehisens",
+    "fenestrasyon",
+    "cekilme"
+   ],
+   "dehisens": [
+    "dehisens",
+    "cekilme"
+   ],
+   "fenestrasyon": [
+    "fenestrasyon"
+   ],
+   "cekilme": [
+    "cekilme"
+   ],
+   "rezorpsiyon": [
+    "cekim-sonrasi"
+   ],
+   "implant": [
+    "implant"
+   ],
+   "kron": [
+    "implant"
+   ]
+  }
+ },
+ "on-mandibula": {
+  "ad": "Ön mandibula, simfiz ve ağız tabanı (sagital)",
+  "varyantlar": [
+   "dis",
+   "cekim-sonrasi",
+   "atrofi",
+   "implant",
+   "lingual-perforasyon"
+  ],
+  "parcalar": {
+   "alt-dudak": "Alt dudak",
+   "orbikularis": "M. orbicularis oris",
+   "alt-dudak-arteri": "A. labialis inferior",
+   "mentalis": "M. mentalis",
+   "vestibul": "Vestibül (forniks)",
+   "alveol-mukozasi": "Alveol mukozası",
+   "b-noktasi": "Supramental çukurluk (B noktası)",
+   "pogonion": "Pogonion (çene ucu)",
+   "menton": "Menton",
+   "kortikal": "Alt kenar korteksi",
+   "kemik": "Simfiz yüksekliği ≈ 28.7 mm",
+   "insisiv-kanal": "Mandibular insisiv kanal",
+   "lingual-foramen": "Lingual foramen ve kanalı",
+   "genial-tuberkul": "Spina mentalis",
+   "sublingual-arter": "A. sublingualis",
+   "submental-arter": "A. submentalis",
+   "genioglossus": "M. genioglossus",
+   "geniohyoid": "M. geniohyoideus",
+   "sublingual-bez": "Sublingual bez",
+   "agiz-tabani": "Ağız tabanı",
+   "dil": "Dil",
+   "mine": "Mine",
+   "pulpa": "Pulpa",
+   "kok": "Alt orta kesici kökü",
+   "labial-kemik": "Labial kemik plağı ≈ 0.6 mm",
+   "lingual-kemik": "Lingual kemik plağı",
+   "dis-eti": "Dişeti",
+   "kret": "Alveol kreti",
+   "implant": "İmplant (simfiz eksenine uygun)",
+   "guvenlik": "Lingual kortekse güvenli mesafe",
+   "hematom": "Ağız tabanı hematomu riski"
+  },
+  "ayrinti": [
+   "alveol-mukozasi",
+   "b-noktasi",
+   "menton"
+  ],
+  "yalniz": {
+   "mine": [
+    "dis"
+   ],
+   "pulpa": [
+    "dis"
+   ],
+   "kok": [
+    "dis"
+   ],
+   "labial-kemik": [
+    "dis"
+   ],
+   "lingual-kemik": [
+    "dis"
+   ],
+   "dis-eti": [
+    "dis"
+   ],
+   "kret": [
+    "cekim-sonrasi",
+    "atrofi",
+    "implant",
+    "lingual-perforasyon"
+   ],
+   "implant": [
+    "implant",
+    "lingual-perforasyon"
+   ],
+   "guvenlik": [
+    "implant"
+   ],
+   "hematom": [
+    "lingual-perforasyon"
+   ]
+  }
+ },
+ "yan-gorunum": {
+  "ad": "Çeneler yandan: trigeminal dallar ve arterler",
+  "varyantlar": [
+   "kemik",
+   "sinirler",
+   "arterler",
+   "sinir-arter",
+   "mental-foramen"
+  ],
+  "parcalar": {
+   "maksilla": "Maksilla",
+   "mandibula": "Mandibula gövdesi",
+   "ramus": "Ramus",
+   "kondil": "Kondil",
+   "koronoid": "Koronoid çıkıntı",
+   "angulus": "Angulus (gonion)",
+   "zigoma": "Zigomatik kemik ve kavis",
+   "payanda": "Zigomatik payanda (krista)",
+   "orbita": "Orbita",
+   "ans": "Spina nasalis anterior",
+   "pterigoid": "Pterigoid çıkıntı",
+   "dis-oblik": "Dış oblik sırt",
+   "infraorbital-foramen": "Foramen infraorbitale",
+   "mental-foramen": "Foramen mentale",
+   "mandibular-foramen": "Foramen mandibulae (medialde)",
+   "mandibular-kanal": "Mandibular kanal",
+   "tuber": "Tuber maxillae",
+   "ust-disler": "Üst birinci büyük azı",
+   "alt-disler": "Alt birinci büyük azı",
+   "trigeminal": "N. trigeminus (ganglion)",
+   "infraorbital-sinir": "N. infraorbitalis (V2)",
+   "psa-sinir": "Arka üst alveol siniri (PSA)",
+   "msa-sinir": "Orta üst alveol siniri (MSA)",
+   "asa-sinir": "Ön üst alveol siniri (ASA)",
+   "alt-alveol-sinir": "N. alveolaris inferior (V3)",
+   "lingual-sinir": "N. lingualis",
+   "bukkal-sinir": "N. buccalis",
+   "mental-sinir": "N. mentalis",
+   "insisiv-sinir": "N. incisivus",
+   "eksternal-karotis": "A. carotis externa",
+   "temporal-arter": "A. temporalis superficialis",
+   "maksiller-arter": "A. maxillaris",
+   "alt-alveol-arter": "A. alveolaris inferior",
+   "psa-arter": "A. alveolaris superior posterior",
+   "infraorbital-arter": "A. infraorbitalis",
+   "fasiyal-arter": "A. facialis",
+   "ust-dudak-arteri": "A. labialis superior",
+   "alt-dudak-arteri": "A. labialis inferior",
+   "lingual-arter": "A. lingualis",
+   "submental-arter": "A. submentalis",
+   "on-loop": "Ön loop (anterior loop)"
+  },
+  "ayrinti": [
+   "angulus",
+   "payanda",
+   "ans",
+   "pterigoid",
+   "dis-oblik",
+   "ust-disler",
+   "alt-disler",
+   "insisiv-sinir"
+  ],
+  "yalniz": {
+   "trigeminal": [
+    "sinirler",
+    "sinir-arter",
+    "mental-foramen"
+   ],
+   "infraorbital-sinir": [
+    "sinirler",
+    "sinir-arter",
+    "mental-foramen"
+   ],
+   "psa-sinir": [
+    "sinirler",
+    "sinir-arter",
+    "mental-foramen"
+   ],
+   "msa-sinir": [
+    "sinirler",
+    "sinir-arter",
+    "mental-foramen"
+   ],
+   "asa-sinir": [
+    "sinirler",
+    "sinir-arter",
+    "mental-foramen"
+   ],
+   "alt-alveol-sinir": [
+    "sinirler",
+    "sinir-arter",
+    "mental-foramen"
+   ],
+   "lingual-sinir": [
+    "sinirler",
+    "sinir-arter",
+    "mental-foramen"
+   ],
+   "bukkal-sinir": [
+    "sinirler",
+    "sinir-arter",
+    "mental-foramen"
+   ],
+   "mental-sinir": [
+    "sinirler",
+    "sinir-arter",
+    "mental-foramen"
+   ],
+   "insisiv-sinir": [
+    "sinirler",
+    "sinir-arter",
+    "mental-foramen"
+   ],
+   "eksternal-karotis": [
+    "arterler",
+    "sinir-arter"
+   ],
+   "temporal-arter": [
+    "arterler",
+    "sinir-arter"
+   ],
+   "maksiller-arter": [
+    "arterler",
+    "sinir-arter"
+   ],
+   "alt-alveol-arter": [
+    "arterler",
+    "sinir-arter"
+   ],
+   "psa-arter": [
+    "arterler",
+    "sinir-arter"
+   ],
+   "infraorbital-arter": [
+    "arterler",
+    "sinir-arter"
+   ],
+   "fasiyal-arter": [
+    "arterler",
+    "sinir-arter"
+   ],
+   "ust-dudak-arteri": [
+    "arterler",
+    "sinir-arter"
+   ],
+   "alt-dudak-arteri": [
+    "arterler",
+    "sinir-arter"
+   ],
+   "lingual-arter": [
+    "arterler",
+    "sinir-arter"
+   ],
+   "submental-arter": [
+    "arterler",
+    "sinir-arter"
+   ],
+   "on-loop": [
+    "mental-foramen"
+   ]
+  }
+ },
+ "fasiyal-bosluk": {
+  "ad": "Fasiyal boşluklar ve odontojenik enfeksiyonun yayılımı",
+  "varyantlar": [
+   "saglikli",
+   "vestibuler-apse",
+   "bukkal",
+   "sublingual",
+   "submandibuler",
+   "palatinal",
+   "bukkal-ust",
+   "sinus"
+  ],
+  "parcalar": {
+   "cilt": "Cilt",
+   "buccinator": "M. buccinator",
+   "milohiyoid": "M. mylohyoideus",
+   "bukkal-alan": "Bukkal boşluk",
+   "vestibul": "Vestibül",
+   "mandibula": "Mandibula",
+   "kanal": "Mandibular kanal",
+   "alt-azi": "Alt büyük azı",
+   "ust-azi": "Üst büyük azı",
+   "maksilla": "Maksilla",
+   "sinus": "Maksiller sinüs",
+   "burun": "Burun boşluğu",
+   "damak-mukozasi": "Damak mukozası",
+   "dil": "Dil",
+   "genioglossus": "M. genioglossus",
+   "sublingual-bez": "Sublingual bez",
+   "lingual-sinir": "N. lingualis",
+   "submandibular-bez": "Submandibüler bez",
+   "digastrik": "M. digastricus (ön karın)",
+   "platisma": "Platisma",
+   "fasiyal-arter": "A. ve v. facialis",
+   "buccinator-yapisma": "Buccinator yapışması",
+   "milohiyoid-cizgi": "Milohiyoid çizgi",
+   "alt-kok": "Kök ucu (apeks)",
+   "vestibuler-apse": "Vestibüler apse",
+   "bukkal-bosluk": "Bukkal boşluk apsesi",
+   "sublingual-bosluk": "Sublingual boşluk apsesi",
+   "submandibuler-bosluk": "Submandibüler boşluk apsesi",
+   "palatinal-apse": "Palatinal apse",
+   "ust-kok": "Apeks buccinator üstünde",
+   "sinus-enfeksiyonu": "Odontojenik sinüzit"
+  },
+  "ayrinti": [
+   "cilt",
+   "kanal",
+   "burun",
+   "genioglossus",
+   "lingual-sinir",
+   "platisma",
+   "fasiyal-arter"
+  ],
+  "yalniz": {
+   "vestibuler-apse": [
+    "vestibuler-apse"
+   ],
+   "bukkal-bosluk": [
+    "bukkal",
+    "bukkal-ust"
+   ],
+   "sublingual-bosluk": [
+    "sublingual"
+   ],
+   "submandibuler-bosluk": [
+    "submandibuler"
+   ],
+   "palatinal-apse": [
+    "palatinal"
+   ],
+   "ust-kok": [
+    "bukkal-ust"
+   ],
+   "sinus-enfeksiyonu": [
+    "sinus"
+   ]
+  }
+ },
+ "kontur-fasiyal": {
+  "ad": "Fasiyal kontur: kritik ve kritik altı bölge (implant, labio-palatinal kesit)",
+  "varyantlar": [
+   "duz",
+   "kritik-fazla",
+   "kritik-az",
+   "kritik-alti-konkav",
+   "kritik-alti-konveks"
+  ],
+  "parcalar": {
+   "implant": "İmplant",
+   "dayanak": "Dayanak",
+   "kron": "İmplant üstü kron",
+   "labial-kemik": "Labial kemik",
+   "palatinal-kemik": "Palatinal kemik",
+   "labial-mukoza": "Labial mukoza",
+   "palatinal-mukoza": "Palatinal mukoza",
+   "kenar": "Mukoza kenarı",
+   "kritik-alti": "Kritik altı kontur",
+   "kritik": "Kritik kontur",
+   "plan": "Planlanan kenar düzeyi",
+   "kayma": "Kenar apikale kayar (yaklaşık)",
+   "hacim": "Yumuşak doku hacmi artar"
+  },
+  "ayrinti": [
+   "dayanak",
+   "plan"
+  ],
+  "yalniz": {
+   "kayma": [
+    "kritik-fazla",
+    "kritik-az",
+    "kritik-alti-konkav",
+    "kritik-alti-konveks"
+   ],
+   "hacim": [
+    "kritik-alti-konkav",
+    "kritik-alti-konveks"
+   ]
+  }
+ },
+ "papil": {
+  "ad": "Papil: diş–implant arası kontur ve temas noktası (önden kesit)",
+  "varyantlar": [
+   "dis-dis",
+   "duz",
+   "konkav",
+   "konveks",
+   "kare-kron",
+   "ince-biyotip",
+   "implant-implant"
+  ],
+  "parcalar": {
+   "papil": "İnterdental papil",
+   "tepe": "Papil yüksekliği",
+   "temas": "Temas noktası",
+   "olcum": "Temas–kemik tepesi",
+   "kret": "Kemik tepesi",
+   "kemik": "Alveol kemiği",
+   "kuron": "Doğal diş (orta kesici)",
+   "kuron-sag": "Komşu doğal diş",
+   "siyah-ucgen": "Siyah üçgen",
+   "kron-sag": "İmplant üstü kron",
+   "implant": "İmplant",
+   "dayanak-sag": "Dayanak",
+   "kritik-alti": "Kritik altı kontur: düz",
+   "kritik": "Kritik kontur",
+   "kazanc": "Papil koronale (yaklaşık)",
+   "biyotip": "İnce biyotip: sivri papil",
+   "kron-sol": "İmplant üstü kron"
+  },
+  "ayrinti": [
+   "kemik",
+   "dayanak-sag"
+  ],
+  "yalniz": {
+   "kuron": [
+    "dis-dis",
+    "duz",
+    "konkav",
+    "konveks",
+    "kare-kron",
+    "ince-biyotip"
+   ],
+   "kuron-sag": [
+    "dis-dis"
+   ],
+   "siyah-ucgen": [
+    "duz",
+    "konkav",
+    "konveks",
+    "ince-biyotip",
+    "implant-implant"
+   ],
+   "kron-sag": [
+    "duz",
+    "konkav",
+    "konveks",
+    "kare-kron",
+    "ince-biyotip",
+    "implant-implant"
+   ],
+   "implant": [
+    "duz",
+    "konkav",
+    "konveks",
+    "kare-kron",
+    "ince-biyotip",
+    "implant-implant"
+   ],
+   "dayanak-sag": [
+    "duz",
+    "konkav",
+    "konveks",
+    "kare-kron",
+    "ince-biyotip",
+    "implant-implant"
+   ],
+   "kritik-alti": [
+    "duz",
+    "konkav",
+    "konveks",
+    "kare-kron",
+    "ince-biyotip",
+    "implant-implant"
+   ],
+   "kritik": [
+    "duz",
+    "konkav",
+    "konveks",
+    "kare-kron",
+    "ince-biyotip",
+    "implant-implant"
+   ],
+   "kazanc": [
+    "konveks"
+   ],
+   "biyotip": [
+    "ince-biyotip"
+   ],
+   "kron-sol": [
+    "implant-implant"
+   ]
+  }
+ }
+}

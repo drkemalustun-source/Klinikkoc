@@ -20,10 +20,26 @@ def _json_oku(yol):
 BLOOM = ["hatirla", "anla", "uygula", "cozumle", "degerlendir", "olustur"]
 BLOOM_AD = dict(zip(BLOOM, ["Hatırla", "Anla", "Uygula", "Çözümle", "Değerlendir", "Oluştur"]))
 TUR_AD = {"secmeli": "seçmeli", "acik": "açık uçlu", "vaka_karar": "vaka kararı", "vaka_acik": "vaka, açık uçlu",
-          "vaka_veri": "vaka, veri toplama"}
+          "vaka_veri": "vaka, veri toplama", "isaretleme": "şablonda işaretleme"}
 DURUM_AD = {"ele_alinmadi": "ele alınmadı", "destekle_yapti": "destekle yaptı", "bagimsiz_yapti": "bağımsız yaptı",
             "tekrar_gerekli": "tekrar gerekli", "devam_ediyor": "devam ediyor"}
 SONUC_AD = {"iyi": "iyi sonuç", "kabul": "kabul edilebilir", "kotu": "kötü sonuç", "yarim": "yarım kaldı"}
+
+
+def secenekli_mi(c):
+    """Seçeneklerden seçilerek verilen cevap mı (seçmeli soru ya da takılınca gösterilen seçenekler)?"""
+    return bool(c.get("secenekli")) or c.get("tur") == "secmeli"
+
+
+def bloom_tablosu(bloom):
+    """Bloom tablosu (markdown satırları): her düzeyde kendi cevabıyla ve seçenekle verilen cevaplar ayrı."""
+    hucre = lambda g: "-" if not g or not g["cevap"] else "%s (%d soru)" % (yuzde(g["oran"]), g["cevap"])
+    y = ["| Düzey | Kendi cevabıyla | Seçenekten seçerek |", "| --- | --- | --- |"]
+    for b in bloom:
+        serbest = b.get("serbest") or {"cevap": b["cevap"], "oran": b["oran"]}
+        y.append("| %s | %s | %s |" % (BLOOM_AD[b["duzey"]], hucre(serbest), hucre(b.get("secenekli"))))
+    y += ["", "Seçenekten seçerek verilen cevaplar, kendi kurduğun cevaplardan ayrı gösterilir."]
+    return y
 
 
 def oran(puan, en):
@@ -79,13 +95,18 @@ def hesapla(kayit, hedefler, bugun=None):
             "sonraki_tekrar": v.get("sonraki_tekrar")})
     out["hedefler"] = hed
 
-    # Bloom düzeyleri
+    # Bloom düzeyleri: öğrencinin kendi kurduğu cevaplar ile seçenekten seçtikleri ayrı sayılır; seçenekle verilen
+    # doğru cevap o düzeyde bağımsız başarı gibi görünmesin (v5).
     bl = []
     for b in BLOOM:
         cs = [c for c in cevaplar if c.get("bloom") == b]
         if cs:
-            bl.append({"duzey": b, "cevap": len(cs),
-                       "oran": oran(sum(c.get("puan", 0) for c in cs), sum(c.get("en_yuksek", 1) for c in cs))})
+            g = {"duzey": b, "cevap": len(cs),
+                 "oran": oran(sum(c.get("puan", 0) for c in cs), sum(c.get("en_yuksek", 1) for c in cs))}
+            for ad, grup in (("serbest", [c for c in cs if not secenekli_mi(c)]), ("secenekli", [c for c in cs if secenekli_mi(c)])):
+                g[ad] = {"cevap": len(grup), "oran": oran(sum(c.get("puan", 0) for c in grup),
+                                                           sum(c.get("en_yuksek", 1) for c in grup))}
+            bl.append(g)
     out["bloom"] = bl
 
     # Sorular (madde analizi, tek öğrenci)
@@ -152,9 +173,7 @@ def markdown(k, ders_basligi=None, tarih=None):
             h["id"], h.get("baslik") or "", BLOOM_AD.get(h.get("hedef_bloom"), "-"), h["cevap"], yuzde(h["oran"]),
             yuzde(h["ilk_deneme_dogru"]), DURUM_AD.get(h["durum"], h["durum"]), h.get("sonraki_tekrar") or "-"))
     if k["bloom"]:
-        y += ["", "## Düşünme düzeyine göre (Bloom)", "", "| Düzey | Cevap | Başarı |", "| --- | --- | --- |"]
-        for b in k["bloom"]:
-            y.append("| %s | %d | %s |" % (BLOOM_AD[b["duzey"]], b["cevap"], yuzde(b["oran"])))
+        y += ["", "## Düşünme düzeyine göre (Bloom)", ""] + bloom_tablosu(k["bloom"])
         y += ["", "Üst düzeylerde (çözümle, değerlendir, oluştur) başarı alt düzeylerden belirgin düşükse, bilgiyi "
               "biliyor ama vakaya uygulamakta zorlanıyorsun demektir: vaka çalışmasına ağırlık ver."]
     if k["sorular"]:

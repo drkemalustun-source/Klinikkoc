@@ -16,6 +16,7 @@ import tempfile
 import threading
 import time
 import unittest
+os.environ.setdefault("KLINIK_KOC_ANLAM_KURMA", "1")  # testler anlam aramasını arka planda kurmaya kalkmasın
 import urllib.request
 
 KOK = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

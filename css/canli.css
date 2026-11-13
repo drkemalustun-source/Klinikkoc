@@ -317,3 +317,110 @@ body:has(.canli) { background: #EAE5DC; }
 .canli-buyuk-dugme small { color: #6b6658; }
 .canli .question { background: rgba(12,22,54,.86); }
 .canli .board.case-mode .question { background: rgba(12,22,54,.92); }
+
+/* Sürüm etiketi (üst çubuk): her zaman görünür; sayfa ile program uyuşmazsa kırmızı. */
+.canli-surum { flex: none; align-self: center; margin-left: .5em; padding: .1em .5em; border-radius: 6px;
+  font-size: .62em; font-weight: 600; color: #5b6478; background: rgba(27,54,123,.08); white-space: nowrap; }
+.canli-surum:empty { display: none; }
+.canli-surum.uyumsuz { color: #fff; background: #c0392b; }
+.canli-ses.yukleniyor::after { content: " ⏳"; animation: canli-yanip 1.4s ease-in-out infinite; }
+@keyframes canli-yanip { 50% { opacity: .35; } }
+
+/* Canlı tahtada tablo, akış, ağaç gibi içerikler tahtanın üstünden başlar (eskiden ortalanıp üst yarı boş kalıyordu). */
+.canli .board-visual { justify-content: flex-start; }
+.canli .board-visual > .board-draw, .canli .board-visual > .board-figure { flex: 1 1 auto; }
+
+/* ================= 5.0 · Açık (kırık beyaz) tahta: varsayılan =================
+   Kemal 2026-11-13: çizimler beyaz zeminde net okunur. Koyu (kobalt) tahta ⚙ Ayarlar'dan seçilir
+   (#lesson[data-zemin="koyu"]). Renk adları (chalk, accent, ok, warn, info) açık zeminde koyu tonlara döner;
+   dersler ve şablonlar değişmeden iki zeminde de çalışır. */
+.canli:not([data-zemin="koyu"]) .board, .canli:not([data-zemin="koyu"]) .canli-panel {
+  --board: #FAF7F0; --board-2: #F0ECE3; --board-line: #D9D2C3;
+  --chalk: #1f2633; --chalk-dim: #5f6676; --accent: #9a5a00; --ok: #1e7a4c; --warn: #c0392b; --info: #1f5fa8;
+}
+.canli:not([data-zemin="koyu"]) .board { background: #FAF7F0; color: var(--chalk);
+  box-shadow: inset 0 1px 3px rgba(60,50,30,.10), 0 0 0 1px #E2DCCF, 0 10px 24px -12px rgba(60,50,30,.35); }
+.canli:not([data-zemin="koyu"]) .board-title h2 { color: #1B367B; }
+.canli:not([data-zemin="koyu"]) .board-table th { background: #EDE8DD; color: #1B367B; }
+.canli:not([data-zemin="koyu"]) .board-table h3, .canli:not([data-zemin="koyu"]) .board-flow h3,
+.canli:not([data-zemin="koyu"]) .board-compare h3, .canli:not([data-zemin="koyu"]) .board-draw h3,
+.canli:not([data-zemin="koyu"]) .board-tree h3, .canli:not([data-zemin="koyu"]) .note-block h3 { color: #1B367B; }
+.canli:not([data-zemin="koyu"]) .note-text { background: rgba(31,95,168,.07); }
+.canli:not([data-zemin="koyu"]) .note-text.key { background: rgba(154,90,0,.08); }
+.canli:not([data-zemin="koyu"]) .note-text.warn { background: rgba(192,57,43,.07); }
+.canli:not([data-zemin="koyu"]) .note-kaynak { background: #F0ECE3; }
+.canli:not([data-zemin="koyu"]) .flow-node, .canli:not([data-zemin="koyu"]) .tree-node,
+.canli:not([data-zemin="koyu"]) .compare-col { background: #fff; box-shadow: 0 2px 6px -3px rgba(60,50,30,.25); }
+.canli:not([data-zemin="koyu"]) .tree-node.danger { background: #fbe9e6; }
+.canli:not([data-zemin="koyu"]) .tree-item.on-path > .tree-node { box-shadow: 0 0 0 3px rgba(154,90,0,.22); }
+.canli:not([data-zemin="koyu"]) .shape.filled { fill: rgba(31,38,51,.06); }
+.canli:not([data-zemin="koyu"]) .shape.accent.filled { fill: rgba(154,90,0,.12); }
+.canli:not([data-zemin="koyu"]) .shape.ok.filled { fill: rgba(30,122,76,.12); }
+.canli:not([data-zemin="koyu"]) .shape.warn.filled { fill: rgba(192,57,43,.12); }
+.canli:not([data-zemin="koyu"]) .shape.info.filled { fill: rgba(31,95,168,.12); }
+.canli:not([data-zemin="koyu"]) .compare-figure.expanded { box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+/* Şablonlar: kron ve mine zemine karışmasın diye ince çizgi; zemin üstündeki açık konturlar koyulaşır. */
+.canli:not([data-zemin="koyu"]) .an-mine, .canli:not([data-zemin="koyu"]) .an-kron { stroke: #a99f88; stroke-width: .4; }
+.canli:not([data-zemin="koyu"]) .an-nokta { stroke: #FAF7F0; }
+/* Açık zeminde boşluklar: koyu zeminin rengiyle çizilmiş hava/boşluk alanları açık gri-maviye döner */
+.canli:not([data-zemin="koyu"]) .an-hava, .canli:not([data-zemin="koyu"]) .an-pencere { fill: #dfe6ee; }
+.canli:not([data-zemin="koyu"]) .an-furkasyon-acik { fill: #dfe6ee; }
+.canli:not([data-zemin="koyu"]) .an-siyah-ucgen { fill: #3c4651; }
+.canli:not([data-zemin="koyu"]) .an-defekt-cizgi { stroke: #dfe6ee; }
+.canli:not([data-zemin="koyu"]) .an-cizelge-kutu { fill: #ffffff; stroke: #cfc6b4; stroke-width: .15; }
+.canli:not([data-zemin="koyu"]) .an-kafa { fill: #e4ded2; }
+.canli:not([data-zemin="koyu"]) .an-orbita { fill: #8a7b58; }
+/* Soru kartı ve vaka paneli açık zeminde beyaz kart */
+.canli:not([data-zemin="koyu"]) .question, .canli:not([data-zemin="koyu"]) .board.case-mode .question {
+  background: rgba(250,247,240,.96); color: var(--chalk); box-shadow: 0 -8px 30px -10px rgba(60,50,30,.35); }
+
+/* ---------- ⚙ Ayarlar, yan paneller, mola (5.0) ---------- */
+.canli .icon-btn.canli-ayar-dugme svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.canli .icon-btn.canli-ayar-dugme[aria-expanded="true"] { background: #fff; box-shadow: inset 0 0 0 2px #1B367B; }
+.canli-menu.canli-ayar { position: fixed; top: 58px; right: 12px; left: auto; bottom: auto; z-index: 48; width: min(360px, calc(100vw - 24px));
+  font-size: 15px; display: flex; flex-direction: column; gap: 6px; }
+.canli-menu.canli-ayar[hidden] { display: none; }
+.canli-menu.canli-ayar .canli-menu-baslik { margin: 6px 0 0; }
+.canli-ayar-secim { display: flex; gap: 6px; flex-wrap: wrap; }
+.canli-ayar-secim label, .canli-ayar-kutu { display: flex; gap: 8px; align-items: flex-start; padding: 7px 10px; border-radius: 12px;
+  cursor: pointer; background: #fff; box-shadow: 0 1px 0 rgba(0,0,0,.04), 0 2px 6px -4px rgba(60,40,20,.4); }
+.canli-ayar-secim label { flex: 1 1 140px; align-items: center; }
+.canli-ayar-kutu small { display: block; color: #6b6658; font-size: .85em; margin-top: 2px; }
+.canli-ayar input { accent-color: #1B367B; margin-top: .2em; }
+.canli-menu.canli-ayar .btn { align-self: flex-start; font: inherit; padding: .45em 1em; border-radius: 999px; border: 0; cursor: pointer;
+  background: #EAE5DC; color: #2A2D3A; box-shadow: inset 0 1px 0 #fff, inset 0 -3px 0 rgba(0,0,0,.1); }
+
+/* Yan panel: tahtanın sağında, isteğe bağlı (varsayılan kapalı) */
+#lesson.canli.panelli { grid-template-columns: minmax(0, 1fr) clamp(220px, 22vw, 320px); }
+#lesson.canli.panelli > .topbar, #lesson.canli.panelli > .canli-alt { grid-column: 1 / -1; }
+#lesson.canli.panelli > .board { grid-column: 1; grid-row: 2; }
+.canli-panel { grid-column: 2; grid-row: 2; min-height: 0; overflow-y: auto; margin: 0 10px 0 0; padding: 14px 14px 10px;
+  border-radius: 22px; display: flex; flex-direction: column; gap: 14px; font-size: 15px;
+  background: var(--board); color: var(--chalk); box-shadow: inset 0 1px 3px rgba(60,50,30,.10), 0 0 0 1px #E2DCCF; }
+.canli[data-zemin="koyu"] .canli-panel { --board: #1B367B; --chalk: #eef2ee; --chalk-dim: #a9b8b0; --accent: #f4c95d; --board-line: rgba(255,255,255,.16);
+  background: #1B367B; box-shadow: inset 0 3px 10px rgba(0,0,0,.35); }
+.canli-panel[hidden], .canli-panel-bolum[hidden], .canli-panel-bos[hidden] { display: none; }
+.canli-panel h3 { margin: 0 0 6px; font-size: 1em; color: var(--accent); }
+.canli[data-zemin]:not([data-zemin="koyu"]) .canli-panel h3, .canli:not([data-zemin]) .canli-panel h3 { color: #1B367B; }
+.canli-panel-adim { font-size: .85em; color: var(--chalk-dim); margin-bottom: 4px; }
+.canli-panel-adim .cubuk { height: 6px; border-radius: 3px; background: var(--board-line); margin-top: 4px; overflow: hidden; }
+.canli-panel-adim .cubuk i { display: block; height: 100%; background: #E06826; border-radius: 3px; }
+.canli-akis { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 4px; }
+.canli-akis li { color: var(--chalk-dim); line-height: 1.3; }
+.canli-akis li.simdi { color: var(--chalk); font-weight: 700; }
+.canli-akis li.simdi::marker { color: #E06826; }
+.canli-panel-bos { margin: 0; color: var(--chalk-dim); font-size: .85em; }
+.canli-ilerleme { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.canli-ilerleme li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 8px; align-items: start; line-height: 1.25; }
+.canli-ilerleme .nokta { width: 12px; height: 12px; border-radius: 50%; margin-top: .2em; background: var(--board-line); grid-row: span 2; }
+.canli-ilerleme .bagimsiz_yapti .nokta { background: #1e7a4c; }
+.canli-ilerleme .destekle_yapti .nokta, .canli-ilerleme .devam_ediyor .nokta { background: #d99a1e; }
+.canli-ilerleme .tekrar_gerekli .nokta { background: #c0392b; }
+.canli-ilerleme .ad { font-size: .9em; }
+.canli-ilerleme .alt { font-size: .75em; color: var(--chalk-dim); }
+@media (max-width: 760px) { #lesson.canli.panelli { grid-template-columns: minmax(0, 1fr); }
+  .canli-panel { display: none !important; } }
+.canli.tam .canli-panel { margin: 0; border-radius: 0; }
+
+/* Mola penceresi */
+.canli-mola-sure { margin: .2em 0; font-size: 2.4em; font-weight: 800; color: #1B367B; font-variant-numeric: tabular-nums; }

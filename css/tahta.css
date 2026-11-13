@@ -159,6 +159,16 @@ strong { color: var(--accent); font-weight: 700; }
 .board-table table { border-collapse: collapse; width: 100%; font-size: .8em; }
 .board-table th, .board-table td { border: 1px solid var(--board-line); padding: .45em .6em; text-align: left; vertical-align: top; }
 .board-table th { background: var(--board-2); color: var(--accent); }
+.board-table td.soru-hucresi { text-align: center; }
+.tablo-soru { min-width: 2.4em; min-height: 2em; padding: .2em .7em; border-radius: 10px; border: 2px dashed var(--accent);
+  background: transparent; color: var(--accent); font: inherit; font-weight: 700; cursor: pointer; }
+.tablo-soru.secildi { border-style: solid; font-weight: 600; }
+.tablo-soru.dogru { border-color: var(--ok); color: var(--ok); }
+.tablo-soru.yanlis { border-color: var(--warn); color: var(--warn); }
+.tablo-secenekler { display: flex; flex-direction: column; gap: .3em; margin-top: .4em; }
+.tablo-secenek { padding: .35em .6em; border-radius: 8px; border: 1px solid var(--board-line); background: var(--board-2);
+  color: var(--chalk); font: inherit; text-align: left; cursor: pointer; }
+.tablo-secenek:hover, .tablo-secenek:focus { border-color: var(--accent); }
 .table-caption { font-size: .65em; color: var(--chalk-dim); }
 
 /* Akış */
@@ -233,6 +243,8 @@ strong { color: var(--accent); font-weight: 700; }
 .stroke-in.dashed { stroke-dasharray: 2 1.5; stroke-dashoffset: 0; animation: fade .6s ease-out both; }
 @keyframes stroke { to { stroke-dashoffset: 0; } }
 .fade-in { animation: fade .5s ease-out both; }
+/* Gerçek renkli dolgu: çizgi çizilirken dolgu yavaşça belirir (yalnız saydamlık; fill-opacity korunur). */
+.stroke-in.dolgu-belir { animation: stroke 0.8s ease-out forwards, fade .9s ease-out both; }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 
 /* Kaynak işareti: makale mi, öğretici yorumu mu, kurgusal örnek mi */
@@ -577,6 +589,12 @@ strong { color: var(--accent); font-weight: 700; }
 .an-mse { fill: none; stroke: #c9a865; stroke-width: .35; }
 .an-kemik-hat { fill: none; stroke: #efe2bf; stroke-width: .45; stroke-dasharray: 1 .7; }
 .an-siyah-ucgen { fill: #0c1411; stroke: none; }
+/* Kontur şablonları (anatomi-kontur.js): restorasyon yüzeyinde kritik (mavi) ve kritik altı (turuncu) bölgeler.
+   Renk uzlaşısı kaynak makaledekiyle aynıdır (Su ve ark. 2010: kritik mavi, kritik altı turuncu). */
+.an-sematik-not { opacity: .55; font-style: italic; }
+.an-kritik { fill: none; stroke: #2f7fd1; stroke-width: 1.1; stroke-linecap: round; opacity: .95; }
+.an-kenar-ok { fill: none; stroke: #c0392b; stroke-width: .5; stroke-linecap: round; stroke-linejoin: round; }
+.an-kritik-alti { fill: none; stroke: #e08a1e; stroke-width: 1.1; stroke-linecap: round; opacity: .9; }
 .an-temas { fill: var(--accent); stroke: none; }
 .an-olcum-kilavuz { fill: none; stroke: var(--chalk-dim); stroke-width: .22; stroke-dasharray: .5 .5; }
 .an-olcum-mss { stroke: var(--accent); }
@@ -614,3 +632,43 @@ strong { color: var(--accent); font-weight: 700; }
 .an-apse { fill: #d9d36a; stroke: #f4efa6; stroke-width: .45; }
 .an-yayilim { fill: none; stroke: #f4efa6; stroke-width: .7; stroke-dasharray: 1.3 .9; stroke-linecap: round; }
 .an-mm-kortikal { stroke-width: 1.1; } .an-mm-pdl { stroke-width: .8; }
+
+/* Tıklanabilir kaynak (kaynak komutu) ve sayfa penceresi */
+.note-kaynak { display: inline-flex; align-items: center; gap: .45em; margin: .3em 0; padding: .3em .8em; border-radius: 999px;
+  font: inherit; font-size: .72em; color: var(--chalk); background: rgba(255,255,255,.08); border: 1px solid var(--board-line);
+  cursor: pointer; text-align: left; }
+.note-kaynak:hover, .note-kaynak:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.note-kaynak:disabled { opacity: .55; cursor: default; outline: none; }
+.kaynak-pencere { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; padding: 2vh 2vw;
+  background: rgba(8,14,30,.82); backdrop-filter: blur(3px); }
+.kaynak-pencere-ust { display: flex; justify-content: space-between; align-items: center; gap: 1em; color: #fff;
+  font-size: 18px; padding: 0 0 8px; }
+.kaynak-kapat { font: inherit; font-size: 16px; padding: .35em .9em; border-radius: 999px; border: 0; cursor: pointer;
+  background: #EAE5DC; color: #1B367B; font-weight: 700; }
+.kaynak-pencere-govde { flex: 1; min-height: 0; overflow: auto; display: flex; justify-content: center; align-items: flex-start; }
+.kaynak-pencere-govde img { max-width: 100%; background: #fff; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+.kaynak-hata { color: #fff; font-size: 18px; }
+
+/* Şablonda yanıt (board-etkilesim.js): işaretleme ve etiket sürükleme */
+.etk-isaretle .draw-svg [data-part] { cursor: pointer; }
+.etk-isaretle .draw-svg [data-part]:hover { filter: brightness(1.08); }
+.etk-secili { stroke: var(--accent) !important; stroke-width: .9 !important; filter: drop-shadow(0 0 1.2px var(--accent)); }
+.etk-secili.etk-dogru { stroke: var(--ok) !important; filter: drop-shadow(0 0 1.4px var(--ok)); }
+.etk-secili.etk-yanlis { stroke: var(--warn) !important; filter: drop-shadow(0 0 1.4px var(--warn)); }
+.etk-soru { margin: .4em 0; padding: .35em .7em; border-radius: 10px; border: 2px dashed var(--accent); color: var(--accent);
+  font-weight: 600; font-size: .8em; display: inline-block; }
+.etk-soru.dogru { border-style: solid; border-color: var(--ok); color: var(--ok); }
+.etk-soru.yanlis { border-style: solid; border-color: var(--warn); color: var(--warn); }
+.etk-raf { margin-top: .3em; }
+.etk-kartlar { display: flex; flex-wrap: wrap; gap: .4em; }
+.etk-kart { padding: .4em .8em; border-radius: 999px; border: 1px solid var(--board-line); background: var(--board-2); color: var(--chalk);
+  font: inherit; font-size: .75em; cursor: grab; touch-action: none; user-select: none; }
+.etk-kart.yerlesti { opacity: .35; cursor: default; }
+.etk-hayalet { position: fixed; z-index: 1000; transform: translate(-50%, -130%); padding: .35em .8em; border-radius: 999px;
+  background: var(--accent); color: #fff; font-size: .8em; pointer-events: none; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
+.etk-nokta { fill: var(--accent); stroke: #fff; stroke-width: .3; }
+.etk-yazi { fill: var(--chalk); paint-order: stroke; stroke: var(--board); stroke-width: .8px; font-weight: 600; }
+.etk-etiket.dogru .etk-nokta { fill: var(--ok); } .etk-etiket.dogru .etk-yazi { fill: var(--ok); }
+.etk-etiket.yanlis .etk-nokta { fill: var(--warn); } .etk-etiket.yanlis .etk-yazi { fill: var(--warn); }
+.etk-duzeltme { fill: none; stroke: var(--warn); stroke-width: .3; stroke-dasharray: .8 .6; }
+.etk-dogru-yer { fill: none; stroke: var(--ok); stroke-width: .4; }

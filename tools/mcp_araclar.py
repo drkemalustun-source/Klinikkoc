@@ -81,10 +81,22 @@ KOMUT_SEMASI = {
     "description": "Tahta komutu. Türe göre alanlar: "
                    "clear | title{text,subtitle} | bullets{title?,items[]} | point{text} | text{text,style?:note|key|warn} | "
                    "term{term,definition} | image{asset,caption?} | highlight{region[x,y,g,y] 0–1,label?,color?,shape?:rect|ellipse,id?} | "
-                   "unhighlight{id?} | zoom{region} | unzoom | table{title?,headers[],rows[][],caption?} | "
+                   "unhighlight{id?} | zoom{region} | unzoom | table{title?,headers[],rows[][],caption?,secenekler?{'satır,sütun':[..]},sutun_secenekleri?{'sütun':[..]},dogru?{'satır,sütun':'seçenek'}} (hücreye yalnız '?' yazarsan öğrenci dokunup seçenekten seçer ya da yazar; seçimi sana söz olarak gelir) | "
                    "flow{title?,nodes[],direction?:row|column} | compare{title?,columns[{title,items?[],asset?,caption?,color?}]} "
                    "(asset verilen sütunda o ders görseli gösterilir: iki fotoğrafı yan yana karşılaştırmak için) | "
-                   "draw{title?,viewBox?='0 0 160 90',shapes[{kind:line|arrow|rect|ellipse|path|text, ...}]} | "
+                   "draw{title?,viewBox?='0 0 160 90',shapes[{kind:line|arrow|rect|ellipse|path|text, ...}]} "
+                   "(şekil alanları, koordinatlar viewBox biriminde (160×90, sol üst 0,0): line ve arrow{x1,y1,x2,y2} "
+                   "(arrow ucu x2,y2'dedir) | rect{x,y,w,h,r?} | ellipse{cx,cy,rx,ry?} | path{d} (SVG yol: M,L,Q,C,Z) | "
+                   "text{x,y,text,size?=5,anchor?:start|middle|end}; hepsinde isteğe bağlı id, color, fill, opacity, stroke, "
+                   "width, dashed. Bunların dışındaki alanlar yok sayılır ve sonuçta cizim_uyarilari olarak döner. "
+                   "Şekil renkleri: color = çizgi/yazı rengi, fill = true | renk, opacity = dolgu saydamlığı 0–1, "
+                   "stroke = çizgi rengi ya da 'none', width = çizgi kalınlığı. Renk: tahta adları chalk|accent|ok|warn|info|muted, "
+                   "doku adları dis-eti|iltihap|mukoza|epitel|mine|dentin|sement|pulpa|pdl|kemik|kortikal|greft|titanyum|"
+                   "dayanak|kron|plak|kan (şablonlarla aynı tonlar) ya da hex '#f2a7a7'. style alanı yoktur. "
+                   "Serbest şekillerde de gecis çalışır: şekle id ver (ör. id:'cep'), sonraki draw'da aynı id'li şekli yeni "
+                   "konum/boyut/renkle ve gecis:<sn> ile gönder; şekil akarak değişir (aynı viewBox gerekir). Eğri (path) "
+                   "ancak komut yapısı aynıysa (aynı harfler, aynı sayıda nokta) akar; değilse eskisi solar, yenisi belirir. "
+                   "Yeni çizimde olmayan id'li şekiller solar) | "
                    "tree{title?,nodes[{id,text,parent?,edge?,state?:ok|warn|accent|danger|dim}],path?[id],caption?} "
                    "(klinik karar ağacı: kök düğümün parent'ı yok; edge dala yazılan koşuldur, ör. 'ateş var'; path öğrencinin "
                    "seçtiği yolu vurgular. Aynı title ile düğüm ekleyerek yeniden gönderirsen ağaç adım adım büyür). "
@@ -115,7 +127,7 @@ KOMUT_SEMASI = {
                    "soket-koruma (pihti, granulasyon, orgu-kemik, olgun-kemik, demet-kemigi, rezorpsiyon, dikey-kayip, eski-hat, greft, kollajen-ortu). "
                    "template:kemik-ici variant: saglikli|uc-duvarli|iki-duvarli|tek-duvarli|krater (defekt, duvar, bukkal-duvar, lingual-duvar, "
                    "proksimal-duvar, septum). template:cekilme variant: saglikli|rt1|rt2|rt3 (Cairo; cekilme, acik-kok, sinif, papilla, temas, "
-                   "siyah-ucgen, ara-kayip, mgj, mine-sement). template:sondalama variant: saglikli|gingivitis|periodontitis|cekilme "
+                   "siyah-ucgen, ara-kayip, mgj, mine-sement). ŞABLONDA YANIT: template'li draw'a isaretle:{soru, dogru?:[parça], coklu?} eklersen öğrenci şablonda bir bölgeye dokunur ve seçtiği parça sana söz olarak gelir ('İşaretleme · soru: ad [parça] (doğru|yanlış)'); etiket_surukle:{etiketler:[parça], soru?} eklersen şablon etiketsiz çizilir, öğrenci etiketleri yerine sürükler, hepsi yerleşince sonuç gelir ('Etiket yerleştirme: 3/4 doğru (yanlış: …)'). Parça adlarını aşağıdaki listelerden al; işaretlemede yalnız çizimde şekli olan parçalar seçilebilir. template:papil variant: dis-dis|duz|konkav|konveks|kare-kron|ince-biyotip|implant-implant (diş–implant arası meziodistal kesit; papil, tepe, temas, olcum, kret, siyah-ucgen, kritik, kritik-alti, kron-sag, implant, kuron, kazanc, biyotip). template:kontur-fasiyal variant: duz|kritik-fazla|kritik-az|kritik-alti-konkav|kritik-alti-konveks (implant labio-palatinal kesit; kritik, kritik-alti, kenar, kayma, hacim, labial-kemik, labial-mukoza, palatinal-mukoza, kron, implant). papil: kritik altı kontur dış bükey (konveks) yapılınca papil tepesi koronale kayar, siyah üçgen küçülür. Bu iki şablondaki doku tepkisi ölçüleri (papil artışı, kenar kayması) yaklaşık gözlemdir; eşik gibi söyleme. Bu iki şablonda kritik kontur MAVİ, kritik altı kontur TURUNCU çizilir. Hazır etiketlerdeki sayılar (implant çapı, kemik ve mukoza kalınlığı, papil yüksekliği) şemanın çizim ölçüleridir; makaleye bağlı derste sayı makalede yoksa draw'a olcu:false ekle (sayılar yazılmaz). Şablon, varyant ya da parça adını yanlış yazarsan sonuçta cizim_uyarilari gelir ve geçerli adlar listelenir; güncel adlar için sablon_bilgisi aracı. template:sondalama variant: saglikli|gingivitis|periodontitis|cekilme "
                    "(cep derinliği ve klinik ataşman ölçümü; dis parçalarına ek: olcum-cd, olcum-kas, olcum-gm, olcum-formul). "
                    "İNDEKSLER: template:plak-indeksi variant: pli-0..pli-3 (Silness–Löe) | qh-0..qh-5 (Quigley–Hein/Turesky, plak boyalı); "
                    "template:gingival-indeks variant: gi-0..gi-3 (Löe–Silness). Parçalar: dis, dis-eti, papilla, mgj, alveol-mukozasi, skor, olcut, "
@@ -148,10 +160,13 @@ KOMUT_SEMASI = {
                    "VIDEO: video{video?:videolar aracındaki kimlik | youtube?:bağlantı ya da kimlik, baslangic?:sn, "
                    "bitis?:sn, oynat?=true, bekle?=true, sessiz?, caption?} görsel alanını kaplar; bekle=true iken o adımın "
                    "anlatımı video bitince başlar (videonun üstüne konuşma); kısa klip için baslangic/bitis ver. "
-                   "video_kontrol{eylem:oynat|duraklat|git, saniye?} tahtadaki videoyu yönetir.",
+                   "video_kontrol{eylem:oynat|duraklat|git, saniye?} tahtadaki videoyu yönetir. "
+                   "KAYNAK: kaynak{text:'Su ve ark. 2010, s. 8', makale?:makaleler aracındaki id ya da kısa ad, sayfa:PDF sayfa "
+                   "sırası} tahtaya dokunulabilir bir kaynak yazar; öğrenci dokununca o sayfa kendi PDF'inden büyük açılır. "
+                   "Sayfa numarası verdiğin her yerde bunu kullan (yalnız yazıyla 's. 336' deme).",
     "properties": {"type": {"type": "string", "enum": [
         "clear", "title", "bullets", "point", "text", "term", "image", "highlight", "unhighlight",
-        "zoom", "unzoom", "table", "flow", "compare", "draw", "tree", "video", "video_kontrol"]}},
+        "zoom", "unzoom", "table", "flow", "compare", "draw", "tree", "video", "video_kontrol", "kaynak"]}},
     "required": ["type"],
     "additionalProperties": True,
 }
@@ -174,7 +189,9 @@ ARACLAR = [
             "deneme": {"type": "boolean", "description": "öğretmen denemesi: kayıt 'deneme' olarak işaretlenir, "
                                                          "araştırma aktarımına katılmaz"},
             "egitmen": {"type": "string", "enum": ["inci", "mercan"],
-                        "description": "yalnız ders izin veriyorsa başka eğitmen seçmek için"}},
+                        "description": "yalnız ders izin veriyorsa başka eğitmen seçmek için"},
+            "yalniz_ogrenci": {"type": "boolean", "description": "kuralları ve ders bilgisini bu konuşmada zaten aldıysan "
+                                                                 "(ör. ilk çağrı ad sordu) true: yalnız öğrenci kaydı döner, kısa yanıt"}},
             "required": ["ders"]},
     },
     {
@@ -188,8 +205,8 @@ ARACLAR = [
                        "yanilgilar: [{id, durum (acik|cozuldu), not}]. guven: [{hedef, soru, guven (tahmin|biraz|emin), dogru}]. "
                        "sorular: [{soru, kaynakta_yok}]. testler: [{tur (on|son|gecikmeli), dogru, toplam}]. "
                        "cevaplar: her cevaplanan soru ve vaka adımı için [{soru (kimlik ya da kısa metin), hedef, bloom, "
-                       "tur (secmeli|acik|sozlu|vaka_karar|vaka_acik|vaka_veri), puan, en_yuksek (rubrik toplamı; seçmelide 1), "
-                       "ilk_deneme (true/false), ipucu (kullanılan ipucu sayısı), vaka, dugum, tehlikeli (true/false), "
+                       "tur (secmeli|acik|sozlu|vaka_karar|vaka_acik|vaka_veri|isaretleme), puan, en_yuksek (rubrik toplamı; seçmelide 1), "
+                       "ilk_deneme (true/false), ipucu (kullanılan ipucu sayısı), secenekli (seçeneklerden seçerek cevapladıysa true), vaka, dugum, tehlikeli (true/false), "
                        "karsilanan_olcutler [ölçüt metni, kısa], eksik_olcutler [ölçüt metni, kısa]}]. "
                        "mod: once_anlat|once_yanitla. mola: bekleyen nokta metni ya da null. oturum: {egitmen, ozet, sure_dk "
                        "(oturumun yaklaşık süresi, dakika)}. "
@@ -211,7 +228,9 @@ ARACLAR = [
         "name": "bilgi_ara",
         "description": "Bu bilgisayardaki derslerin kaynak metinlerinde (ders notu/makale sayfaları), hazır anlatımlarında, "
                        "sorularında, öğretmen notlarında ve vaka kartlarında arar. Sözcük araması her zaman açıktır; "
-                       "anlam araması kuruluysa anlamca yakın parçaları da bulur. Her sonuçta kaynak (sayfa) bilgisi vardır. "
+                       "Türkçe terimler İngilizce karşılıklarıyla birlikte aranır (terim_eslemesi alanı hangilerinin eklendiğini söyler); "
+                       "İngilizce makalede sonuç azsa sorguyu İngilizce terimlerle de tekrarlayabilirsin. "
+                       "Anlam araması kuruluysa anlamca yakın parçaları da bulur. Her sonuçta kaynak (sayfa) bilgisi vardır. "
                        "Sonuçta 'dayanak' (guclu | zayif | yok) kaynakta bu soruya gerçekten dayanak olup olmadığını söyler.",
         "inputSchema": {"type": "object", "properties": {
             "sorgu": {"type": "string", "description": "aranacak soru ya da anahtar sözcükler (Türkçe)"},
@@ -331,6 +350,16 @@ ARACLAR = [
         "inputSchema": {"type": "object", "properties": {}},
     },
     {
+        "name": "sablon_bilgisi",
+        "description": "Hazır anatomik şablonların (draw.template) güncel bilgisi: varyantlar, parça kimlikleri ve tahtada "
+                       "görünen adları, hangi parçanın yalnız hangi varyantta bulunduğu. template verilmezse bütün şablonların "
+                       "listesi döner. Bir şablonu ilk kez kullanmadan, labels/highlight/isaretle/etiket_surukle için parça adı "
+                       "yazmadan önce çağır; adları tahmin etme (bilinmeyen ad çizilmez, tahta aracı uyarı döndürür).",
+        "inputSchema": {"type": "object", "properties": {
+            "template": {"type": "string", "description": "şablon adı, ör. kontur-fasiyal, papil, dis, implant"},
+            "variant": {"type": "string", "description": "verilirse o varyantta bulunan parçalar da listelenir"}}},
+    },
+    {
         "name": "makale_sayfasi_bak",
         "description": "Öğretmen için: derse makaleden şekil eklerken makalenin bir sayfasını görüntü olarak gösterir "
                        "(makalenin PDF'i bu bilgisayarda hazır olmalı). bolge verilirse yalnız o kısım. Şeklin yerini "
@@ -396,6 +425,37 @@ ARACLAR = [
                        "Sınır aşıldıysa öğrenciye 'Hangi dersleri arşive kaldıralım?' diye sor; dersleri boyutları ve son "
                        "açılma tarihleriyle say. Arşivleme otomatik değildir. ac true ise depolama sayfası tarayıcıda açılır.",
         "inputSchema": {"type": "object", "properties": {"ac": {"type": "boolean"}}},
+    },
+    {
+        "name": "ortak_klasor",
+        "description": "İki bilgisayarda (ör. Mac ve Windows) aynı kayıtlar ve makalelerle çalışmak için ortak bulut klasörü "
+                       "(OneDrive, Google Drive, iCloud Drive, Dropbox). islem 'durum' (varsayılan): açık mı, yolu, bu bilgisayarda "
+                       "bulunan bulut klasörleri (adaylar), başka bilgisayar şu an açık mı (uyari). 'ayarla' {yol}: kayıtları ve "
+                       "makale PDF'lerini oraya kopyalar (önce yedek alınır, hiçbir şey silinmez). 'kapat': ortak klasördeki "
+                       "veriyi bu bilgisayara kopyalayıp ortak klasörü bırakır. ayarla ve kapat YALNIZ kullanıcı açıkça "
+                       "isteyince ve onay true ile çağrılır. Kullanıcıya aynı anda iki bilgisayarda çalışmamasını söyle.",
+        "inputSchema": {"type": "object", "properties": {
+            "islem": {"type": "string", "enum": ["durum", "ayarla", "kapat"]},
+            "yol": {"type": "string", "description": "ayarla için bulut klasörü (adaylardan biri)"},
+            "onay": {"type": "boolean"}}},
+    },
+    {
+        "name": "eski_surumler",
+        "description": "Bu bilgisayardaki eski KlinikKoç (ve eski akıllı tahta) klasörlerini listeler: sürüm, boyut, son "
+                       "değişiklik, yeni kurulumda olmayan dersler, Claude'un o klasörü kullanıp kullanmadığı. Hiçbir şey silmez. "
+                       "Kullanıcıya klasörleri tek tek say ve hangilerinin silinmesini istediğini sor.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "eski_surumleri_sil",
+        "description": "Eski KlinikKoç klasörlerini yedekleyip siler. YALNIZ kullanıcı bu konuşmada o klasörleri adıyla "
+                       "görüp açıkça 'sil' dediyse çağır; onay true olmalı. Önce yeni kurulumda olmayan dersler yeni kuruluma "
+                       "kopyalanır, sonra klasörün yedeği Belgeler/KlinikKoç Yedekler içine zip olarak alınır ve doğrulanır, "
+                       "en son klasör silinir. Çalışan kurulum ve Claude'un kullandığı klasör silinmez. Yedeğin yerini kullanıcıya söyle.",
+        "inputSchema": {"type": "object", "properties": {
+            "klasorler": {"type": "array", "items": {"type": "string"}, "description": "eski_surumler'in verdiği yollar"},
+            "onay": {"type": "boolean", "description": "kullanıcı açıkça onayladı"}},
+            "required": ["klasorler", "onay"]},
     },
     {
         "name": "ders_arsivle",
@@ -551,11 +611,15 @@ ARACLAR = [
         "name": "ders_oku",
         "description": "Bir dersin içeriğini okur. bolum verilmezse ders planı (hedefler, bölümler, görseller); "
                        "bolum verilirse o bölümün anlatım metni, tahta komutları ve soruları; sayfa verilirse "
-                       "kaynağın (ders notu ya da makale) o sayfasının metni.",
+                       "kaynağın (ders notu ya da makale) o sayfasının metni. Derste birden çok makale varsa "
+                       "makale alanıyla hangisi olduğunu söyle.",
         "inputSchema": {"type": "object", "properties": {
             "ders": {"type": "string", "description": "ders kimliği, ör. peri-implantitis-cerrahi"},
             "bolum": {"type": "string", "description": "bölüm kimliği (isteğe bağlı)"},
-            "sayfa": {"type": "integer", "description": "kaynağın bu sayfasının metnini ve o sayfaya ait öğretmen notlarını oku"}},
+            "sayfa": {"type": "integer", "description": "kaynağın bu sayfasının metnini ve o sayfaya ait öğretmen notlarını oku"},
+            "makale": {"type": "string", "description": "sayfa bir makaleden okunacaksa makalenin kimliği ya da kısa adı "
+                                                         "(makaleler aracındaki id/kisa; ör. kendi-makalelerim kitaplığında). "
+                                                         "Sayfa = PDF'in sayfa sırası."}},
             "required": ["ders"]},
     },
     {
@@ -571,7 +635,13 @@ ARACLAR = [
                        "tahtaya çizilir, sonra anlat metni okunur. Anlatım çok uzun sürerse araç "
                        "'sürüyor' döner; bitişini bekle(no) ile bekle. Kullanıcı tahtada duraklattıysa "
                        "'duraklatildi' döner: hata değil, bekle(no) ile beklemeyi sürdür. Kullanıcı konuşursa "
-                       "anlatım duraklar ve araç hemen 'kullanici_konustu' döner: cevap ver, sonra anlatima_devam.",
+                       "anlatım duraklar ve araç hemen 'kullanici_konustu' döner: cevap ver, sonra anlatima_devam. "
+                       "Sonuçtaki araya_girdi: true, bu komutun askıdaki bir anlatımın arasına girdiğini söyler (o anlatım "
+                       "kaldigi_yer.askida ile bekler; anlatima_devam ile sürer, birak:true ile kapanır). ders_oku'daki anlatım "
+                       "metinlerinde geçen {1}, {2} işaretleri ve komutlardaki cue alanı oynatıcı içindir: tahta {n}'yi sesli "
+                       "okumaz, cue'yu yok sayar ve bir adımın bütün komutlarını adımın başında çizer. Bir görselin belirli bir "
+                       "cümlede gelmesini istiyorsan onu ayrı bir adıma koy. Diş, dişeti, kemik, implant, papil ya da kontur "
+                       "çizeceksen önce hazır şablonu (draw template) kullan; serbest çizimi yalnız uyan şablon yoksa yap.",
         "inputSchema": {"type": "object", "properties": {
             "ders": {"type": "string", "description": "image komutu kullanılacaksa görsellerin alınacağı ders"},
             "adimlar": {"type": "array", "minItems": 1, "maxItems": 12, "items": {
@@ -585,7 +655,11 @@ ARACLAR = [
         "name": "soru_sor",
         "description": "Tahtada çoktan seçmeli bir soru kartı açar ve dokunulan cevabı döndürür (cevap gelmeden "
                        "'sürüyor' dönerse bekle(no) ile beklemeyi sürdür). dogru verilirse kart doğru/yanlışı ve "
-                       "aciklama'yı gösterir. Sorular not için değil, öğrenmek içindir.",
+                       "aciklama'yı gösterir. Sorular not için değil, öğrenmek içindir. Başka soru türleri: öğrencinin "
+                       "çizimde bir bölgeye DOKUNARAK işaretlemesi ya da etiketleri çizimdeki yerine SÜRÜKLEMESİ için tahta "
+                       "aracında şablonlu draw komutuna isaretle:{soru,dogru?} ya da etiket_surukle:{etiketler,soru?} ekle; "
+                       "tabloda öğrencinin hücreyi doldurması için table komutunda hücreye '?' yaz. Bu cevaplar sana "
+                       "öğrencinin sözü olarak gelir.",
         "inputSchema": {"type": "object", "properties": {
             "soru": {"type": "string"},
             "secenekler": {"type": "array", "minItems": 2, "maxItems": 6, "items": {"type": "string"}},
@@ -600,8 +674,14 @@ ARACLAR = [
         "description": "Tahtanın durumunu verir. no verilirse o komutun (anlatım ya da soru) bitmesini bekler (bekle(no) ile aynı) "
                        "ve sonucunu döndürür; kullanıcı konuşursa beklemeden 'kullanici_konustu' döner. "
                        "'duraklatildi': kullanıcı anlatımı duraklattı; aynı no ile beklemeyi sürdür. no verilmezse "
-                       "kullanıcının bekleyen sözünü de 'kullanici_konustu' alanında verir (kullanıcı 'tahtaya bak' derse).",
-        "inputSchema": {"type": "object", "properties": {"no": {"type": "integer"}}},
+                       "kullanıcının bekleyen sözünü de 'kullanici_konustu' alanında verir (kullanıcı 'tahtaya bak' derse). "
+                       "goruntu: true verilirse tahtanın O ANKİ RESMİNİ döndürür (anlatımı bölmez): serbest çizim ya da "
+                       "şablon gösterdikten sonra taşma, üst üste binme, okunmayan etiket var mı diye bakmak, öğrenci "
+                       "'tahtadaki şuna bak' dediğinde ne gördüğünü bilmek için kullan.",
+        "inputSchema": {"type": "object", "properties": {
+            "no": {"type": "integer"},
+            "goruntu": {"type": "boolean", "description": "true: tahtanın resmini (PNG) döndür"},
+            "en_fazla": {"type": "integer", "description": "resmin en fazla genişliği, piksel (varsayılan 1400)"}}},
     },
     {
         "name": "bekle",
@@ -633,7 +713,9 @@ ARACLAR = [
     {
         "name": "anlatima_devam",
         "description": "Kullanıcı söz alınca duraklayan anlatımı, cevabından sonra kaldığı cümleden sürdürür (tahta cevaptan "
-                       "önceki hâline döner) ve anlatımın bitmesini tahta gibi bekler. birak=true: anlatımı sürdürmez, bırakır.",
+                       "önceki hâline döner) ve anlatımın bitmesini tahta gibi bekler. birak=true: anlatımı sürdürmez, bırakır; "
+                       "anlatım duraklamamış, hâlâ sürüyorsa da keser ('birakildi'). Bırakılacak anlatım yoksa "
+                       "'devam_edilecek_anlatim_yok' ya da 'etkisiz' döner.",
         "inputSchema": {"type": "object", "properties": {
             "birak": {"type": "boolean", "description": "anlatımı sürdürme, bırak (konu değiştiyse)"}}},
     },

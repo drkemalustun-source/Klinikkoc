@@ -192,7 +192,7 @@ def metin_klasoru(ders, kid):
 
 
 def durum_yolu(ders):
-    return os.path.join(veri_yeri.veri_kok(), "makaleler", ders_gecerli(ders) + ".json")
+    return os.path.join(veri_yeri.paylasilan_kok(), "makaleler", ders_gecerli(ders) + ".json")
 
 
 def durum_oku(ders):
@@ -202,6 +202,11 @@ def durum_oku(ders):
     d.setdefault("ders", ders)
     d.setdefault("kaynaklar", {})
     d.setdefault("ekler", [])
+    for s in d["kaynaklar"].values():  # ortak klasörde öbür bilgisayarın yolu yazılı olabilir: bu bilgisayarınkine çevir
+        if isinstance(s, dict) and s.get("pdf") and not os.path.isfile(s["pdf"]):
+            aday = os.path.join(makale_klasoru(ders), re.split(r"[\\/]", s["pdf"])[-1])
+            if os.path.isfile(aday):
+                s["pdf"] = aday
     return d
 
 
@@ -422,8 +427,43 @@ def kaynak_hazirla(ders, k, ag=None, ag_kullan=True, eposta=None):
     if doi and doi == ders_metni_doi(ders) and glob.glob(os.path.join(ders_klasoru(ders), "kaynak", "sayfa-*.txt")):
         d.update(durum="hazir", nereden="ders", not_="Dersin kendi metni; zaten aramada.")
         return d
+    pmid = re.sub(r"\D", "", str(k.get("pmid") or ""))
+    if pmid:
+        d["pmid"] = pmid
+        d.setdefault("sayfa_adresi", "https://pubmed.ncbi.nlm.nih.gov/%s/" % pmid)
     yol, nereden = yerelde_bul(ders, k)
     denenen = []
+    if not yol:
+        # Öğrencinin 'Kendi makalelerim' kitaplığında aynı makale varsa o PDF kullanılır (kopyalanmaz).
+        try:
+            kyol, kb = kendi_kitaplikta_bul(ders, k)
+        except Exception:
+            kyol, kb = None, None
+        denenen.append("Kendi makalelerim")
+        if kyol:
+            se = kb.get("sayfa_uyumu") or {}
+            if se and se.get("kayma") is None:
+                d["kitaplik_notu"] = ("'Kendi makalelerim'deki PDF bu makalenin başka bir baskısı: sayfaları dersin "
+                                      "sayfalarıyla aynı sırada değil. Yanlış sayfa açılmasın diye bağlanmadı.")
+            else:
+                yol, nereden = kyol, "kendi-makalelerim"
+                d["eslesme"] = kb["eslesme"]
+                if se.get("kayma"):
+                    d["sayfa_kaymasi"] = se["kayma"]
+                if se.get("eksik"):
+                    d["eksik_sayfalar"] = se["eksik"]
+                    d["sayfa_notu"] = ("Bu PDF kopyasında dersin şu sayfaları yok: %s. O sayfalara kaynak bağlantısı "
+                                       "açılmaz." % ", ".join(str(n) for n in se["eksik"]))
+                if kb["eslesme"] == "dosya-adi":
+                    d["sayfa_notu"] = ("PDF dosya adından eşleştirildi (tahmini); sayfa numaraları tutmayabilir. "
+                                       "Emin olmak için makaleler sayfasından doğru PDF'i ekleyin.")
+    if not yol and ag_kullan and not doi and pmid:
+        ag = ag or Ag()
+        denenen.append("PubMed")
+        doi = pmid_ile_doi(pmid, ag)
+        if doi:
+            d["doi"] = doi
+            d["sayfa_adresi"] = "https://doi.org/" + doi
     if not yol and ag_kullan and doi:
         ag = ag or Ag()
         for url, kim in acik_erisim_adresleri(doi, ag, eposta):
@@ -443,16 +483,24 @@ def kaynak_hazirla(ders, k, ag=None, ag_kullan=True, eposta=None):
             if veri:
                 yol, nereden = _kaydet(ders, k, veri), "universite"
     if not yol:
-        if denenen and not getattr(ag, "ulasildi", True):
+        agda = [x for x in denenen if x != "Kendi makalelerim"]
+        if agda and not getattr(ag, "ulasildi", True):
             neden = "İnternete ulaşılamadı. Bağlantınızı kontrol edip yeniden deneyin."
-        elif denenen:
+        elif agda and doi:
             neden = ("Açık erişimli bir sürümü bulunamadı ve yayıncı indirmeye izin vermedi. Üniversite ağındaysanız "
                      "yayıncı sayfasından indirip buraya bırakın.")
         else:
-            neden = "İnternete bakılmadı." if (not ag_kullan and doi) else "DOI yok; PDF'i elle ekleyin."
+            neden = "İnternete bakılmadı." if (not ag_kullan and doi) else (
+                "Bu makalenin DOI'si yok; 'Kendi makalelerim'de de bulunamadı. PDF'i makaleler sayfasından elle ekleyin.")
+        if d.get("kitaplik_notu"):
+            neden = d.pop("kitaplik_notu")
         d.update(durum="eksik", denenen=denenen, neden=neden)
         return d
     d.update(pdf=yol, nereden=nereden)
+    if d.get("eslesme") == "icerik":
+        # Dersin kendi sayfa metni zaten aramada; PDF yalnız sayfa görüntüsü (kaynak bağlantısı, şekiller) içindir.
+        d["durum"] = "hazir"
+        return d
     try:
         d["sayfa"] = metne_cevir(ders, k["id"], yol, k)
         d["durum"] = "hazir"
@@ -505,6 +553,40 @@ def sekilleri_cikar(ders):
         return {"hata": str(e)}
 
 
+def ortak_esitle():
+    """Ortak klasör (ya da başka bir bilgisayar) üzerinden gelen makalelerin metnini bu bilgisayarda da üretir:
+    durum "hazır" ve PDF burada var ama bu bilgisayarda metin yoksa PDF yeniden okunur ve aramaya eklenir.
+    Bu bilgisayarda kurulu olmayan derslere dokunulmaz. Hazırlanan [{ders, id}] listesini döndürür."""
+    out = []
+    for yol in sorted(glob.glob(os.path.join(veri_yeri.paylasilan_kok(), "makaleler", "*.json"))):
+        ders = os.path.basename(yol)[:-5]
+        try:
+            ders_gecerli(ders)
+        except ValueError:
+            continue
+        if ders == KENDI:
+            kendi_kitaplik_hazirla()
+        elif not os.path.isdir(ders_klasoru(ders)):
+            continue
+        durum = durum_oku(ders)
+        hazirlanan = []
+        for kid, s in list(durum["kaynaklar"].items()):
+            if not isinstance(s, dict) or s.get("durum") != "hazir" or not s.get("pdf") or not os.path.isfile(s["pdf"]):
+                continue
+            try:
+                if glob.glob(os.path.join(metin_klasoru(ders, kid), "sayfa-*.txt")):
+                    continue
+                k = next((x for x in kaynaklar(ders) + durum["ekler"] if str(x.get("id")) == kid), {"id": kid})
+                metne_cevir(ders, kid, s["pdf"], k, ogrenci=bool(s.get("ogrenci")))
+                hazirlanan.append(kid)
+            except Exception:
+                continue
+        if hazirlanan:
+            aramaya_ekle(ders)
+            out += [{"ders": ders, "id": k} for k in hazirlanan]
+    return out
+
+
 def aramaya_ekle(ders):
     """Bilgi bankasını (sözcük araması) günceller. Anlam araması kuruluysa eğitmen ilk aramada onu da ekler."""
     try:
@@ -528,6 +610,202 @@ def baslikla_esle(ilk_sayfa, adaylar, esik=0.8):
         if len(b) >= 3 and len(b & sayfa) / len(b) >= esik:
             uyan.append(aday)
     return uyan[0] if len(uyan) == 1 else None
+
+
+def _ilk_sayfalar(ders, kid, n=2):
+    try:
+        yollar = sorted(glob.glob(os.path.join(metin_klasoru(ders, kid), "sayfa-*.txt")))[:n]
+    except ValueError:
+        return ""
+    out = []
+    for y in yollar:
+        try:
+            with open(y, encoding="utf-8") as f:
+                out.append(f.read())
+        except OSError:
+            pass
+    return "\n".join(out)
+
+
+def _ders_makale_adaylari(ders):
+    """Bir dersin dayandığı makaleler: kaynaklar.json + egitmen.json kaynak + ders.json source. Atıf metni de
+    başlık adayı olur (cümlelere bölünür; en az 4 sözcüklü her parça ayrı denenir)."""
+    adaylar = [dict(k) for k in kaynaklar(ders)]
+    eg = _json_oku(os.path.join(ders_klasoru(ders), "egitmen.json"), {}) or {}
+    d = _json_oku(os.path.join(ders_klasoru(ders), "ders.json"), {}) or {}
+    for kay in (eg.get("kaynak") or {}, d.get("source") or {}):
+        if not isinstance(kay, dict):
+            continue
+        metin = kay.get("baslik") or kay.get("title") or kay.get("citation") or kay.get("atif") or ""
+        parcalar = [p.strip() for p in re.split(r"(?<=[a-z0-9\)])\.\s+", metin) if len(p.split()) >= 4] or [metin]
+        for p in parcalar:
+            adaylar.append({"baslik": p, "doi": kay.get("doi")})
+    for k in list(adaylar):
+        if k.get("atif") and not k.get("baslik"):
+            k["baslik"] = k["atif"]
+    return adaylar
+
+
+def _dortluler(metin):
+    w = re.findall(r"[a-zçğıöşü]{3,}", (metin or "").lower())
+    return set(zip(w, w[1:], w[2:], w[3:]))
+
+
+def _sayfa_metinleri(klasor_ya_da_kalip):
+    """{sayfa no: metin}; sayfa-NN.txt dosyalarından."""
+    out = {}
+    for y in sorted(glob.glob(os.path.join(klasor_ya_da_kalip, "sayfa-*.txt"))):
+        m = re.search(r"sayfa-(\d+)\.txt$", y)
+        try:
+            with open(y, encoding="utf-8") as f:
+                out[int(m.group(1))] = f.read()
+        except (OSError, AttributeError):
+            pass
+    return out
+
+
+def sayfa_esle(pdf_sayfalari, ders_sayfalari):
+    """Bir PDF'in sayfa metinleri dersin kendi kaynak metniyle (kaynak/sayfa-NN.txt) aynı makale mi, sayfalar
+    aynı sırada mı? Döner: None (aynı makale değil) ya da
+    {kayma: PDF sayfası − ders sayfası (hepsinde aynıysa; değilse None), eslesen: n, eksik: [PDF'te olmayan ders sayfaları]}.
+    Ölçü: dört sözcüklük dizilerin örtüşmesi (aynı metin ≈ %90+, başka sayfa ≈ %10)."""
+    A = {n: _dortluler(t) for n, t in pdf_sayfalari.items()}
+    B = {n: _dortluler(t) for n, t in ders_sayfalari.items()}
+    A = {n: x for n, x in A.items() if len(x) >= 80}   # kapak, telif notu gibi kısa sayfalar karar vermez
+    Bd = {n: x for n, x in B.items() if len(x) >= 80}
+    if not A or not Bd:
+        return None
+    es = {}
+    for n, x in A.items():
+        en = max(Bd, key=lambda b: len(x & Bd[b]))
+        if len(x & Bd[en]) / len(x) >= 0.6:
+            es[en] = n
+    if len(es) < max(1, (len(A) + 1) // 2):
+        return None
+    kaymalar = {pdf - ders for ders, pdf in es.items()}
+    return {"kayma": kaymalar.pop() if len(kaymalar) == 1 else None, "eslesen": len(es),
+            "eksik": sorted(n for n in Bd if n not in es)}
+
+
+def _ders_sayfalari(ders):
+    return _sayfa_metinleri(os.path.join(ders_klasoru(ders), "kaynak"))
+
+
+def _dosya_adiyla_esle(ad, adaylar):
+    """Dosya adındaki sözcüklerin hepsi (en az iki; ilki ilk yazarın soyadı) tek bir makalenin künyesinde geçiyorsa o makale.
+    Zayıf bir eşleşmedir (ör. 'Su- critical' → Su H, ... critical contour ...); 'tahmini' diye bildirilir."""
+    soz = [w for w in re.findall(r"[a-zçğıöşü]{2,}", os.path.splitext(ad or "")[0].lower()) if w not in ("pdf", "et", "al", "ve", "ark")]
+    if len(soz) < 2 or not any(len(w) >= 5 for w in soz):
+        return None
+    uyan = []
+    for a in adaylar:
+        kunye = re.findall(r"[a-zçğıöşü]{2,}", ((a.get("atif") or "") + " " + (a.get("baslik") or "")).lower())
+        if kunye and kunye[0] == soz[0] and all(w in kunye for w in soz):
+            uyan.append(a)
+    return uyan[0] if len(uyan) == 1 else None
+
+
+def hazir_ders_bul(kid, ders_listesi=None):
+    """Kendi makalelerimdeki bir makalenin hazır (sunumlu) dersi varsa {ders, baslik, eslesme: doi|baslik|icerik|dosya-adi}.
+    Sıra: DOI (kayıttan ya da PDF metninden); makale başlığının PDF'in ilk sayfalarında geçmesi; PDF metninin dersin
+    kendi kaynak metniyle örtüşmesi (o zaman sayfa uyumu da döner); en son dosya adı (tahmini)."""
+    durum = durum_oku(KENDI)
+    kayit = durum["kaynaklar"].get(kid) or {}
+    ek = next((e for e in durum["ekler"] if e.get("id") == kid), {})
+    metin = _ilk_sayfalar(KENDI, kid)
+    doi = doi_temizle(kayit.get("doi") or ek.get("doi"))
+    if not doi:
+        m = DOI_KALIBI.search(metin or "")
+        doi = doi_temizle(m.group(1)) if m else None
+    if ders_listesi is None:
+        ders_listesi = sorted({os.path.basename(os.path.dirname(y)) for ad in ("ders.json", "egitmen.json")
+                               for y in glob.glob(os.path.join(KOK, "lessons", "*", ad))})
+    try:
+        pdf_sayfalari = _sayfa_metinleri(metin_klasoru(KENDI, kid))
+    except ValueError:
+        pdf_sayfalari = {}
+    dosya = os.path.basename(kayit.get("pdf") or "") or ek.get("kisa") or kayit.get("kisa") or ""
+    baslikla = icerikle = adla = None
+    for ders in ders_listesi:
+        if ders == KENDI:
+            continue
+        try:
+            adaylar = _ders_makale_adaylari(ders)
+        except ValueError:
+            continue
+        temel = {"ders": ders, "baslik": ders_basligi(ders)}
+        if doi and any(doi_temizle(a.get("doi")) == doi for a in adaylar):
+            return dict(temel, eslesme="doi")
+        if metin and not baslikla and baslikla_esle(metin, [a for a in adaylar if a.get("baslik")]):
+            baslikla = dict(temel, eslesme="baslik")
+        if pdf_sayfalari and not icerikle:
+            se = sayfa_esle(pdf_sayfalari, _ders_sayfalari(ders))
+            if se:
+                icerikle = dict(temel, eslesme="icerik", sayfa_uyumu=se)
+        if dosya and not adla and _dosya_adiyla_esle(dosya, adaylar):
+            adla = dict(temel, eslesme="dosya-adi", tahmini=True)
+    return icerikle or baslikla or adla
+
+
+def kendi_kitaplikta_bul(ders, k):
+    """Dersin bir makalesi öğrencinin 'Kendi makalelerim' kitaplığında varsa (yol, bilgi) döner; yoksa (None, None).
+    bilgi: {kid, eslesme, sayfa_uyumu?}. Dersin kendi sayfa metni varsa ve PDF'in sayfaları onunla tutarlı bir
+    sırada değilse (başka baskı) eşleşme kabul edilmez: yanlış sayfa açılmasın."""
+    if ders == KENDI:
+        return None, None
+    durum = durum_oku(KENDI)
+    doi = doi_temizle(k.get("doi"))
+    ana = k.get("rol") == "ana" or len(kaynaklar(ders)) == 1
+    ders_sayfa = _ders_sayfalari(ders) if ana else {}
+    en_iyi = None
+    for ek in durum["ekler"]:
+        kid = str(ek.get("id"))
+        kayit = durum["kaynaklar"].get(kid) or {}
+        yol = kayit.get("pdf")
+        if kayit.get("durum") != "hazir" or not yol or not os.path.isfile(yol):
+            continue
+        try:
+            sayfalar = _sayfa_metinleri(metin_klasoru(KENDI, kid))
+        except ValueError:
+            continue
+        ilk = "\n".join(sayfalar[n] for n in sorted(sayfalar)[:2])
+        pdoi = doi_temizle(kayit.get("doi") or ek.get("doi"))
+        if not pdoi:
+            m = DOI_KALIBI.search(ilk)
+            pdoi = doi_temizle(m.group(1)) if m else None
+        se = sayfa_esle(sayfalar, ders_sayfa) if ders_sayfa else None
+        if doi and pdoi == doi:
+            tur, puan = "doi", 4
+        elif se:
+            tur, puan = "icerik", 3
+        elif k.get("baslik") and baslikla_esle(ilk, [k]):
+            tur, puan = "baslik", 2
+        elif _dosya_adiyla_esle(os.path.basename(yol), [k]):
+            tur, puan = "dosya-adi", 1
+        else:
+            continue
+        if ders_sayfa and tur != "icerik" and puan < 4:
+            continue  # ders sayfa sayfa bu metne bağlı; içeriği tutmayan PDF bağlanmaz
+        if not en_iyi or puan > en_iyi[0]:
+            en_iyi = (puan, yol, {"kid": kid, "eslesme": tur, **({"sayfa_uyumu": se} if se else {})})
+    if not en_iyi:
+        return None, None
+    return en_iyi[1], en_iyi[2]
+
+
+def pmid_ile_doi(pmid, ag):
+    """PubMed numarasından DOI (NCBI kimlik dönüştürücü). Bulunamazsa None."""
+    pmid = re.sub(r"\D", "", str(pmid or ""))
+    if not pmid:
+        return None
+    try:
+        j = ag.json("https://pmc.ncbi.nlm.nih.gov/tools/idconv/api/v1/articles/?format=json&ids=" + pmid)
+        for r in (j or {}).get("records") or []:
+            if r.get("doi"):
+                return doi_temizle(r["doi"])
+    except Exception:
+        pass
+    return None
 
 
 def elle_ekle(ders, veri, ad="makale.pdf", kaynak_id=None, dizinle=True):
@@ -679,6 +957,13 @@ def ozet(ders):
         s.setdefault("durum", "denenmedi")
         if s.get("pdf") and not os.path.isfile(s["pdf"]):
             s["durum"], s["neden"] = "eksik", "PDF dosyası yerinden kaldırılmış."
+        if ders == KENDI and s["durum"] == "hazir":
+            try:
+                hd = hazir_ders_bul(str(k["id"]))
+            except Exception:
+                hd = None
+            if hd:
+                s["hazir_ders"] = hd
         satirlar.append(s)
     sayi = {}
     for s in satirlar:

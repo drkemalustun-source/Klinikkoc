@@ -218,3 +218,9 @@ pre.k-metin { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 5
   .k-cubuk { width: 70px; }
 }
 @media (prefers-reduced-motion: reduce) { .k-ana * { transition: none !important; animation: none !important; } }
+
+/* Ortak (bulut) klasör uyarısı: başka bilgisayar açık ya da klasöre ulaşılamıyor */
+.k-ortak-uyari { margin: 6px 24px 0; padding: 10px 16px; border-radius: 14px; background: #fbe3cf; color: #6b3410;
+  font-size: 14.5px; line-height: 1.45; }
+.k-ortak-uyari b { color: #4f2508; }
+@media (max-width: 760px) { .k-ortak-uyari { margin: 6px 12px 0; } }

@@ -16,6 +16,10 @@ echo 1/3 Piper ses paketleri denetleniyor (zaten kuruluysa hizli gecer)...
 %PY% tools\ses-uret.py --kur
 %PY% tools\makale_bulucu.py --kur
 echo.
+echo Anlam aramasi kuruluyor (yaklasik 120 MB, bir kez; Turkce soruyla Ingilizce makalede arama icin)...
+%PY% tools\bilgi_bankasi.py --kur-anlam
+if errorlevel 1 echo Anlam aramasi kurulamadi. Arama yine calisir: sozcuk aramasi ve Turkce-Ingilizce terim eslemesi.
+echo.
 echo 2/3 Claude masaustu uygulamasina KlinikKoc araclari ekleniyor...
 %PY% tools\tahta-mcp.py --kur
 echo.
@@ -35,6 +39,9 @@ echo Dogal ses kurulmadi; tahta daha basit bir yedek sesle konusacak. Sonra kurm
 :denetim
 echo.
 %PY% tools\tahta-mcp.py --dene
+echo.
+echo Eski surum klasorleri araniyor (onayiniz olmadan hicbir sey silinmez)...
+%PY% tools\eski_surumler.py --sor
 echo.
 echo Bitti. Claude'u tamamen kapatin: saatin yanindaki ^^ isareti, Claude simgesi, sag tik, Cik.
 echo Sonra Claude'u acin. Ayarlar, Gelistirici ekraninda klinik-koc "Calisiyor" gorunmeli.

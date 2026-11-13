@@ -10,6 +10,7 @@ import os
 import sys
 import tempfile
 import unittest
+os.environ.setdefault("KLINIK_KOC_ANLAM_KURMA", "1")  # testler anlam aramasını arka planda kurmaya kalkmasın
 import zipfile
 
 KOK = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -211,7 +212,7 @@ class BulucuTest(OrtamliTest):
         self.ders_kur(ders, [{"id": "a", "doi": "10.1/a", "kisa": "A"}, {"id": "b", "kisa": "Kitap bölümü"}])
         o = mb.hazirla(ders, ag_kullan=False, dizinle=False)
         self.assertEqual(o["sayilar"], {"eksik": 2})
-        self.assertEqual(o["makaleler"][1]["neden"], "DOI yok; PDF'i elle ekleyin.")
+        self.assertIn("DOI'si yok", o["makaleler"][1]["neden"])
         self.assertFalse(o["calisiyor"])
         self.assertEqual(o["makaleler"][0]["sayfa_adresi"], "https://doi.org/10.1/a")
 
@@ -316,3 +317,33 @@ class PaketTest(OrtamliTest):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(PYPDF, "pypdf yok")
+class SonradanEklenenMakaleTest(OrtamliTest):
+    """4.0.2: ders bir kez dizinlendikten sonra eklenen PDF de aramaya girmeli (Kemal'in Mac testi, Sanz 2020)."""
+
+    def test_sonradan_eklenen_pdf_aranir(self):
+        yol = os.path.join(self.tmp.name, "dizin.sqlite")
+        mb.kendi_kitaplik_hazirla()
+        bilgi_bankasi.dizinle([mb.KENDI], sessiz=True, yol=yol)  # kitaplık boşken dizinlendi
+        d = mb.elle_ekle(mb.KENDI, makale_pdf("10.5/stage", "staging grading"), "Sanz 2020.pdf", dizinle=False)
+        self.assertEqual(d["durum"], "hazir")
+        rapor = bilgi_bankasi.dizinle([mb.KENDI], sessiz=True, yol=yol)
+        self.assertEqual(rapor[0]["durum"], "dizinlendi")
+        sonuc = bilgi_bankasi.ara("staging", mb.KENDI, yol=yol)
+        self.assertTrue(sonuc, "makale metni aramada yok")
+        self.assertIn(d["kisa"], sonuc[0]["kaynak"])
+        self.assertEqual(bilgi_bankasi.makale_parca_sayilari(mb.KENDI, yol=yol).get(d["kisa"], 0) > 0, True)
+
+    def test_anlamsiz_dizinleme_vektorleri_silmez(self):
+        yol = os.path.join(self.tmp.name, "dizin.sqlite")
+        self.ders_kur("deneme", [])
+        bilgi_bankasi.dizinle(["deneme"], sessiz=True, yol=yol)
+        db = bilgi_bankasi.baglan(yol)
+        taban = bilgi_bankasi.ders_imzasi("deneme")
+        db.execute("INSERT OR REPLACE INTO bilgi VALUES (?,?)", ("imza:deneme", taban + "+anlam"))
+        db.commit()
+        db.close()
+        rapor = bilgi_bankasi.dizinle(["deneme"], sessiz=True, yol=yol)  # model yok: anlamlı dizin güncel sayılır
+        self.assertEqual(rapor[0]["durum"], "güncel")

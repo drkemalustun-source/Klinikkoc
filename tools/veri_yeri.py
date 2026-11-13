@@ -6,6 +6,11 @@
 
 KLINIK_KOC_VERI ortam değişkeni bu kökü değiştirir. Öğrenci kayıtları için KLINIK_KOC_KAYIT
 her şeyden önce gelir. Yalnız Python'un kendi kitaplığını kullanır.
+
+Ortak klasör (isteğe bağlı, iki bilgisayarda çalışanlar için): veri klasöründeki ortak-klasor.json bir bulut
+klasörünü (OneDrive, Google Drive, iCloud, Dropbox) gösterirse öğrenci kayıtları, makale PDF'leri ve makale
+durumları oraya yazılır (bkz. ortak_klasor.py). Ayarlar, arama dizini, sesler ve programın kendisi her
+bilgisayarda ayrı kalır. Ortak klasör o an erişilemiyorsa bu bilgisayarın kendi klasörü kullanılır ve uyarı verilir.
 """
 import os
 import sys
@@ -27,10 +32,41 @@ def veri_kok():
     return os.path.join(taban, UYGULAMA)
 
 
+ORTAK_AYAR_ADI = "ortak-klasor.json"
+
+
+def ortak_ayari():
+    """Seçilmiş ortak klasörün yolu (erişilebilir olsun olmasın) ya da None. KLINIK_KOC_ORTAK önce gelir."""
+    ozel = os.environ.get("KLINIK_KOC_ORTAK")
+    if ozel is not None:
+        return os.path.abspath(os.path.expanduser(ozel)) if ozel.strip() else None
+    try:
+        import json
+        with open(os.path.join(veri_kok(), ORTAK_AYAR_ADI), encoding="utf-8") as f:
+            yol = (json.load(f) or {}).get("yol")
+        return os.path.abspath(os.path.expanduser(yol)) if yol else None
+    except (OSError, ValueError, AttributeError):
+        return None
+
+
+def ortak_klasor():
+    """Kullanılan ortak klasör: seçilmiş ve şu an erişilebilirse yolu, değilse None."""
+    yol = ortak_ayari()
+    return yol if yol and os.path.isdir(yol) else None
+
+
+def paylasilan_kok():
+    """Bilgisayarlar arasında paylaşılan verinin kökü (makale durumları): ortak klasör ya da veri klasörü."""
+    return ortak_klasor() or veri_kok()
+
+
 def kayit_kok():
     ozel = os.environ.get("KLINIK_KOC_KAYIT")
     if ozel:
         return os.path.abspath(os.path.expanduser(ozel))
+    ortak = ortak_klasor()
+    if ortak:
+        return os.path.join(ortak, "kayitlar")
     return os.path.join(veri_kok(), "kayitlar")
 
 
@@ -96,6 +132,14 @@ def makale_kok():
     ozel = os.environ.get("KLINIK_KOC_MAKALE")
     if ozel:
         return os.path.abspath(os.path.expanduser(ozel))
+    ortak = ortak_klasor()
+    if ortak:
+        return os.path.join(ortak, "Makaleler")
+    return yerel_makale_kok()
+
+
+def yerel_makale_kok():
+    """Ortak klasör kullanılmazken makalelerin yeri: Belgeler/KlinikKoç Makaleler."""
     return os.path.join(belgeler(), "KlinikKoç Makaleler")
 
 

@@ -193,8 +193,10 @@
               <li>Python'u kurarken ilk ekrandaki <b>"Add python.exe to PATH"</b> kutusunu işaretleyin.</li>
               <li>KlinikKoç klasöründeki <b>KUR-Windows</b> dosyasına çift tıklayın. Windows dosya uzantılarını
                 gizleyebilir; adı yalnız "KUR-Windows" görünür.</li>
-              <li>Kurulum üç adım yapar: ses paketleri ve PDF okuyucu, Claude'a KlinikKoç araçlarının eklenmesi,
-                isteğe bağlı doğal Türkçe ses (yaklaşık 1 GB, "E" ya da "H" ile seçilir).</li>
+              <li>Kurulum şunları yapar: ses paketleri ve PDF okuyucu, anlam araması (yaklaşık 120 MB; Türkçe soruyla İngilizce
+                makalede arar), Claude'a KlinikKoç araçlarının eklenmesi, isteğe bağlı doğal Türkçe ses (yaklaşık 1 GB, "E" ya da
+                "H" ile seçilir). En sonda bilgisayardaki eski KlinikKoç klasörlerini listeler ve her biri için silinsin mi diye
+                sorar; "E" derseniz önce yedeği <code>Belgeler\KlinikKoç Yedekler</code> içine alınır.</li>
               <li>Claude'u <b>tamamen</b> kapatın: saatin yanındaki <b>^</b> işareti → Claude simgesi → sağ tık → <b>Çık</b>.
                 Sonra yeniden açın.</li>
               <li>Denetim: Claude'da <b>Ayarlar › Geliştirici</b> ekranında "klinik-koc" <b>Çalışıyor</b> görünmeli.</li>
@@ -439,7 +441,11 @@
         </table></div>
         <ul>
           <li>Windows'ta yolu Dosya Gezgini'nin adres çubuğuna yazın; Mac'te Finder → Git → Klasöre Git… ile açın.</li>
-          <li><b>Başka bilgisayara taşımak:</b> Claude'a "kayıtlarımı dışa aktar" deyin; masaüstüne tek bir dosya yazılır.
+          <li><b>İki bilgisayarda çalışmak</b> (ör. Mac ve Windows): ana ekranda <b>Raporlarım › İki bilgisayarda çalışma</b>'dan
+            iki bilgisayarda da aynı bulut klasörünü (OneDrive, Google Drive, iCloud Drive, Dropbox) seçin. Kayıtlarınız ve makale
+            PDF'leriniz oradaki <code>KlinikKoç Ortak</code> klasörüne taşınır. Aynı anda iki bilgisayarda çalışmayın; öbür bilgisayar
+            açıkken KlinikKoç uyarır. Ders paketlerini iki bilgisayara da ayrıca kurun.</li>
+          <li><b>Başka bilgisayara bir kez taşımak:</b> Claude'a "kayıtlarımı dışa aktar" deyin; masaüstüne tek bir dosya yazılır.
             Öbür bilgisayarda "şu dosyadaki kayıtlarımı içe al" deyin.</li>
           <li><b>Silmek:</b> Claude'u kapatıp kayıt klasörünü (ya da içindeki kendi adınızla başlayan klasörü) çöp kutusuna atın.</li>
         </ul>

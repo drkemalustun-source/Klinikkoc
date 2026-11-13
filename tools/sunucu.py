@@ -55,6 +55,7 @@ try:
 except ImportError:
     sihirbaz = None
 import ana_ekran  # noqa: E402
+import ortak_klasor  # noqa: E402
 import surum as surum_  # noqa: E402
 import uyandirma  # noqa: E402
 import veri_yeri  # noqa: E402
@@ -397,7 +398,7 @@ class Canli:
             self.claude_bekliyor -= 1
             self.kosul.notify_all()
 
-    def soyle(self, metin, ham_metin=None, motor=None):
+    def soyle(self, metin, ham_metin=None, motor=None, guven=None):
         """Sayfa: kullanıcının mikrofonla söylediği (ya da yazdığı) metin. ham_metin: tanıyıcının terim
         sözlüğünden önceki çıktısı; motor: duyu | tarayici | yazi."""
         metin = (metin or "").strip()
@@ -408,6 +409,13 @@ class Canli:
                     x["motor"] = str(motor)[:20]
                 if ham_metin and ham_metin.strip():
                     x["ham_metin"] = ham_metin.strip()[:2000]
+                try:
+                    g = float(guven) if guven is not None else None
+                except (TypeError, ValueError):
+                    g = None
+                if g is not None and 0 < g < DIKTE_GUVEN_ESIGI and motor in ("tarayici", "duyu"):
+                    x["belirsiz"] = True
+                    x["guven"] = round(g, 2)
                 self.konusmalar.append(x)
                 self.konusmalar = self.konusmalar[-20:]
                 self.konusmalar[-1]["t"] = time.time()
@@ -481,7 +489,7 @@ class Canli:
                 return {"durum": "bağlı değil",
                         "hata": "Tahta sayfası açık değil. tahtayi_ac aracını çağırın ya da "
                                 "tarayıcıda http://localhost:8810/canli.html adresini açın."}
-            if self.konusmalar and komut.get("tur") not in ("dur", "devam"):
+            if self.konusmalar and komut.get("tur") not in ("dur", "devam", "goruntu"):
                 # Kullanıcının cevaplanmamış sözü var: yeni anlatım onu ezmesin, önce o cevaplansın.
                 return self._konusma_ekle({
                     "durum": "kullanici_konustu", "gonderilmedi": True,
@@ -622,7 +630,7 @@ class Canli:
             self.sayfa_durumu = durum or {}
             self.son_gorulme = time.time()
             self.kosul.notify_all()
-            return {"sayac": self.sayac, "ses": self.ses_bilgisi(),
+            return {"sayac": self.sayac, "ses": self.ses_bilgisi(), "surum": degerlendirme.program_surumu(),
                     "uyandirma": dict(self.uyandirma, acik=self.uyandirma_acik(), destek=uyandirma.destekleniyor())}
 
     def bitti(self, no, sonuc, durum):
@@ -768,6 +776,35 @@ CANLI = Canli()
 POCKET = pocket_ses.PocketIsci()
 
 
+def ders_ilerlemesi(ders):
+    """Tahtanın İlerleme paneli: bu dersin bu bilgisayardaki en son güncellenen kaydına göre hedeflerin durumu.
+    (Kayıtlar yalnız bu bilgisayarda; ad ve kimlik panele gönderilmez.)"""
+    makale_bulucu.ders_gecerli(ders)
+    klasor = os.path.join(KOK, "lessons", ders)
+    hedefler = ders_sonu.karne_.ders_hedefleri(klasor) if os.path.isdir(klasor) else []
+    kayit, son = None, ""
+    for _, yol in ders_sonu.ders_kayitlari(ders):
+        try:
+            with open(yol, encoding="utf-8") as f:
+                k = json.load(f)
+        except (OSError, ValueError):
+            continue
+        g = str(k.get("guncelleme") or "")
+        if kayit is None or g > son:
+            kayit, son = k, g
+    out = {"ders": ders, "kayit": bool(kayit), "guncelleme": son[:16] or None, "hedefler": []}
+    if not hedefler:
+        return out
+    if kayit is None:
+        out["hedefler"] = [{"id": h["id"], "baslik": h.get("baslik"), "durum": "ele_alinmadi"} for h in hedefler]
+        return out
+    k = ders_sonu.karne_.hesapla(kayit, hedefler, time.strftime("%Y-%m-%d"))
+    out["hedefler"] = [{x: h.get(x) for x in ("id", "baslik", "durum", "oran", "cevap", "hedef_bloom", "ulasilan_bloom")}
+                       for h in k["hedefler"]]
+    out["genel_oran"] = k.get("genel_oran")
+    return out
+
+
 class Isleyici(http.server.SimpleHTTPRequestHandler):
     # Windows'ta Python dosya türlerini kayıt defterinden okur ve .js'yi "text/plain" verebilir;
     # tarayıcı o zaman kitaplıkları yüklemez. Türleri burada sabitliyoruz.
@@ -854,6 +891,8 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
                 CANLI.arac_etkin()
             if yol == "durum":
                 return self._json(200, CANLI.durum(al=q.get("al") == "1", teslim=teslim))
+            if yol == "ilerleme":  # tahtadaki İlerleme paneli
+                return self._json(200, ders_ilerlemesi(q.get("ders", "")))
             if yol == "gonder":
                 return self._json(200, CANLI.gonder(veri.get("komut") or {}, float(veri.get("bekle", 50)), bekleme, teslim))
             if yol == "sonuc":
@@ -873,7 +912,7 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
                                                 sayfa_uyandirma=q.get("uy")))
             if yol == "soyle":
                 return self._json(200, CANLI.soyle(str(veri.get("metin", ""))[:2000], veri.get("ham_metin"),
-                                                   veri.get("motor")))
+                                                   veri.get("motor"), veri.get("guven")))
             if yol == "duzelt":
                 return self._json(200, TERIMLER.duzelt(str(veri.get("metin", ""))[:4000]))
             if yol == "dinle":
@@ -920,6 +959,33 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             return self._json(500, {"hata": "%s: %s" % (type(e).__name__, e)})
 
+    def _makale_sayfasi(self, q):
+        import makale_sekil
+        ders = makale_bulucu.ders_gecerli(q.get("ders", ""))
+        kaynak = q.get("kaynak", "")
+        pdf = makale_sekil._pdf_yolu(ders, kaynak)
+        if not pdf:  # kısa adıyla da bulunsun (Claude 'Su 2010' yazabilir)
+            for m in makale_bulucu.ozet(ders)["makaleler"]:
+                if m.get("durum") == "hazir" and kaynak and kaynak.lower() in (m.get("kisa") or "").lower():
+                    pdf = makale_sekil._pdf_yolu(ders, m["id"])
+                    kaynak = m["id"]
+                    break
+        if not pdf:
+            return self._json(404, {"hata": "Bu makalenin PDF'i bu bilgisayarda yok. Makaleler sayfasından ekleyin."})
+        if not makale_sekil.cizici_var():
+            return self._json(503, {"hata": "Sayfa çizici (pypdfium2) kurulu değil: KUR dosyasını yeniden çalıştırın."})
+        try:
+            sayfa = makale_sekil.pdf_sayfasi(ders, kaynak, max(1, int(q.get("sayfa") or 1)))
+        except ValueError as e:
+            return self._json(404, {"hata": str(e)})
+        veri = makale_sekil.onizleme(pdf, sayfa, None, 2.0)
+        self.send_response(200)
+        self.send_header("Content-Type", "image/png")
+        self.send_header("Content-Length", str(len(veri)))
+        self.end_headers()
+        self.wfile.write(veri)
+        return None
+
     def _makale(self, govde=b""):
         """Makaleler sayfası: durum, makale bulma, elle PDF ekleme, ders paketi kurma."""
         u = urllib.parse.urlparse(self.path)
@@ -935,6 +1001,8 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
                 return self._json(200, makale_bulucu.ozet(q.get("ders", "")))
             if yol == "depolama":
                 return self._json(200, ders_sonu.depolama())
+            if yol == "sayfa":  # tahtadaki kaynak bağlantısı: öğrencinin kendi PDF'inden bir sayfa (PNG)
+                return self._makale_sayfasi(q)
             if yol == "degerlendirme":
                 return self._json(200, degerlendirme.form(q.get("ders", ""), q.get("ogrenci") or None))
             if self.command != "POST":
@@ -1099,6 +1167,8 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
                 return self._json(200, A.ozet())
             if yol == "geri_bildirim":
                 return self._json(200, A.geri_bildirim())
+            if yol == "ortak":
+                return self._json(200, dict(ortak_klasor.durum(), adaylar=ortak_klasor.adaylar()))
             if self.command != "POST":
                 return self._json(405, {"hata": "POST gerekli"})
             v = json.loads(govde.decode("utf-8")) if govde else {}
@@ -1115,6 +1185,12 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
                 r = surum_.geri_al()
                 yeniden_baslat()
                 return self._json(200, r)
+            if yol == "ortak_ayarla":
+                r = ortak_klasor.ayarla(str(v.get("yol") or ""))
+                threading.Thread(target=makale_bulucu.ortak_esitle, daemon=True).start()
+                return self._json(200, r)
+            if yol == "ortak_kapat":
+                return self._json(200, ortak_klasor.kapat())
             if yol == "oneri_sil":
                 return self._json(200, A.oneri_sil(str(v.get("id", ""))))
             if yol == "oneri_gonderildi":
@@ -1140,6 +1216,8 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
         return not host or (urllib.parse.urlsplit("//" + host).hostname or "") in self.YEREL
 
     def do_GET(self):
+        if self.path.startswith("/api/"):
+            ortak_kilidi_tazele()
         # DNS yeniden bağlama: başka bir alan adı bu sunucuya yönlendirilip ders dosyaları okunamasın.
         if not self._host_yerel_mi():
             return self.send_error(403, "Yalnızca bu bilgisayardan")
@@ -1325,6 +1403,17 @@ def kur_duyu():
     return 0
 
 
+DIKTE_GUVEN_ESIGI = 0.6  # tarayıcı tanıyıcısının güveni bunun altındaysa söz "belirsiz" işaretlenir
+
+
+def ortak_kilidi_tazele():
+    """Tahta ya da ana ekran açıkken (sayfalar API'yi düzenli yoklar) ortak klasörde "bu bilgisayar açık" kilidi."""
+    try:
+        ortak_klasor.kilit_tazele()
+    except Exception:
+        pass
+
+
 def main():
     ap = argparse.ArgumentParser(description="KlinikKoç yerel sunucusu")
     ap.add_argument("--port", type=int, default=8810)
@@ -1361,6 +1450,11 @@ def main():
     print("Otomatik uyandırma: " + ("açık (Claude dinlemiyorken söylenenler sohbete gönderilir)"
                                     if CANLI.uyandirma["acik"] else "kapalı"))
     print("Ses: " + CANLI.ses_durumu() + " (ayar: ses/ses-ayari.json)")
+    od = ortak_klasor.durum()
+    if od.get("acik"):
+        print("Ortak klasör: " + (od.get("yol") or "") + (" (ULAŞILAMIYOR)" if not od.get("erisilebilir") else ""))
+        if od.get("erisilebilir"):
+            threading.Thread(target=makale_bulucu.ortak_esitle, daemon=True).start()
     if not a.acma:
         threading.Timer(0.8, lambda: webbrowser.open(adres)).start()
     try:
@@ -1369,6 +1463,10 @@ def main():
         print("\nKapatıldı.")
     finally:
         POCKET.kapat()
+        try:
+            ortak_klasor.kilit_birak()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

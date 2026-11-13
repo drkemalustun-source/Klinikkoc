@@ -24,6 +24,7 @@ import glob
 import hashlib
 import json
 import os
+import re
 import random
 import shutil
 import subprocess
@@ -334,6 +335,51 @@ def ar_dersler(_):
     return metin(out)
 
 
+def makale_metinleri(ders):
+    """Dersin PDF'ten metne çevrilmiş makaleleri: [{id, kisa, sayfalar: [no..]}]."""
+    out = []
+    for mk in sorted(glob.glob(os.path.join(ders_yolu(ders), "makale-metin", "*"))):
+        bilgi = {}
+        try:
+            with open(os.path.join(mk, "bilgi.json"), encoding="utf-8") as f:
+                bilgi = json.load(f) or {}
+        except (OSError, ValueError):
+            pass
+        sayfalar = sorted(int(x[-6:-4]) for x in glob.glob(os.path.join(mk, "sayfa-*.txt")) if x[-6:-4].isdigit())
+        out.append({"id": bilgi.get("id") or os.path.basename(mk), "kisa": bilgi.get("kisa") or os.path.basename(mk),
+                    "klasor": os.path.basename(mk), "sayfalar": sayfalar})
+    return out
+
+
+def makale_metni_sec(ders, istenen=None):
+    """istenen (kimlik ya da kısa adının bir parçası) verilirse o makale; verilmezse ders tek makaleliyse o."""
+    liste = makale_metinleri(ders)
+    if istenen:
+        i = str(istenen).strip().lower()
+        for m in liste:
+            if m["id"].lower() == i:
+                return m
+        uyan = [m for m in liste if i in m["kisa"].lower() or i in m["id"].lower()]
+        return uyan[0] if len(uyan) == 1 else None
+    return liste[0] if len(liste) == 1 else None
+
+
+def makale_sayfasi_oku(ders, makale, n, istenen=None):
+    if not makale:
+        return {"sayfa": n, "durum": "makale seçilmedi" if not istenen else "makale bulunamadı",
+                "makaleler": [{"makale": m["id"], "kisa": m["kisa"], "sayfa_sayisi": len(m["sayfalar"])}
+                              for m in makale_metinleri(ders)],
+                "not": "ders_oku'yu makale (yukarıdaki kimliklerden biri) ve sayfa ile yeniden çağır."}
+    yol = os.path.join(ders_yolu(ders), "makale-metin", makale["klasor"], "sayfa-%02d.txt" % n)
+    if not os.path.exists(yol):
+        return {"makale": makale["id"], "kisa": makale["kisa"], "sayfa": n, "durum": "okunamadı",
+                "metinli_sayfalar": makale["sayfalar"],
+                "not": "Bu sayfanın metni yok (sayfa aralık dışında, kaynakça sonrası ya da resim olabilir). "
+                       "Görüntü olarak bakmak için makale_sayfasi_bak'ı kullan."}
+    return {"makale": makale["id"], "kisa": makale["kisa"], "sayfa": n, "metin": _metin_oku(yol),
+            "not": "Sayfa numarası PDF'in sayfa sırasıdır (derginin sayfa numarası değil)."}
+
+
 def ar_ders_oku(a):
     ders = a.get("ders")
     d = ders_json(ders)
@@ -344,6 +390,10 @@ def ar_ders_oku(a):
             n = int(a["sayfa"])
         except (TypeError, ValueError):
             raise ValueError("sayfa bir sayı olmalı")
+        makale = makale_metni_sec(ders, a.get("makale"))
+        if a.get("makale") or (makale and not os.path.exists(ders_yolu(
+                ders, *(kay.get("sayfaMetni") or "kaynak/sayfa-{nn}.txt").replace("{nn}", "%02d" % n).split("/")))):
+            return metin(makale_sayfasi_oku(ders, makale, n, a.get("makale")))
         sablon = kay.get("sayfaMetni") or "kaynak/sayfa-{nn}.txt"
         yol = ders_yolu(ders, *sablon.replace("{nn}", "%02d" % n).split("/"))
         if not os.path.exists(yol):
@@ -443,15 +493,16 @@ def yeni_kutu(kutu, dogru, yardimsiz, iskele=None):
             return max(1, kutu)
         return 1
     return min(4, kutu + 1) if yardimsiz else 1
-KAYIT_KOK = veri_yeri.kayit_kok()          # kalıcı yer; KLINIK_KOC_KAYIT önce gelir
+KAYIT_KOK = None  # None: veri_yeri.kayit_kok() her seferinde sorulur (ortak klasör açılıp kapanabilir); testler sabitler
 ESKI_KAYIT_KOK = os.path.join(KOK, "kayitlar")  # eski sürümlerin yeri: ilk açılışta bir kez kopyalanır
 _DEPO = None
 
 
 def depo():
     global _DEPO
-    if _DEPO is None or _DEPO.kok != os.path.abspath(KAYIT_KOK):
-        _DEPO = kd.Depo(KAYIT_KOK, None if veri_yeri.kayit_ortamdan_mi() else ESKI_KAYIT_KOK)
+    kok = KAYIT_KOK or veri_yeri.kayit_kok()
+    if _DEPO is None or _DEPO.kok != os.path.abspath(kok):
+        _DEPO = kd.Depo(kok, None if veri_yeri.kayit_ortamdan_mi() else ESKI_KAYIT_KOK)
     return _DEPO
 
 
@@ -624,6 +675,13 @@ def ar_egitmen_hazirla(a):
                     "vakalar": [os.path.splitext(os.path.basename(y))[0]
                                 for y in sorted(glob.glob(ders_yolu(ders, "vakalar", "*.json")))]},
            "bloom_sirasi": BLOOM}
+    ilgili = dersle_ilgili_sablonlar(ders, eg, d)
+    if ilgili:
+        out["sablonlar"] = {"bu_dersle_ilgili": [sablon_ozeti(x) for x in ilgili],
+                            "tum_sablonlar": sorted(sablonlar()),
+                            "not": "Çizimde önce bu hazır şablonları kullan; parça ve varyant adlarını buradan al (tahmin "
+                                   "etme). Başka şablon için sablon_bilgisi(template). Makaleye bağlı derste sayı makalede "
+                                   "yoksa draw'a olcu:false ekle."}
     if not_:
         out["not"] = not_
     kimlik, soru = ogrenci_sec(a)
@@ -639,6 +697,13 @@ def ar_egitmen_hazirla(a):
         uyari_ekle(out["ogrenci"], k)
     else:
         out["ogrenci"] = soru
+        out["sonraki_cagri"] = "Öğrenci adını verince egitmen_hazirla'yı yalniz_ogrenci: true ile çağır (kurallar yeniden gönderilmez)."
+    if a.get("yalniz_ogrenci") is True:
+        kisa = {"egitmen": out["egitmen"], "ders": {"kimlik": ders, "baslik": out["ders"]["baslik"]},
+                "ogrenci": out["ogrenci"], "not": "Kurallar ve ders bilgisi bu konuşmadaki önceki egitmen_hazirla yanıtındadır."}
+        if out.get("not"):
+            kisa["egitmen_notu"] = out["not"]
+        return metin(kisa)
     if depo().tasima_raporu and not getattr(depo(), "_tasima_soylendi", False):
         r = depo().tasima_raporu
         depo()._tasima_soylendi = True
@@ -646,6 +711,10 @@ def ar_egitmen_hazirla(a):
                                "kaynak": r["kaynak"], "yeni_yer": depo().kok, "kopyalanan": r["kopyalanan"]}
     if ders == makale_bulucu.KENDI:
         mo = makale_bulucu.ozet(ders)
+        hd = {m["kisa"]: m["hazir_ders"] for m in mo["makaleler"] if m.get("hazir_ders")}
+        if hd:
+            out["hazir_dersler"] = {"makaleler": hd, "not": "Bu makalelerin öğretmenin hazırladığı sunumlu bir dersi var; "
+                                    "öğrenci isterse o derse geç."}
         out["makaleler"] = {"hazir": [m["kisa"] for m in mo["makaleler"] if m["durum"] == "hazir"],
                             "not": "Öğrencinin kendi eklediği makaleler. Hangisiyle çalışmak istediğini sor; bilgiyi "
                                    "bilgi_ara(ders='kendi-makalelerim') ile bu makalelerden al."}
@@ -817,8 +886,7 @@ def ar_rapor_yaz(a):
                 t.get("emin_ama_yanlis", "-"), ", ".join(t.get("secilen_yanilgilar") or []) or "-"))
     if k.get("cevaplar"):
         kr = karne_.hesapla(k, karne_.ders_hedefleri(ders_yolu(ders)), bugun())
-        y += ["", "## Bloom düzeyine göre başarı", "", "| Düzey | Cevap | Başarı |", "| --- | --- | --- |"]
-        y += ["| %s | %d | %s |" % (karne_.BLOOM_AD[b["duzey"]], b["cevap"], karne_.yuzde(b["oran"])) for b in kr["bloom"]]
+        y += ["", "## Bloom düzeyine göre başarı", ""] + karne_.bloom_tablosu(kr["bloom"])
         if kr["tehlikeli_secimler"]:
             y += ["", "Vakalarda hastaya zarar verebilecek seçim sayısı: %d" % len(kr["tehlikeli_secimler"])]
     for baslik, alan in (("Öğrenme güçlükleri", "guclukler"), ("Eğitmen için iyileştirme önerileri", "oneriler"),
@@ -847,6 +915,56 @@ def anlam_modeli():
     return _MODEL
 
 
+_DIZIN_KILIDI = threading.Lock()
+_ANLAM_IS = {"calisiyor": False, "hata": None}
+
+
+def anlam_dizini_arka_planda(model):
+    """Anlam vektörü eksik dersleri arka planda işler (aynı anda tek iş)."""
+    if _ANLAM_IS["calisiyor"]:
+        return
+
+    def is_():
+        try:
+            with _DIZIN_KILIDI:
+                bilgi_bankasi.dizinle(model=model, sessiz=True)
+            _ANLAM_IS["hata"] = None
+        except Exception as e:  # arama sözcükle sürer
+            _ANLAM_IS["hata"] = str(e)
+        finally:
+            _ANLAM_IS["calisiyor"] = False
+
+    _ANLAM_IS["calisiyor"] = True
+    threading.Thread(target=is_, daemon=True, name="anlam-dizini").start()
+
+
+_ANLAM_KURULUM = {"durum": None}  # None | "kuruluyor" | "bitti" | "hata"
+
+
+def anlam_kurulumu_arka_planda():
+    """Anlam araması kurulu değilse (ör. tek tuşla güncellenmiş eski kurulum) bir kez arka planda kurar.
+    Kurulum bitince model yeniden yüklenir; o zamana dek arama sözcük + terim eşlemesiyle sürer."""
+    if _ANLAM_KURULUM["durum"] or os.environ.get("KLINIK_KOC_ANLAM_KURMA"):
+        return
+
+    def is_():
+        global _MODEL
+        try:
+            gunluk = os.path.join(veri_yeri.veri_kok(), "anlam-kurulumu.log")
+            os.makedirs(os.path.dirname(gunluk), exist_ok=True)
+            with open(gunluk, "w", encoding="utf-8") as f:
+                kod = subprocess.call([sys.executable, os.path.join(KOK, "tools", "bilgi_bankasi.py"), "--kur-anlam"],
+                                      stdout=f, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, timeout=3600)
+            _ANLAM_KURULUM["durum"] = "bitti" if kod == 0 else "hata"
+        except Exception:
+            _ANLAM_KURULUM["durum"] = "hata"
+        if _ANLAM_KURULUM["durum"] == "bitti":
+            _MODEL = None  # bir sonraki aramada yeni model yüklenir
+
+    _ANLAM_KURULUM["durum"] = "kuruluyor"
+    threading.Thread(target=is_, daemon=True, name="anlam-kurulumu").start()
+
+
 def ar_bilgi_ara(a):
     sorgu = (a.get("sorgu") or "").strip()
     if not sorgu:
@@ -854,12 +972,29 @@ def ar_bilgi_ara(a):
     if a.get("ders"):
         ders_yolu(a["ders"])
     model = anlam_modeli()
-    # Değişen dersler her aramadan önce yeniden dizinlenir (değişmeyenler saniyenin altında atlanır).
-    bilgi_bankasi.dizinle(model=model, sessiz=True)
+    # Değişen dersler her aramadan önce sözcük dizinine eklenir (hızlı; değişmeyenler atlanır). Anlam vektörleri
+    # uzun sürebilir (büyük bir makale paketinde dakikalar): onlar arka planda hesaplanır, arama beklemez.
+    if _DIZIN_KILIDI.acquire(timeout=2):  # arka plandaki anlam işi sürüyorsa beklemeden mevcut dizinde ara
+        try:
+            bilgi_bankasi.dizinle(sessiz=True)
+        finally:
+            _DIZIN_KILIDI.release()
+    if model.hazir:
+        anlam_dizini_arka_planda(model)
+    else:
+        anlam_kurulumu_arka_planda()
     k = max(1, min(int(a.get("k") or 6), 15))
     sonuclar, oz = bilgi_bankasi.ara_ve_dayanak(sorgu, a.get("ders"), a.get("tur"), k, model=model)
     out = {"sorgu": sorgu, "anlam_aramasi": "açık" if model.hazir else "kapalı (yalnız sözcük araması)",
            "dayanak": oz["dayanak"]}
+    if not model.hazir and _ANLAM_KURULUM["durum"] == "kuruluyor":
+        out["anlam_aramasi"] += "; arka planda kuruluyor (bir kez, ~120 MB), birkaç dakika sonra açılır"
+    esler = bilgi_bankasi.ingilizce_karsiliklar(sorgu)
+    if esler:
+        out["terim_eslemesi"] = sorted({" ".join(e) for v in esler.values() for e in v})
+    if model.hazir and _ANLAM_IS["calisiyor"]:
+        out["anlam_dizini"] = ("hazırlanıyor: yeni eklenen metinler şimdilik yalnız sözcük aramasında; birkaç dakika "
+                               "sonra anlam aramasına da girer")
     if DAYANAK_TALIMAT.get(oz["dayanak"]):
         out["talimat"] = DAYANAK_TALIMAT[oz["dayanak"]]
     out["dayanak_olcumu"] = {x: oz[x] for x in ("en_iyi_benzerlik", "en_iyi_kapsam", "sozcuk_eslesen_sayi")}
@@ -1328,6 +1463,35 @@ def ar_ses_yeniden_baslat(_):
                                                          "kapatıp tahtayi_ac'ı yeniden çağır." % e.code}, hata=True)
 
 
+def ortak_uyarisi():
+    """Ortak (bulut) klasör kullanılıyorsa ve başka bilgisayar açıksa ya da klasöre ulaşılamıyorsa Claude'a uyarı."""
+    try:
+        import ortak_klasor
+        od = ortak_klasor.durum()
+    except Exception:
+        return {}
+    if not od.get("uyari"):
+        return {}
+    return {"ortak_klasor_uyarisi": od["uyari"] + " Bunu öğrenciye derse başlamadan önce bir cümleyle söyle."}
+
+
+def ar_ortak_klasor(a):
+    import ortak_klasor
+    islem = a.get("islem") or "durum"
+    if islem == "durum":
+        return metin(dict(ortak_klasor.durum(), adaylar=ortak_klasor.adaylar()))
+    if a.get("onay") is not True:
+        raise ValueError("Kullanıcının açık onayı gerekli (onay: true).")
+    if islem == "ayarla":
+        r = ortak_klasor.ayarla(str(a.get("yol") or ""))
+        threading.Thread(target=makale_bulucu.ortak_esitle, daemon=True).start()
+        return metin({**r, "not": "Öbür bilgisayarda da aynı bulut klasörü seçilmeli (ana ekran › Raporlarım › "
+                                  "İki bilgisayarda çalışma ya da bu araç). Ders paketleri iki bilgisayara ayrı kurulur."})
+    if islem == "kapat":
+        return metin(ortak_klasor.kapat())
+    raise ValueError("islem: durum | ayarla | kapat")
+
+
 def ar_tahtayi_ac(_):
     d = sunucu_acik()
     yabanci = baska_kurulum_mu(d)
@@ -1368,11 +1532,32 @@ def ar_tahtayi_ac(_):
                 break
     if not d.get("bagli"):
         return metin({"durum": "bekleniyor", "not": "Tarayıcıda canli.html açılıyor; birkaç saniye sonra tekrar dene."})
-    return metin({"durum": "hazır", "tahta": d.get("sayfa"), "ses": d.get("ses"), "dikte": dikte_durumu(d),
+    out_ortak = ortak_uyarisi()
+    return metin({"durum": "hazır", "surum": surum_bilgisi(d), "tahta": d.get("sayfa"), "ses": d.get("ses"),
+                  "dikte": dikte_durumu(d), **out_ortak,
                   "not": "Tahta açık. 'ses' alanı gerçekten kullanılacak sesi söyler (yedek sese düşüldüyse kullanıcıya bir "
                          "cümleyle söyle). Kullanıcı ilk açılışta sayfada 'başlat' düğmesine bir kez dokunmalı. Tarayıcı sesi "
                          "engellerse anlatım o cümlede bekler ve tahta_durumu'nda sayfa.ses_engelli true olur: kullanıcıdan "
                          "ekrandaki 'Sesi açmak için dokunun' düğmesine basmasını iste."})
+
+
+def surum_bilgisi(d=None):
+    """Çalışan program sürümü; yeni sürüm varsa (ya da sunucu başka sürümse) Claude'un söyleyeceği uyarı."""
+    out = {"program": SURUM}
+    sunucu = (d or {}).get("surum")
+    if sunucu and sunucu != SURUM:
+        out["sunucu"] = sunucu
+        out["uyari"] = ("Tahta sunucusu %s, bu araç %s. Kullanıcıdan KlinikKoç'u kapatıp yeniden başlatmasını iste." %
+                        (sunucu, SURUM))
+    try:
+        g = surum_.denetle()
+        if g.get("var") and not g.get("gelistirici"):
+            out["yeni_surum"] = g.get("yeni_surum")
+            out["uyari"] = ("Yeni sürüm var (%s; kurulu %s). Kullanıcıya bir cümleyle söyle: ana ekrandaki "
+                            "'Güncelle' düğmesiyle tek tuşla güncellenir." % (g.get("yeni_surum"), SURUM))
+    except Exception:
+        pass
+    return out
 
 
 def dikte_durumu(d):
@@ -1397,8 +1582,169 @@ def dikte_durumu(d):
         out["duyu"] = "hazır" if du.get("hazir") else ("kurulu" if du.get("model_indirildi")
                                                        else "kurulu, model ilk kullanımda indirilecek")
     out["terim_duzeltme"] = ("Dikteyle gelen sözlerde 'metin' terim sözlüğüyle düzeltilmiştir; 'ham_metin' tanıyıcının "
-                             "ilk çıktısıdır. İkisi farklıysa ve anlam belirsizse öğrenciye kısaca sor.")
+                             "ilk çıktısıdır. İkisi farklıysa ve anlam belirsizse öğrenciye kısaca sor. 'belirsiz: true' "
+                             "tanıyıcının kendinden emin olmadığını söyler; bağlama uymayan gündelik sözcük de dikte "
+                             "hatası olabilir (ör. 'hâlini' → 'kalesini'): tahmin etme, 'Şunu mu demek istediniz?' diye sor.")
     return out
+
+
+# Serbest çizim (draw.shapes) alanları: tahta bilinmeyen alanı sessizce yok sayar; Claude yanlış tahmin etmesin diye uyarılır.
+SEKIL_ORTAK = {"kind", "id", "color", "fill", "opacity", "stroke", "width", "dashed"}
+SEKIL_ALANLARI = {
+    "line": ({"x1", "y1", "x2", "y2"}, set()), "arrow": ({"x1", "y1", "x2", "y2"}, set()),
+    "rect": ({"x", "y", "w", "h"}, {"r"}), "ellipse": ({"cx", "cy", "rx"}, {"ry"}),
+    "path": ({"d"}, set()), "text": ({"x", "y", "text"}, {"size", "anchor"}),
+}
+
+
+_SABLONLAR = {}
+
+
+def sablonlar():
+    """Şablonların parça ve varyant dökümü (tools/sablonlar.json; node tools/sablon_dokum.mjs üretir)."""
+    if not _SABLONLAR:
+        try:
+            with open(os.path.join(KOK, "tools", "sablonlar.json"), encoding="utf-8") as f:
+                _SABLONLAR.update(json.load(f))
+        except (OSError, ValueError):
+            pass
+    return _SABLONLAR
+
+
+def sablon_ozeti(ad, varyant=None):
+    """Bir şablonun Claude'a gösterilen bilgisi: varyantlar, parçalar (kimlik → tahtadaki adı), yalnız bazı
+    varyantlarda bulunan parçalar."""
+    s = sablonlar().get(ad)
+    if not s:
+        return None
+    out = {"template": ad, "ad": s["ad"], "varyantlar": s["varyantlar"], "parcalar": dict(s["parcalar"])}
+    if s.get("ayrinti"):
+        out["ayrinti_parcalari"] = s["ayrinti"]
+    if s.get("yalniz"):
+        out["yalniz_bu_varyantlarda"] = s["yalniz"]
+    if varyant:
+        if varyant not in s["varyantlar"]:
+            out["uyari"] = "'%s' varyantı yok; geçerli: %s" % (varyant, ", ".join(s["varyantlar"]))
+        else:
+            out["bu_varyantta"] = sorted(_sablon_parcalari(s, varyant))
+    return out
+
+
+def _sablon_parcalari(s, varyant):
+    return {p for p in s["parcalar"] if p not in s.get("yalniz", {}) or varyant in s["yalniz"][p]}
+
+
+def sablon_uyarilari(c, yer):
+    """template'li draw: bilinmeyen şablon, varyant, parça (labels, highlight, isaretle.dogru, etiket_surukle.etiketler).
+    Tahta bunları sessizce yok sayar (bilinmeyen varyant ilk varyant gibi çizilir); Claude'a geçerli adlar söylenir."""
+    tum = sablonlar()
+    ad = c.get("template")
+    if not tum or not ad:
+        return []
+    s = tum.get(ad)
+    if not s:
+        return ["%s: '%s' şablonu yok; hiçbir şey çizilmedi. Geçerli şablonlar: %s" % (yer, ad, ", ".join(sorted(tum)))]
+    out = []
+    v = c.get("variant")
+    if v and v not in s["varyantlar"]:
+        out.append("%s: %s şablonunda '%s' varyantı yok, '%s' çizildi. Geçerli: %s"
+                   % (yer, ad, v, s["varyantlar"][0], ", ".join(s["varyantlar"])))
+        v = None
+    v = v or s["varyantlar"][0]
+    var = _sablon_parcalari(s, v)
+    istenen = []
+    lab = c.get("labels")
+    if isinstance(lab, list):
+        istenen += [("labels", l.get("part") if isinstance(l, dict) else l) for l in lab]
+    elif isinstance(lab, str) and lab not in ("hepsi", "all", "ayrinti"):
+        out.append("%s: labels '%s' tanınmıyor; 'hepsi', 'ayrinti' ya da parça listesi ver" % (yer, lab))
+    h = c.get("highlight")
+    istenen += [("highlight", x) for x in (h if isinstance(h, list) else [h] if h else [])]
+    isr = c.get("isaretle") if isinstance(c.get("isaretle"), dict) else {}
+    dg = isr.get("dogru")
+    istenen += [("isaretle.dogru", x) for x in (dg if isinstance(dg, list) else [dg] if dg else [])]
+    es = c.get("etiket_surukle") if isinstance(c.get("etiket_surukle"), dict) else {}
+    et = [x for x in (es.get("etiketler") or [])]
+    istenen += [("etiket_surukle.etiketler", x) for x in et]
+    yok, baska = [], []
+    for alan, x in istenen:
+        if x in var:
+            continue
+        if x in s["parcalar"]:
+            baska.append("%s '%s' (yalnız: %s)" % (alan, x, ", ".join(s["yalniz"].get(x, []))))
+        else:
+            yok.append("%s '%s'" % (alan, x))
+    if yok:
+        out.append("%s: %s şablonunda bu parçalar yok, yok sayıldı: %s. Geçerli parçalar (%s): %s"
+                   % (yer, ad, "; ".join(yok), v, ", ".join(sorted(var))))
+    if baska:
+        out.append("%s: %s şablonunun '%s' varyantında bu parçalar yok, yok sayıldı: %s" % (yer, ad, v, "; ".join(baska)))
+    if c.get("etiket_surukle") is not None and not [x for x in et if x in var]:
+        out.append("%s: etiket_surukle için geçerli etiket kalmadı; öğrenciye etiket kartı GÖSTERİLMEDİ." % yer)
+    return out
+
+
+def cizim_uyarilari(adimlar):
+    """draw komutlarında: şekillerde bilinmeyen tür/alan ya da eksik zorunlu alan; şablonlarda bilinmeyen ad."""
+    out = []
+    for i, adim in enumerate(adimlar or [], 1):
+        for c in (adim or {}).get("komutlar") or []:
+            if not isinstance(c, dict) or c.get("type") != "draw":
+                continue
+            out += sablon_uyarilari(c, "adım %d" % i)
+            for j, sh in enumerate(c.get("shapes") or [], 1):
+                if not isinstance(sh, dict):
+                    continue
+                yer = "adım %d, şekil %d%s" % (i, j, " (id %s)" % sh["id"] if sh.get("id") else "")
+                tur = sh.get("kind")
+                if tur not in SEKIL_ALANLARI:
+                    out.append("%s: bilinmeyen kind %r (line|arrow|rect|ellipse|path|text); şekil çizilmedi" % (yer, tur))
+                    continue
+                gerekli, istege = SEKIL_ALANLARI[tur]
+                eksik = sorted(gerekli - set(sh))
+                fazla = sorted(set(sh) - gerekli - istege - SEKIL_ORTAK)
+                if eksik:
+                    out.append("%s: %s için eksik alan %s" % (yer, tur, ", ".join(eksik)))
+                if fazla:
+                    out.append("%s: %s bu alanları tanımıyor, yok sayıldı: %s (geçerli: %s)" % (
+                        yer, tur, ", ".join(fazla), ", ".join(sorted(gerekli | istege | SEKIL_ORTAK))))
+    return out
+
+
+def dersle_ilgili_sablonlar(ders, eg, d, en_cok=4):
+    """Derste adı geçen ya da başlığı dersin başlığıyla örtüşen şablonlar (egitmen_hazirla bunların parça listesini verir)."""
+    tum = sablonlar()
+    if not tum:
+        return []
+    ham = json.dumps([eg, d], ensure_ascii=False).lower()
+    baslik = set(re.findall(r"[a-zçğıöşü]{5,}", ((eg or {}).get("baslik") or (d or {}).get("title") or "").lower()))
+    puan = {}
+    for ad, s in tum.items():
+        p = 0
+        if re.search(r"[\"'`]%s[\"'`]" % re.escape(ad), ham):
+            p += 10
+        p += len(baslik & set(re.findall(r"[a-zçğıöşü]{5,}", (s["ad"] + " " + ad).lower())))
+        if p:
+            puan[ad] = p
+    return sorted(puan, key=lambda a: -puan[a])[:en_cok]
+
+
+def ar_sablon_bilgisi(a):
+    ad = (a.get("template") or "").strip()
+    tum = sablonlar()
+    if not tum:
+        raise ValueError("Şablon dökümü (tools/sablonlar.json) bulunamadı.")
+    if not ad:
+        return metin({"sablonlar": {k: {"ad": v["ad"], "varyantlar": v["varyantlar"]} for k, v in tum.items()},
+                      "not": "Parça adları için sablon_bilgisi(template: '<ad>') çağır."})
+    o = sablon_ozeti(ad, a.get("variant"))
+    if not o:
+        raise ValueError("'%s' şablonu yok. Geçerli: %s" % (ad, ", ".join(sorted(tum))))
+    o["kullanim"] = ("draw{template, variant, labels:'hepsi'|[parça], highlight:[parça], gecis:sn, olcu:false, "
+                     "isaretle:{soru, dogru:[parça]}, etiket_surukle:{etiketler:[parça]}}. Parça KİMLİKLERİNİ (soldaki adlar) "
+                     "kullan; tahtada sağdaki Türkçe ad görünür. olcu:false hazır etiketlerdeki şematik sayıları (mm) yazmaz: "
+                     "makaleye bağlı derste, sayı makalede yoksa böyle çiz.")
+    return metin(o)
 
 
 def ar_tahta(a):
@@ -1409,7 +1755,12 @@ def ar_tahta(a):
     komut = {"tur": "adimlar", "adimlar": adimlar}
     if a.get("ders"):
         komut["ders"] = a["ders"]
-    return metin(gonder(komut, a.get("bekle", True) is not False))
+    uyari = cizim_uyarilari(adimlar)
+    r = gonder(komut, a.get("bekle", True) is not False)
+    if uyari and isinstance(r, dict):
+        r["cizim_uyarilari"] = uyari[:12]
+        r["cizim_notu"] = "Bu şekiller istediğin gibi çizilmemiş olabilir; tahta_durumu(goruntu: true) ile bak."
+    return metin(r)
 
 
 def ar_soru_sor(a):
@@ -1420,7 +1771,29 @@ def ar_soru_sor(a):
     return metin(gonder(komut))
 
 
+def tahta_goruntusu(en_fazla=1400):
+    """Tahtanın o anki görüntüsü (PNG). Sayfa komutu sırasını beklemeden çıkarır (js/tahta-goruntu.js)."""
+    y = istek("gonder", {"komut": {"tur": "goruntu", "en_fazla": int(en_fazla)}, "bekle": 15}, zaman=35)
+    if isinstance(y, dict) and y.get("durum") == "sürüyor" and y.get("no"):
+        y = istek("sonuc?no=%d&bekle=10" % int(y["no"]), zaman=30)
+    return y
+
+
 def ar_tahta_durumu(a):
+    if a.get("goruntu"):
+        try:
+            y = tahta_goruntusu(a.get("en_fazla") or 1400)
+        except urllib.error.URLError:
+            return metin({"durum": "bağlı değil", "not": "tahtayi_ac ile aç."})
+        png = (y or {}).get("png") if isinstance(y, dict) else None
+        if not png or not str(png).startswith("data:image/png;base64,"):
+            return metin({"durum": "görüntü alınamadı", "ayrinti": y,
+                          "not": "Tahta sayfası açık mı ve güncel mi? Sayfayı yenileyip yeniden dene."})
+        bilgi = {"baslik": y.get("baslik", ""), "boyut": "%sx%s" % (y.get("en"), y.get("boy")),
+                 "not": "Tahtanın şu anki görüntüsü. Kendi çiziminde taşan, üst üste binen, okunmayan ya da yanlış "
+                        "yerde duran bir şey varsa düzelt; öğrenciye bundan söz etmen gerekmez."}
+        return {"content": [{"type": "image", "data": png.split(",", 1)[1], "mimeType": "image/png"},
+                            {"type": "text", "text": json.dumps(bilgi, ensure_ascii=False)}]}
     if a.get("no"):
         try:
             return metin(_suruyor_notu(uzun_bekle(int(a["no"]))))
@@ -1581,6 +1954,7 @@ def ar_makaleler(a):
         return metin({"dersler": makale_bulucu.makaleli_dersler()})
     ders_yolu(ders)
     out = makale_bulucu.ozet(ders)
+    aramada_durumu(ders, out)
     if a.get("ac"):
         if not sunucu_acik():
             sunucuyu_baslat()
@@ -1592,11 +1966,46 @@ def ar_makaleler(a):
         out["sayfa"] = "Makaleler sayfası tarayıcıda açıldı."
     if not out["pdf_okuyucu"]:
         out["uyari"] = "PDF okuyucu kurulu değil; inen makaleler metne çevrilemez. KUR dosyasını yeniden çalıştırın."
-    eksik = [m["kisa"] for m in out["makaleler"] if m["durum"] in ("eksik", "hata")]
+    eksik = [m["kisa"] for m in out["makaleler"] if m["durum"] in ("eksik", "hata", "aramada_degil")]
     if eksik:
         out["not"] = ("Eksik makaleler aramada yok. Öğrenciye söyle; makaleler sayfasında yayıncı bağlantısı var, "
                       "PDF'i indirip sayfaya sürükleyebilir.")
     return metin(out)
+
+
+def aramada_durumu(ders, out):
+    """'hazir' görünen her makalenin metni gerçekten aramada mı? Değilse durumu dürüstçe değiştirir."""
+    try:
+        if _DIZIN_KILIDI.acquire(timeout=2):
+            try:
+                bilgi_bankasi.dizinle([ders], sessiz=True)
+            finally:
+                _DIZIN_KILIDI.release()
+        sayilar = bilgi_bankasi.makale_parca_sayilari(ders)
+    except Exception as e:
+        out["arama_dizini"] = "okunamadı: %s" % e
+        return out
+    for m in out.get("makaleler") or []:
+        if m.get("durum") != "hazir" or m.get("nereden") == "ders" or m.get("eslesme") == "icerik":
+            continue
+        klasor = makale_bulucu.metin_klasoru(ders, m["id"])
+        bilgi = {}
+        try:
+            with open(os.path.join(klasor, "bilgi.json"), encoding="utf-8") as f:
+                bilgi = json.load(f)
+        except (OSError, ValueError):
+            pass
+        n = sayilar.get(bilgi.get("kisa") or m.get("kisa"), 0)
+        m["aramada"] = n
+        if not n:
+            m["durum"] = "aramada_degil"
+            m["neden"] = ("PDF var ama metni aramaya girmedi. Makaleler sayfasında bu makaleyi yeniden ekleyin; yine "
+                          "olmazsa PDF taranmış (resim) olabilir. Şimdilik makale_sayfasi_bak ile sayfaya bakabilirsin.")
+    sayi = {}
+    for m in out.get("makaleler") or []:
+        sayi[m["durum"]] = sayi.get(m["durum"], 0) + 1
+    out["sayilar"] = sayi
+    return out
 
 
 def ar_ders_paketi_ekle(a):
@@ -1747,6 +2156,19 @@ def ar_calisma_secimi(_):
     diger = s["dersler"][1:]
     out = {"dersler": [{"ders": d, "baslik": b} for d, b in zip(s["dersler"], s["ders_adlari"])],
            "kendi_pdfleri": s["pdf_adlari"], "secim_tarihi": s["tarih"], "ilk_ders": ana}
+    hazir = {}
+    for pid, ad in zip(s["pdfler"], s["pdf_adlari"]):
+        try:
+            hd = makale_bulucu.hazir_ders_bul(pid)
+        except Exception:
+            hd = None
+        if hd:
+            hazir[ad] = hd
+    if hazir:
+        out["kendi_pdflerinin_hazir_dersleri"] = hazir
+        out["hazir_ders_notu"] = ("Bu PDF'lerin öğretmenin hazırladığı (sunumlu, görselli) bir dersi de var. Öğrenci "
+                                  "'sunumlu hâli', 'dersi' gibi bir şey isterse o derse geç (egitmen_hazirla(ders=...)); "
+                                  "yalnız makaleyi tartışmak isterse kendi-makalelerim ile sürdür. Emin değilsen sor.")
     out["not"] = (
         "Öğrenci ana ekranda bunları işaretledi. egitmen_hazirla(ders='%s') ile başla ve tahtayi_ac çağır. " % ana
         + ("Sonra sırayla öteki dersler: %s (her biri için yeniden egitmen_hazirla). " % ", ".join(diger) if diger else "")
@@ -1769,7 +2191,7 @@ def _makale_pdf(ders, kaynak):
 
 def ar_makale_sayfasi_bak(a):
     pdf = _makale_pdf(a.get("ders"), a.get("kaynak"))
-    veri = makale_sekil.onizleme(pdf, int(a.get("sayfa") or 1), a.get("bolge"))
+    veri = makale_sekil.onizleme(pdf, makale_sekil.pdf_sayfasi(a.get("ders"), a.get("kaynak"), a.get("sayfa")), a.get("bolge"))
     return {"content": [{"type": "image", "data": base64.b64encode(veri).decode("ascii"), "mimeType": "image/png"},
                         {"type": "text", "text": "Sayfa %s%s. Bölge [sol, üst, sağ, alt], 0–1 oran." % (
                             a.get("sayfa"), " (yalnız bölge)" if a.get("bolge") else "")}]}
@@ -1825,6 +2247,25 @@ def ar_tekrar_karti_yaz(a):
                   "ogrenildi": bool(k.get("ogrenildi"))})
 
 
+def ar_eski_surumler(a):
+    import eski_surumler
+    eski = eski_surumler.bul()
+    return metin({"eski_klasorler": eski, "yedek_yeri": eski_surumler.yedek_klasoru(),
+                  "not": ("Eski klasör yok." if not eski else
+                          "Hiçbir şey silinmedi. Kullanıcıya klasörleri say; silinmesini açıkça istediklerini "
+                          "eski_surumleri_sil ile (onay: true) sil.")})
+
+
+def ar_eski_surumleri_sil(a):
+    import eski_surumler
+    if a.get("onay") is not True:
+        raise ValueError("Kullanıcının açık onayı gerekli (onay: true). Önce eski_surumler ile listeyi göster ve sor.")
+    klasorler = [str(x) for x in (a.get("klasorler") or []) if x]
+    if not klasorler:
+        raise ValueError("klasorler gerekli")
+    return metin({"sonuc": eski_surumler.temizle(klasorler)})
+
+
 def ar_depolama(a):
     out = depolama_ozeti()
     if out["asildi"]:
@@ -1871,9 +2312,10 @@ ISLEYICILER = {"egitmen_hazirla": ar_egitmen_hazirla, "kayit_oku": ar_kayit_oku,
                "makale_bul": ar_makale_bul, "makale_ekle": ar_makale_ekle,
                "sihirbaz_oku": ar_sihirbaz_oku, "sihirbaz_oner": ar_sihirbaz_oner,
                "ders_bitir": ar_ders_bitir, "program_onerisi": ar_program_onerisi,
-               "calisma_secimi": ar_calisma_secimi, "degerlendirme_notu": ar_degerlendirme_notu,
+               "calisma_secimi": ar_calisma_secimi, "sablon_bilgisi": ar_sablon_bilgisi, "degerlendirme_notu": ar_degerlendirme_notu,
                "degerlendirme_ozeti": ar_degerlendirme_ozeti,
                "makale_sayfasi_bak": ar_makale_sayfasi_bak, "makale_sekli_ekle": ar_makale_sekli_ekle, "tekrar_karti_yaz": ar_tekrar_karti_yaz, "depolama": ar_depolama,
+               "eski_surumler": ar_eski_surumler, "ortak_klasor": ar_ortak_klasor, "eski_surumleri_sil": ar_eski_surumleri_sil,
                "ders_arsivle": ar_ders_arsivle, "ders_paketi_ekle": ar_ders_paketi_ekle,
                "ses_yeniden_baslat": ar_ses_yeniden_baslat, "arsivden_geri_yukle": ar_arsivden_geri_yukle}
 
@@ -2132,7 +2574,7 @@ def kendini_dene():
     print("Klasör:", KOK)
     print("Dersler:", ", ".join(g["id"] for g in katalog()) or "yok")
     print("Araçlar:", ", ".join(a["name"] for a in ARACLAR))
-    print("Kayıt klasörü:", KAYIT_KOK)
+    print("Kayıt klasörü:", KAYIT_KOK or veri_yeri.kayit_kok())
     d = sunucu_acik()
     print("Yerel sunucu:", "açık, tahta " + ("bağlı" if d and d.get("bagli") else "bağlı değil") if d else "kapalı (Claude açacak)")
     satirlar, uyarilar = ayar_raporu()
