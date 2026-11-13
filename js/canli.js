@@ -806,6 +806,7 @@
       soruAcik: !qEl.hidden,
       konusuyor: ses.konusuyor,
       duraklatildi: durak.aktif,
+      mola: !!(AT.molada && AT.molada()), // kullanıcı ⚙ Ayarlar'dan mola verdi: yeni anlatım başlatma, dönmesini bekle
       kaldigi_yer: kaldigiYer(),
       video: board.video ? board.video.durum : null,
       ses_engelli: sesEngelli, // tarayıcı sesi engelledi; kullanıcı ekrandaki düğmeye dokunmalı
@@ -1353,6 +1354,134 @@
     '"Şekil 2\'yi göster ve Sınıf Ib\'yi işaretle."',
     '"Bana bu konudan iki soru sor."'
   ] }, true);
+  // ---------- ⚙ Ayarlar: zemin, yan paneller, mola (5.0) ----------
+  // Seçimler bu bilgisayarda (localStorage) hatırlanır. Açık zemin varsayılandır; paneller kapalı başlar.
+  const AYAR_ANAHTAR = 'klinikkoc.tahtaAyar';
+  const ayar = (() => {
+    let a = {};
+    try { a = JSON.parse(localStorage.getItem(AYAR_ANAHTAR) || '{}') || {}; } catch (e) { a = {}; }
+    return { zemin: a.zemin === 'koyu' ? 'koyu' : 'acik', akis: !!a.akis, ilerleme: !!a.ilerleme };
+  })();
+  const lessonEl = $('#lesson');
+  const ayarMenu = $('#ayarMenu'), ayarBtn = $('#ayarAc'), yanPanel = $('#yanPanel');
+  function ayarKaydet() { try { localStorage.setItem(AYAR_ANAHTAR, JSON.stringify(ayar)); } catch (e) { /* özel pencere */ } }
+  function ayarUygula() {
+    lessonEl.dataset.zemin = ayar.zemin;
+    const m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.content = '#EAE5DC';
+    $('#zeminAcik').checked = ayar.zemin === 'acik';
+    $('#zeminKoyu').checked = ayar.zemin === 'koyu';
+    $('#panelAkis').checked = ayar.akis;
+    $('#panelIlerleme').checked = ayar.ilerleme;
+    $('#akisBolum').hidden = !ayar.akis;
+    $('#ilerlemeBolum').hidden = !ayar.ilerleme;
+    const panel = ayar.akis || ayar.ilerleme;
+    yanPanel.hidden = !panel;
+    lessonEl.classList.toggle('panelli', panel);
+    if (ayar.akis) akisGoster();
+    if (ayar.ilerleme) ilerlemeYenile();
+  }
+  ayarBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    ayarMenu.hidden = !ayarMenu.hidden;
+    ayarBtn.setAttribute('aria-expanded', String(!ayarMenu.hidden));
+  });
+  document.addEventListener('click', (e) => {
+    if (!ayarMenu.hidden && !ayarMenu.contains(e.target) && e.target !== ayarBtn) {
+      ayarMenu.hidden = true; ayarBtn.setAttribute('aria-expanded', 'false');
+    }
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !ayarMenu.hidden) { e.stopPropagation(); ayarMenu.hidden = true; ayarBtn.setAttribute('aria-expanded', 'false'); }
+  }, true);
+  $('#zeminAcik').addEventListener('change', () => { ayar.zemin = 'acik'; ayarKaydet(); ayarUygula(); });
+  $('#zeminKoyu').addEventListener('change', () => { ayar.zemin = 'koyu'; ayarKaydet(); ayarUygula(); });
+  $('#panelAkis').addEventListener('change', (e) => { ayar.akis = e.target.checked; ayarKaydet(); ayarUygula(); });
+  $('#panelIlerleme').addEventListener('change', (e) => { ayar.ilerleme = e.target.checked; ayarKaydet(); ayarUygula(); });
+
+  // Ders akışı: bu oturumda tahtaya gelen başlıklar (sırayla) ve anlatımın neresinde olunduğu.
+  const akis = [];
+  let akisDers = null;
+  function akisGoster() {
+    const liste = $('#akisListe');
+    liste.replaceChildren(...akis.map((t, i) => { const li = el('li', i === akis.length - 1 ? 'simdi' : '', t); return li; }));
+    $('#akisBos').hidden = akis.length > 0;
+    const y = kaldigiYer();
+    const adim = $('#akisAdim');
+    if (y && y.toplam) {
+      adim.replaceChildren(document.createTextNode('Anlatım: adım ' + y.adim + ' / ' + y.toplam + (y.askida ? ' (beklemede)' : '')));
+      const c = el('div', 'cubuk'); const i = el('i'); i.style.width = Math.round(100 * y.adim / y.toplam) + '%'; c.appendChild(i);
+      adim.appendChild(c);
+    } else adim.replaceChildren();
+  }
+  new MutationObserver(() => {
+    const h = boardEl.querySelector('.board-title h2');
+    const t = h ? h.textContent.trim() : '';
+    if (dersId !== akisDers) { akis.length = 0; akisDers = dersId; if (ayar.ilerleme) ilerlemeYenile(); }
+    if (t && t !== 'Canlı tahta' && akis[akis.length - 1] !== t) {
+      const eski = akis.indexOf(t);
+      if (eski >= 0) akis.splice(eski, 1); // aynı konuya dönülünce sona taşınır
+      akis.push(t);
+    }
+    if (ayar.akis) akisGoster();
+  }).observe(boardEl.querySelector('.board-title'), { childList: true, subtree: true, characterData: true });
+  setInterval(() => { if (ayar.akis) akisGoster(); }, 1500);
+
+  // İlerleme: dersin hedefleri; durum bu bilgisayardaki kayıttan (eğitmen kayit_yaz ile işledikçe değişir).
+  const DURUM_YAZI = { ele_alinmadi: 'henüz çalışılmadı', destekle_yapti: 'yardımla yaptı', bagimsiz_yapti: 'kendi başına yaptı',
+    tekrar_gerekli: 'tekrar gerekli', devam_ediyor: 'devam ediyor' };
+  let ilerlemeSon = 0;
+  async function ilerlemeYenile() {
+    const liste = $('#ilerlemeListe'), bos = $('#ilerlemeBos');
+    if (!dersId) { liste.replaceChildren(); bos.hidden = false; return; }
+    ilerlemeSon = Date.now();
+    try {
+      const r = await fetch('/api/canli/ilerleme?ders=' + encodeURIComponent(dersId), { cache: 'no-store' });
+      const j = await r.json();
+      const h = j.hedefler || [];
+      liste.replaceChildren(...h.map((x) => {
+        const li = el('li', x.durum || 'ele_alinmadi');
+        li.appendChild(el('span', 'nokta'));
+        li.appendChild(el('span', 'ad', x.baslik || x.id));
+        const alt = [DURUM_YAZI[x.durum] || x.durum || ''];
+        if (x.cevap) alt.push(x.cevap + ' cevap');
+        li.appendChild(el('span', 'alt', alt.filter(Boolean).join(' · ')));
+        return li;
+      }));
+      bos.hidden = h.length > 0;
+      if (!h.length) bos.textContent = 'Bu dersin tanımlı hedefi yok.';
+    } catch (e) { /* sunucu kapalı: sonra yeniden denenir */ }
+  }
+  setInterval(() => { if (ayar.ilerleme && !yanPanel.hidden && Date.now() - ilerlemeSon > 20000) ilerlemeYenile(); }, 5000);
+
+  // Mola: anlatım duraklar (sürüyorsa), süre sayılır; Devam ile kaldığı yerden sürer. Claude durumda 'mola' görür.
+  const molaEl = $('#mola');
+  let molaBas = 0, molaT = null, molaDuraklatti = false;
+  function molaVer() {
+    ayarMenu.hidden = true; ayarBtn.setAttribute('aria-expanded', 'false');
+    if (!molaEl.hidden) return;
+    molaDuraklatti = false;
+    if (!durak.aktif && durak.kullanilabilir()) { durak.duraklat(); molaDuraklatti = durak.aktif; }
+    molaBas = Date.now();
+    molaEl.hidden = false;
+    const yaz = () => { const s = Math.floor((Date.now() - molaBas) / 1000); $('#molaSure').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+    yaz(); molaT = setInterval(yaz, 1000);
+    api('duraklat', { duraklatildi: durak.aktif, durum: durum() }).catch(() => {});
+    $('#molaBitir').focus();
+  }
+  function molaBitir() {
+    if (molaEl.hidden) return;
+    molaEl.hidden = true;
+    clearInterval(molaT);
+    if (molaDuraklatti && durak.aktif) durak.devam();
+    molaDuraklatti = false;
+    api('duraklat', { duraklatildi: durak.aktif, durum: durum() }).catch(() => {});
+  }
+  AT.molada = () => !molaEl.hidden;
+  $('#molaVer').addEventListener('click', molaVer);
+  $('#molaBitir').addEventListener('click', molaBitir);
+  ayarUygula();
+
   // ---------- Sihirbaz katmanı ----------
   // Sihirbaz tahtanın üstünde bir katmanda açılır; tahta sayfası kapanmadığı için çizim, ses ve
   // Claude bağlantısı olduğu gibi kalır. Aynı tuş (ya da sihirbazdaki "Tahtaya dön") geri getirir.

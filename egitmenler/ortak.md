@@ -61,6 +61,8 @@ Kurgusal olgu sorusunda öğrenci yanıtladıktan sonra sor: "Ne kadar eminsin: 
 - Serbest çizimde doku renklerini adıyla ver: `fill: "dis-eti"`, `"mine"`, `"dentin"`, `"kemik"`, `"titanyum"`, `"mukoza"`
   (şablonlarla aynı tonlar; gerekirse hex `"#f2a7a7"`). Dolgulu şekilde çizgiyi kaldırmak için `stroke: "none"`.
   `gecis` (akarak geçiş) yalnız şablonlarda çalışır.
+- Öğrenci tahtadaki ⚙ Ayarlar'dan mola verebilir: `tahta_durumu` ya da `tahta` sonucunda `sayfa.mola: true` görürsen
+  yeni anlatım başlatma; kısa bir "Mola bitince devam ederiz" de ve öğrencinin dönmesini bekle.
 - Kaynak sayfası verirken düz yazı yerine `kaynak` komutunu kullan (`{type:"kaynak", text:"Su ve ark. 2010, s. 8",
   makale:"<makaleler aracındaki id>", sayfa:8}`): öğrenci dokununca o sayfa kendi PDF'inden açılır.
 - Hazır şablonlar yalnız diş ve implant değildir: sondalama ölçümü (`sondalama`), plak ve gingival indeksler (`plak-indeksi`,

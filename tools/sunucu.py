@@ -768,6 +768,35 @@ CANLI = Canli()
 POCKET = pocket_ses.PocketIsci()
 
 
+def ders_ilerlemesi(ders):
+    """Tahtanın İlerleme paneli: bu dersin bu bilgisayardaki en son güncellenen kaydına göre hedeflerin durumu.
+    (Kayıtlar yalnız bu bilgisayarda; ad ve kimlik panele gönderilmez.)"""
+    makale_bulucu.ders_gecerli(ders)
+    klasor = os.path.join(KOK, "lessons", ders)
+    hedefler = ders_sonu.karne_.ders_hedefleri(klasor) if os.path.isdir(klasor) else []
+    kayit, son = None, ""
+    for _, yol in ders_sonu.ders_kayitlari(ders):
+        try:
+            with open(yol, encoding="utf-8") as f:
+                k = json.load(f)
+        except (OSError, ValueError):
+            continue
+        g = str(k.get("guncelleme") or "")
+        if kayit is None or g > son:
+            kayit, son = k, g
+    out = {"ders": ders, "kayit": bool(kayit), "guncelleme": son[:16] or None, "hedefler": []}
+    if not hedefler:
+        return out
+    if kayit is None:
+        out["hedefler"] = [{"id": h["id"], "baslik": h.get("baslik"), "durum": "ele_alinmadi"} for h in hedefler]
+        return out
+    k = ders_sonu.karne_.hesapla(kayit, hedefler, time.strftime("%Y-%m-%d"))
+    out["hedefler"] = [{x: h.get(x) for x in ("id", "baslik", "durum", "oran", "cevap", "hedef_bloom", "ulasilan_bloom")}
+                       for h in k["hedefler"]]
+    out["genel_oran"] = k.get("genel_oran")
+    return out
+
+
 class Isleyici(http.server.SimpleHTTPRequestHandler):
     # Windows'ta Python dosya türlerini kayıt defterinden okur ve .js'yi "text/plain" verebilir;
     # tarayıcı o zaman kitaplıkları yüklemez. Türleri burada sabitliyoruz.
@@ -854,6 +883,8 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
                 CANLI.arac_etkin()
             if yol == "durum":
                 return self._json(200, CANLI.durum(al=q.get("al") == "1", teslim=teslim))
+            if yol == "ilerleme":  # tahtadaki İlerleme paneli
+                return self._json(200, ders_ilerlemesi(q.get("ders", "")))
             if yol == "gonder":
                 return self._json(200, CANLI.gonder(veri.get("komut") or {}, float(veri.get("bekle", 50)), bekleme, teslim))
             if yol == "sonuc":
