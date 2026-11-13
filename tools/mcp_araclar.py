@@ -123,7 +123,7 @@ KOMUT_SEMASI = {
                    "soket-koruma (pihti, granulasyon, orgu-kemik, olgun-kemik, demet-kemigi, rezorpsiyon, dikey-kayip, eski-hat, greft, kollajen-ortu). "
                    "template:kemik-ici variant: saglikli|uc-duvarli|iki-duvarli|tek-duvarli|krater (defekt, duvar, bukkal-duvar, lingual-duvar, "
                    "proksimal-duvar, septum). template:cekilme variant: saglikli|rt1|rt2|rt3 (Cairo; cekilme, acik-kok, sinif, papilla, temas, "
-                   "siyah-ucgen, ara-kayip, mgj, mine-sement). template:sondalama variant: saglikli|gingivitis|periodontitis|cekilme "
+                   "siyah-ucgen, ara-kayip, mgj, mine-sement). template:papil variant: dis-dis|duz|konkav|konveks|kare-kron|ince-biyotip|implant-implant (diş–implant arası meziodistal kesit; papil, tepe, temas, olcum, kret, siyah-ucgen, kritik, kritik-alti, kron-sag, implant, kuron, kazanc, baski, biyotip). template:kontur-fasiyal variant: duz|kritik-fazla|kritik-az|kritik-alti-konkav|kritik-alti-konveks (implant labio-palatinal kesit; kritik, kritik-alti, kenar, kayma, hacim, labial-kemik, labial-mukoza, palatinal-mukoza, kron, implant). Bu iki şablondaki doku tepkisi ölçüleri (papil artışı, kenar kayması) yaklaşık gözlemdir; eşik gibi söyleme. template:sondalama variant: saglikli|gingivitis|periodontitis|cekilme "
                    "(cep derinliği ve klinik ataşman ölçümü; dis parçalarına ek: olcum-cd, olcum-kas, olcum-gm, olcum-formul). "
                    "İNDEKSLER: template:plak-indeksi variant: pli-0..pli-3 (Silness–Löe) | qh-0..qh-5 (Quigley–Hein/Turesky, plak boyalı); "
                    "template:gingival-indeks variant: gi-0..gi-3 (Löe–Silness). Parçalar: dis, dis-eti, papilla, mgj, alveol-mukozasi, skor, olcut, "
