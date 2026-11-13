@@ -762,6 +762,7 @@
   let dersId = null;
   // Tablodaki "?" hücresine verilen cevap Claude'a öğrencinin sözü olarak gider.
   function tabloYanitiBagla(b) {
+    b.onYanit = (metin) => sozGonder(metin, { motor: 'yazi' }); // şablonda işaretleme / etiket sürükleme
     b.onTabloYanit = (y) => {
       const yer = [y.tablo, y.satir, y.sutun].filter(Boolean).join(' · ');
       if (y.yaz) {

@@ -20,7 +20,7 @@ def _json_oku(yol):
 BLOOM = ["hatirla", "anla", "uygula", "cozumle", "degerlendir", "olustur"]
 BLOOM_AD = dict(zip(BLOOM, ["Hatırla", "Anla", "Uygula", "Çözümle", "Değerlendir", "Oluştur"]))
 TUR_AD = {"secmeli": "seçmeli", "acik": "açık uçlu", "vaka_karar": "vaka kararı", "vaka_acik": "vaka, açık uçlu",
-          "vaka_veri": "vaka, veri toplama"}
+          "vaka_veri": "vaka, veri toplama", "isaretleme": "şablonda işaretleme"}
 DURUM_AD = {"ele_alinmadi": "ele alınmadı", "destekle_yapti": "destekle yaptı", "bagimsiz_yapti": "bağımsız yaptı",
             "tekrar_gerekli": "tekrar gerekli", "devam_ediyor": "devam ediyor"}
 SONUC_AD = {"iyi": "iyi sonuç", "kabul": "kabul edilebilir", "kotu": "kötü sonuç", "yarim": "yarım kaldı"}

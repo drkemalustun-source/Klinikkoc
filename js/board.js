@@ -663,6 +663,8 @@
     // Anatomik şablonda gecis (sn) verilirse ve tahtada aynı şablon varsa, çizim eski durumdan yenisine
     // akarak geçer (ör. sağlıklı → gingivitis): dişeti şişer, cep derinleşir, kemik geriler.
     cmd_draw(c, instant) {
+      // Etiket sürüklemede şablonun kendi etiketleri çizilmez; öğrenci yerleştirir.
+      if (c.etiket_surukle) c = Object.assign({}, c, { labels: [] });
       const wrap = el('div', 'board-draw');
       if (c.title) wrap.appendChild(rich(el('h3'), c.title));
       const s = svg('svg', { viewBox: c.viewBox || '0 0 160 90', class: 'draw-svg' });
@@ -740,6 +742,11 @@
       if (akis.length) {
         const a = this._sekilAkisi(akis, gecisSure);
         this._anim = this._anim ? Promise.all([this._anim, a]) : a;
+      }
+      // E aşaması: şablonda dokunarak işaretleme ve etiket sürükleme (js/board-etkilesim.js).
+      if (c.template && (c.isaretle || c.etiket_surukle) && this._etkilesim) {
+        const bekle = this._anim || Promise.resolve();
+        bekle.then(() => { if (wrap.isConnected) this._etkilesim(wrap, s, c); });
       }
       return wrap;
     }

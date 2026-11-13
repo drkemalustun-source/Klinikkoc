@@ -646,3 +646,27 @@ strong { color: var(--accent); font-weight: 700; }
 .kaynak-pencere-govde { flex: 1; min-height: 0; overflow: auto; display: flex; justify-content: center; align-items: flex-start; }
 .kaynak-pencere-govde img { max-width: 100%; background: #fff; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
 .kaynak-hata { color: #fff; font-size: 18px; }
+
+/* Şablonda yanıt (board-etkilesim.js): işaretleme ve etiket sürükleme */
+.etk-isaretle .draw-svg [data-part] { cursor: pointer; }
+.etk-isaretle .draw-svg [data-part]:hover { filter: brightness(1.08); }
+.etk-secili { stroke: var(--accent) !important; stroke-width: .9 !important; filter: drop-shadow(0 0 1.2px var(--accent)); }
+.etk-secili.etk-dogru { stroke: var(--ok) !important; filter: drop-shadow(0 0 1.4px var(--ok)); }
+.etk-secili.etk-yanlis { stroke: var(--warn) !important; filter: drop-shadow(0 0 1.4px var(--warn)); }
+.etk-soru { margin: .4em 0; padding: .35em .7em; border-radius: 10px; border: 2px dashed var(--accent); color: var(--accent);
+  font-weight: 600; font-size: .8em; display: inline-block; }
+.etk-soru.dogru { border-style: solid; border-color: var(--ok); color: var(--ok); }
+.etk-soru.yanlis { border-style: solid; border-color: var(--warn); color: var(--warn); }
+.etk-raf { margin-top: .3em; }
+.etk-kartlar { display: flex; flex-wrap: wrap; gap: .4em; }
+.etk-kart { padding: .4em .8em; border-radius: 999px; border: 1px solid var(--board-line); background: var(--board-2); color: var(--chalk);
+  font: inherit; font-size: .75em; cursor: grab; touch-action: none; user-select: none; }
+.etk-kart.yerlesti { opacity: .35; cursor: default; }
+.etk-hayalet { position: fixed; z-index: 1000; transform: translate(-50%, -130%); padding: .35em .8em; border-radius: 999px;
+  background: var(--accent); color: #fff; font-size: .8em; pointer-events: none; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
+.etk-nokta { fill: var(--accent); stroke: #fff; stroke-width: .3; }
+.etk-yazi { fill: var(--chalk); paint-order: stroke; stroke: var(--board); stroke-width: .8px; font-weight: 600; }
+.etk-etiket.dogru .etk-nokta { fill: var(--ok); } .etk-etiket.dogru .etk-yazi { fill: var(--ok); }
+.etk-etiket.yanlis .etk-nokta { fill: var(--warn); } .etk-etiket.yanlis .etk-yazi { fill: var(--warn); }
+.etk-duzeltme { fill: none; stroke: var(--warn); stroke-width: .3; stroke-dasharray: .8 .6; }
+.etk-dogru-yer { fill: none; stroke: var(--ok); stroke-width: .4; }
