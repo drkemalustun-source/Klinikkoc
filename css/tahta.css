@@ -91,6 +91,9 @@ svg { stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; 
 .board-body { flex: 1; min-height: 0; display: grid; gap: var(--gutter); }
 .board[data-layout="split"] .board-body { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
 .board[data-layout="visual"] .board-notes { display: none; }
+.board[data-layout="gorsel-kaynak"] .board-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: .3em; }
+.board[data-layout="gorsel-kaynak"] .board-notes { flex-direction: row; flex-wrap: wrap; justify-content: flex-end; overflow: visible; font-size: .8em; }
+.board[data-layout="gorsel-kaynak"] .note-kaynak { margin: 0; }
 .board[data-layout="notes"] .board-visual { display: none; }
 .board[data-layout="notes"] .board-body { max-width: 1200px; width: 100%; margin: 0 auto; }
 .board-visual { min-height: 0; display: flex; flex-direction: column; justify-content: center; }
@@ -672,3 +675,7 @@ strong { color: var(--accent); font-weight: 700; }
 .etk-etiket.yanlis .etk-nokta { fill: var(--warn); } .etk-etiket.yanlis .etk-yazi { fill: var(--warn); }
 .etk-duzeltme { fill: none; stroke: var(--warn); stroke-width: .3; stroke-dasharray: .8 .6; }
 .etk-dogru-yer { fill: none; stroke: var(--ok); stroke-width: .4; }
+
+/* Etiket sürüklerken parmağın altındaki parça */
+.etk-hedef { filter: brightness(1.12) drop-shadow(0 0 1.2px var(--accent)); }
+path.etk-hedef[class*="an-kritik"], .an-temas.etk-hedef { stroke-width: 1.9; }

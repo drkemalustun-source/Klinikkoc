@@ -240,7 +240,9 @@
     _layout() {
       const hasVisual = this.visual.childElementCount > 0;
       const hasNotes = this.notes.childElementCount > 0;
-      this.root.dataset.layout = hasVisual && hasNotes ? 'split' : hasVisual ? 'visual' : 'notes';
+      // Notlar yalnız kaynak etiketiyse tahta ikiye bölünmez: görsel bütün alanı kullanır, etiketler altta sağda durur.
+      const yalnizKaynak = hasNotes && [...this.notes.children].every((n) => n.classList.contains('note-kaynak'));
+      this.root.dataset.layout = hasVisual && hasNotes ? (yalnizKaynak ? 'gorsel-kaynak' : 'split') : hasVisual ? 'visual' : 'notes';
     }
 
     // instant=true: geçmiş adımları yeniden kurarken animasyon yapılmaz.
@@ -367,6 +369,12 @@
         b.title = 'Sayfayı aç';
         b.addEventListener('click', () => kaynakAc(src, c.text || ''));
       }
+      // Kaynak etiketleri birikmesin: aynısı yinelenmez, tahtada en çok iki tane kalır (en eskisi kalkar).
+      b.dataset.kaynak = (src || '') + '|' + (c.text || '');
+      const eskiler = [...this.notes.querySelectorAll('.note-kaynak')];
+      for (const e of eskiler.filter((x) => x.dataset.kaynak === b.dataset.kaynak)) e.remove();
+      const kalan = [...this.notes.querySelectorAll('.note-kaynak')];
+      for (const e of kalan.slice(0, Math.max(0, kalan.length - 1))) e.remove();
       this.notes.appendChild(b);
       return b;
     }

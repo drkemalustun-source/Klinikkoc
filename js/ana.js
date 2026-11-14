@@ -629,7 +629,7 @@
     }
     pencere(el('h2', {}, 'Güncelleme tamam'),
       el('p', {}, `KlinikKoç ${surum} kuruldu.`),
-      el('p', {}, el('b', {}, 'Son adım: Claude masaüstü uygulamasını tamamen kapatıp yeniden açın. '), 'Böylece Claude da yeni sürümün araçlarını görür.'),
+      el('p', {}, el('b', {}, 'Son adım: Claude masaüstü uygulamasını tamamen kapatıp yeniden açın. '), 'Pencereyi kapatmak yetmez: Windows’ta saatin yanındaki simge alanında Claude simgesine sağ tıklayıp “Çıkış” deyin, Mac’te menüden Claude › Çıkış (⌘Q). Böylece Claude da yeni sürümün araçlarını görür.'),
       el('div', { class: 'k-alt' }, el('button', { class: 'k-btn', onclick: () => location.reload() }, 'Tamam')));
   }
 

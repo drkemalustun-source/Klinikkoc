@@ -1547,8 +1547,10 @@ def surum_bilgisi(d=None):
     sunucu = (d or {}).get("surum")
     if sunucu and sunucu != SURUM:
         out["sunucu"] = sunucu
-        out["uyari"] = ("Tahta sunucusu %s, bu araç %s. Kullanıcıdan KlinikKoç'u kapatıp yeniden başlatmasını iste." %
-                        (sunucu, SURUM))
+        out["uyari"] = ("Tahta sunucusu %s, bu araç %s: güncellemeden sonra Claude masaüstü uygulaması eski araçlarla "
+                        "çalışıyor. Kullanıcıdan Claude masaüstü uygulamasını TAMAMEN kapatıp yeniden açmasını iste; "
+                        "pencereyi kapatmak yetmez: Windows'ta saatin yanındaki simge alanında Claude simgesine sağ tıklayıp "
+                        "'Çıkış', Mac'te Claude › Çıkış (⌘Q)." % (sunucu, SURUM))
     try:
         g = surum_.denetle()
         if g.get("var") and not g.get("gelistirici"):
@@ -1622,11 +1624,20 @@ def sablon_ozeti(ad, varyant=None):
         out["ayrinti_parcalari"] = s["ayrinti"]
     if s.get("yalniz"):
         out["yalniz_bu_varyantlarda"] = s["yalniz"]
+    if s.get("not"):
+        out["not"] = s["not"]
+    if s.get("takma"):
+        out["eski_adlar"] = s["takma"]
     if varyant:
         if varyant not in s["varyantlar"]:
             out["uyari"] = "'%s' varyantı yok; geçerli: %s" % (varyant, ", ".join(s["varyantlar"]))
         else:
-            out["bu_varyantta"] = sorted(_sablon_parcalari(s, varyant))
+            # Bu durumda tahtada görünen gerçek etiket metinleri (bazı parçaların adı duruma göre değişir).
+            out["bu_varyantta"] = {p: (s.get("adlar", {}).get(p, {}).get(varyant) or s["parcalar"][p])
+                                   for p in sorted(_sablon_parcalari(s, varyant))}
+    elif s.get("adlar"):
+        out["adi_duruma_gore_degisen"] = s["adlar"]
+        out["adi_notu"] = "Bu parçaların tahtadaki etiketi duruma göre değişir; kesin metin için variant ile sor."
     return out
 
 
@@ -1651,7 +1662,7 @@ def sablon_uyarilari(c, yer):
                    % (yer, ad, v, s["varyantlar"][0], ", ".join(s["varyantlar"])))
         v = None
     v = v or s["varyantlar"][0]
-    var = _sablon_parcalari(s, v)
+    var = _sablon_parcalari(s, v) | set(s.get("takma") or {})
     istenen = []
     lab = c.get("labels")
     if isinstance(lab, list):

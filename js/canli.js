@@ -1144,7 +1144,7 @@
       if (!AT.tahtaGoruntu) throw new Error('tahta-goruntu.js yüklenmedi');
       const g = await AT.tahtaGoruntu(document.getElementById('board'), { enFazla: k.en_fazla || 1400 });
       sonuc = { durum: 'bitti', png: g.png, en: g.en, boy: g.boy,
-        baslik: (document.querySelector('#board .board-title') || {}).textContent || '' };
+        baslik: durum().baslik };
     } catch (e) {
       sonuc = { durum: 'hata', hata: String(e && e.message || e) };
     }
