@@ -607,6 +607,7 @@
     return out;
   }
 
+  const UZUN_ETIKET = 24;
   // Etiketleri iki sütuna dizer, çakışmayı önler, kılavuz çizgisi çeker.
   function etiketle(g, parts, labels, instant, eski) {
     const sol = [], sag = [];
@@ -617,17 +618,31 @@
       let at = pr.at;
       if (lab.side === 'sol' && at[0] > 80) at = [160 - at[0], at[1]];
       if (lab.side === 'sag' && at[0] < 80) at = [160 - at[0], at[1]];
-      (at[0] < 80 ? sol : sag).push({ text: lab.text || pr.ad, at, color: lab.color, yeni: eski ? !eski.has(lab.part) : !instant });
+      // Parça kendi yanını söyleyebilir (yan: 'sol'|'sag'): aynı noktayı gösteren etiketler iki sütuna dağılsın diye.
+      const solda = lab.side ? lab.side === 'sol' : pr.yan ? pr.yan === 'sol' : at[0] < 80;
+      (solda ? sol : sag).push({ text: lab.text || pr.ad, at, color: lab.color, yeni: eski ? !eski.has(lab.part) : !instant });
     }
     const yerlestir = (arr) => {
       arr.sort((a, b) => a.at[1] - b.at[1]);
       let last = -Infinity;
-      for (const a of arr) { a.y = Math.max(a.at[1], last + 4.8, 4); last = a.y; }
-      let over = last - 88;
+      // Uzun etiket küçültülmez, iki satıra bölünür (': ' ya da ortaya en yakın boşluktan); iki satırlı etiket daha çok yer tutar.
+      for (const a of arr) {
+        const t = String(a.text);
+        a.satirlar = [t];
+        if (t.length > UZUN_ETIKET) {
+          let k = t.indexOf(': ');
+          if (k > 0 && k < t.length - 3 && Math.max(k + 1, t.length - k - 2) <= UZUN_ETIKET) k += 1;
+          else { k = -1; for (let i = 1; i < t.length - 1; i++) if (t[i] === ' ' && (k < 0 || Math.abs(i - t.length / 2) < Math.abs(k - t.length / 2))) k = i; }
+          if (k > 0) a.satirlar = [t.slice(0, k).trim(), t.slice(k + 1).trim()];
+        }
+        a.h = 4.8 + 3.6 * (a.satirlar.length - 1);
+      }
+      for (const a of arr) { a.y = Math.max(a.at[1], last, 4); last = a.y + a.h; }
+      let over = (arr.length ? arr[arr.length - 1].y + arr[arr.length - 1].h - 4.8 : 0) - 88;
       for (let i = arr.length - 1; i >= 0 && over > 0; i--) {
         arr[i].y -= over;
         const prev = arr[i - 1];
-        over = prev ? prev.y - (arr[i].y - 4.8) : 0;
+        over = prev ? prev.y + prev.h - arr[i].y : 0;
       }
     };
     yerlestir(sol); yerlestir(sag);
@@ -638,9 +653,11 @@
       svg('path', { d: `M${tx + (side === 'sol' ? 0.8 : -0.8)},${f(a.y - 1.1)} L${f(a.at[0])},${f(a.at[1])}`, class: 'an-kilavuz' }, lg);
       svg('circle', { cx: f(a.at[0]), cy: f(a.at[1]), r: 0.65, class: 'an-nokta' }, lg);
       // Uzun etiket kenar sütununa (≈ 45 birim) sığsın diye küçülür.
-      const fs = Math.min(3.4, 45 / (String(a.text).length * 0.56));
+      const enUzun = Math.max(...a.satirlar.map((x) => x.length));
+      const fs = Math.min(3.4, 45 / (enUzun * 0.56));
       const t = svg('text', { x: tx, y: f(a.y), 'text-anchor': side === 'sol' ? 'end' : 'start', 'font-size': f(fs), class: 'an-yazi' }, lg);
-      t.textContent = a.text;
+      if (a.satirlar.length === 1) t.textContent = a.text;
+      else a.satirlar.forEach((x, i) => { svg('tspan', { x: tx, dy: i ? 3.6 : 0 }, t).textContent = x; });
       if (a.yeni) { lg.style.animationDelay = delay + 's'; lg.classList.add('fade-in'); delay += 0.35; }
     };
     sol.forEach((a) => ciz(a, 'sol'));
@@ -654,7 +671,11 @@
     if (!s) { console.warn('Bilinmeyen şablon:', c.template); return null; }
     const g = svg('g', { class: 'an-sablon' + (instant ? '' : ' fade-in') }, svgEl);
     const parts = s.ciz(g, c.variant || s.varyantlar[0], { probe: !!c.probe, p: c.p, olcu: c.olcu });
-    for (const h of [].concat(c.highlight || [])) {
+    // Eski parça kimlikleri (takma) yeni adlarına çevrilir: eski dersler bozulmasın.
+    const takma = s.takma || {};
+    const yeniAd = (k) => (takma[k] && !parts[k] ? takma[k] : k);
+    if (Array.isArray(c.labels)) c = Object.assign({}, c, { labels: c.labels.map((l) => (typeof l === 'string' ? yeniAd(l) : Object.assign({}, l, { part: yeniAd(l.part) }))) });
+    for (const h of [].concat(c.highlight || []).map(yeniAd)) {
       g.querySelectorAll(`[data-part="${h}"]`).forEach((n) => n.classList.add('an-vurgu'));
     }
     let labels = c.labels || [];
