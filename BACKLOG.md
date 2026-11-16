@@ -82,26 +82,42 @@ Davranış değişmez.
 **Doğrulama:** `python3 -m unittest discover -s tools/testler` Node testlerini de koşar. Yayın, dal itilip Pages
 ayarı açıldıktan sonra doğrulanır (aşağıda "Yayın için gerekenler").
 
-### ◐ F1 — Ders paketi tarayıcıda kurulur
+### ☑ F1 — Ders paketi tarayıcıda kurulur (5.1.0)
 
-- [ ] `js/yerel/yerel.js`: `AT.yerel`, SW kaydı
-- [ ] `js/yerel/zip.js`: zip okuyucu (kitaplık yok; `DecompressionStream`)
-- [ ] `js/yerel/ders-deposu.js`: paket denetimi, kurulum, ders listesi
-- [ ] `sw.js`: kurulu ders dosyalarını verme, videoda parça isteği (Range), ders önbelleklerini koruma
-- [ ] Oynatıcı ana sayfasında "Ders paketi ekle" (dosya seçme ve sürükleyip bırakma)
+- [x] `js/yerel/yerel.js`: `AT.yerel`, SW kaydı; ders açılmadan önce SW'nin sayfayı denetlemesi beklenir
+- [x] `js/yerel/zip.js`: zip okuyucu (kitaplık yok; `DecompressionStream`)
+- [x] `js/yerel/ders-deposu.js`: paket denetimi, kurulum, güncelleme, kaldırma, ders listesi
+- [x] `sw.js`: kurulu ders dosyalarını verme, videoda parça isteği (Range); ders önbellekleri sürüm artışında durur
+- [x] Oynatıcı ana sayfasında "Ders paketi ekle" (dosya seçme ve sürükleyip bırakma)
 
 **Taşınan:** `tools/ders_paketi.py` (`paketi_incele`, `yukle`, `katalog_guncelle`).
 **Bırakılan:** kurulumdan sonra otomatik makale arama (F6), ders kaldırma arayüzü (F2).
-**Doğrulama:** Python'un ürettiği örnek ders paketini JS aynı ders kimliği ve dosya listesiyle kabul eder; kötü
-paketleri Python'la aynı iletiyle reddeder. Düz bir statik sunucuda paket bırakılınca ders kartı çıkar, görselleriyle
-oynar, çevrimdışı yenilemede açılır, sürüm artışından sonra yerinde durur.
+
+**Python'dan bilerek ayrılan iki nokta** (site adresinde API anahtarı ve kayıtlar durduğu için):
+- Paketteki `.js` kopyaları (`ders.js` vb.) saklanmaz. Onlar yalnız `file://` içindir; kurulu bir dersin içinden
+  betik çalıştırılamaz.
+- Kurulu ders dosyaları `Content-Security-Policy: sandbox` başlığıyla verilir; paketteki bir dosya adres
+  çubuğundan açılırsa sitenin yetkileriyle çalışmaz.
+
+**Doğrulama (yapıldı):**
+- Eşlik testleri (`tools/testler/test_js.py`): örnek ders paketi Python'da ve JS'te aynı dosyalarla (içerik
+  özetleri dahil) ve aynı ders listesi girişiyle kurulur; 8 uygunsuz paket Python'la aynı iletiyle reddedilir;
+  kurulu ders onaysız değişmez; güncelleme eskiyi siler, videoları korur; boyutu yanlış bildirilen girdi açılmaz.
+- Başsız Chrome'da, alt yoldan (`/Klinikkoc/`, GitHub Pages gibi) düz statik sunucuyla uçtan uca: paket dosya
+  seçerek ve sürükleyip bırakarak kurulur, ders açılır ve tahta çizilir, ders dosyaları ağa gitmez, Range isteği
+  206 döner, çevrimdışı yenilemede ders açılır, sürüm artışında program önbelleği değişir ama ders yerinde durur.
+- **Sınanmadı:** Safari ve Firefox; gerçek GitHub Pages adresi; büyük (yüzlerce MB) videolu paket.
+- **Gözlem:** başsız Chrome `navigator.storage.persist()` isteğine "hayır" dedi. Kalıcılık tarayıcının kararıdır;
+  F2'deki "Kaydımı indir" bu yüzden şart.
 
 ### ☐ F2 — Tek kayıt deposu ve ana ekran
 
+- [ ] `AT.yerel.istek(yol, sec)`: `/api/...` çağrılarını sayfa modüllerine yönlendiren tablo (`js/yerel/yerel.js`)
 - [ ] `js/yerel/depo.js`: IndexedDB (`kayitlar`, `ogrenciler`, `dosyalar`, `yedekler`, `ayarlar`)
 - [ ] Kayıt dışa ve içe aktarma (`kayit_aktar.py` biçimi); "Kaydımı indir" düğmesi
 - [ ] `js/yerel/ana-ekran.js`: `ana/ozet`, `secim`, `geri_bildirim`, `oneri_*`; `makale/paket`, `makale/durum`
-- [ ] `ana.html` web'de açılır; ders kaldırma
+- [ ] `ana.html` web'de açılır; ders kaldırma (`AT.yerel.dersKaldir` hazır, arayüzü yok); oynatıcıda gizlenen
+      "Ana ekran" bağlantısı geri açılır (`js/app.js`)
 - [ ] Oynatıcı ilerlemesi (`localStorage`) kayda yansıtılır (`js/core.js` `Progress.save`)
 - [ ] Depolama paneli (`navigator.storage.estimate`)
 

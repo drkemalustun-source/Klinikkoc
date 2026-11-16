@@ -1,5 +1,5 @@
 {
-  "version": "9580bb7a6952",
+  "version": "3bf261721501",
   "files": [
     "./",
     "index.html",
@@ -7,6 +7,9 @@
     "manifest.webmanifest",
     "css/tahta.css",
     "js/core.js",
+    "js/yerel/yerel.js",
+    "js/yerel/zip.js",
+    "js/yerel/ders-deposu.js",
     "js/speech.js",
     "js/anatomi.js",
     "js/anatomi-bolge.js",

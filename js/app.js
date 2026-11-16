@@ -48,10 +48,12 @@
       // Program derssiz gelir: dersler öğretmenin verdiği ders paketleriyle eklenir.
       const bos = el('div', 'empty-home');
       bos.appendChild(el('h2', null, 'Henüz ders yok'));
-      bos.appendChild(el('p', null, 'Öğretmeninizden aldığınız ders paketini (.zip) ekleyin; ders bu listede belirir ve makaleleri kendiliğinden aranır.'));
+      bos.appendChild(el('p', null, AT.yerel
+        ? 'Öğretmeninizden aldığınız ders paketini (.zip) ekleyin ya da bu sayfaya sürükleyip bırakın; ders bu listede belirir. Paket yalnız bu tarayıcıda saklanır.'
+        : 'Öğretmeninizden aldığınız ders paketini (.zip) ekleyin; ders bu listede belirir ve makaleleri kendiliğinden aranır.'));
       const dug = el('div', 'empty-actions');
-      const ekle = el('a', 'btn primary', 'Ders paketi ekle');
-      ekle.href = 'makaleler.html#paketKutu';
+      const ekle = AT.yerel ? paketDugmesi('btn primary') : el('a', 'btn primary', 'Ders paketi ekle');
+      if (!AT.yerel) ekle.href = 'makaleler.html#paketKutu';
       const kil = el('a', 'btn', 'Kılavuzu okuyun');
       kil.href = 'kilavuz.html';
       dug.append(ekle, kil);
@@ -72,6 +74,56 @@
       if (due) card.appendChild(el('p', 'resume due', 'Tekrar zamanı gelen ' + due + ' soru var'));
       card.addEventListener('click', () => openLesson(entry));
       box.appendChild(card);
+    }
+    if (AT.yerel) {
+      const dug = el('div', 'empty-actions');
+      dug.appendChild(paketDugmesi('btn'));
+      box.appendChild(dug);
+    }
+  }
+
+  // ---------- Ders paketi ekleme (web sürümü: paket tarayıcıda kurulur, bkz. js/yerel/ders-deposu.js) ----------
+  const paketGirisi = el('input');
+  paketGirisi.type = 'file';
+  paketGirisi.accept = '.zip,application/zip';
+  paketGirisi.hidden = true;
+
+  async function paketKur(dosya, uzerine) {
+    toast('Ders paketi kuruluyor…', 120000);
+    try {
+      const s = await AT.yerel.dersKur(dosya, { uzerine });
+      catalog = [];
+      await showHome();
+      toast('"' + s.baslik + '" eklendi.');
+    } catch (e) {
+      if (e.kod !== 409) { toast(e.message, 7000); return; }
+      if (confirm('Bu ders zaten kurulu. Paketteki sürümle güncellensin mi? İlerlemeniz silinmez.')) return paketKur(dosya, true);
+      toast('Ders değiştirilmedi.');
+    }
+  }
+
+  function paketDugmesi(cls) {
+    const dug = el('button', cls, 'Ders paketi ekle');
+    dug.type = 'button';
+    dug.addEventListener('click', () => paketGirisi.click());
+    return dug;
+  }
+
+  if (AT.yerel) {
+    home.appendChild(paketGirisi);
+    paketGirisi.addEventListener('change', () => {
+      const dosya = paketGirisi.files[0];
+      paketGirisi.value = '';
+      if (dosya) paketKur(dosya);
+    });
+    home.addEventListener('dragover', (e) => e.preventDefault());
+    home.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (e.dataTransfer.files[0]) paketKur(e.dataTransfer.files[0]);
+    });
+    // Bu sayfalar henüz yerel sunucu ister; web'e taşındıkça bağlantıları geri açılır (bkz. BACKLOG.md).
+    for (const a of home.querySelectorAll('.home-foot a')) {
+      if (/^(ana|makaleler|sihirbaz)\.html$/.test(a.getAttribute('href'))) a.hidden = true;
     }
   }
 

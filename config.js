@@ -2,7 +2,7 @@
 window.AT = window.AT || {};
 window.AT.config = {
   appName: 'KlinikKoç',
-  version: '5.0.0',  // kök klasördeki SURUM dosyasıyla aynı olmalı (testler denetler)
+  version: '5.1.0',  // kök klasördeki SURUM dosyasıyla aynı olmalı (testler denetler)
   // Web sürümü: yerel sunucu (tools/sunucu.py) yoktur; /api/ çağrıları tarayıcıdaki modüllere (js/yerel/) gider.
   yerel: true,
   // Canlı soru-cevabın başlangıç ayarları (bkz. js/qa/qa.js). Öğrenci Ayarlar'dan değiştirebilir.

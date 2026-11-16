@@ -6,7 +6,10 @@
  * localhost:8810) tarayıcı eski board.js'i vermeyi sürdürdü ("board.animBekle is not a function").
  * Sunucu bu bilgisayarda çalıştığı için ağ her zaman hızlıdır; önbellek yalnız sunucu kapalıyken kullanılır. */
 const PREFIX = 'klinik-koc-';
-const SW_SURUM = '5.0.0'; // bu dosya değişince tarayıcı yeni işçiyi kurar
+const SW_SURUM = '5.1.0'; // bu dosya değişince tarayıcı yeni işçiyi kurar
+// Web sürümü: tarayıcıda kurulan ders paketleri (js/yerel/ders-deposu.js). Adı PREFIX ile başlamaz;
+// program güncellenince silinmez.
+const DERS = 'kk-ders-';
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
@@ -43,12 +46,35 @@ self.addEventListener('activate', (event) => {
   })());
 });
 
-// Önce ağ; ağ yoksa (sunucu kapalı, çevrimdışı) önbellek. API çağrıları hiç önbelleğe girmez.
+// lessons/<ders>/... isteği kurulu bir derse aitse dosyayı o dersin önbelleğinden verir; ders kurulu değilse null.
+// Kurulu dersin pakette olmayan dosyası (ör. ses manifesti) ağda aranmaz: 404.
+async function kuruluDers(req, url) {
+  const m = /\/lessons\/([^/]+)\/./.exec(url.pathname);
+  if (!m || !(await caches.has(DERS + m[1]))) return null;
+  const y = await (await caches.open(DERS + m[1])).match(req, { ignoreSearch: true });
+  if (!y) return new Response(null, { status: 404 });
+  // Video oynatıcı dosyayı parça parça ister (Range); önbellekteki bütün dosyadan dilim verilir.
+  const aralik = /^bytes=(\d+)-(\d*)$/.exec(req.headers.get('range') || '');
+  if (!aralik) return y;
+  const b = await y.blob();
+  const bas = Number(aralik[1]);
+  const son = aralik[2] ? Math.min(Number(aralik[2]), b.size - 1) : b.size - 1;
+  if (bas > son) return new Response(null, { status: 416, headers: { 'Content-Range': 'bytes */' + b.size } });
+  const basliklar = new Headers(y.headers);
+  basliklar.set('Content-Range', 'bytes ' + bas + '-' + son + '/' + b.size);
+  basliklar.set('Content-Length', String(son - bas + 1));
+  return new Response(b.slice(bas, son + 1), { status: 206, headers: basliklar });
+}
+
+// Kurulu ders dosyaları önbellekten; gerisi önce ağ, ağ yoksa (sunucu kapalı, çevrimdışı) önbellek.
+// API çağrıları hiç önbelleğe girmez.
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== location.origin || url.pathname.startsWith('/api/')) return;
   event.respondWith((async () => {
+    const ders = await kuruluDers(req, url);
+    if (ders) return ders;
     try {
       const res = await fetch(req, { cache: 'no-cache' });
       if (res.ok && res.status === 200 && !req.headers.has('range')) {
