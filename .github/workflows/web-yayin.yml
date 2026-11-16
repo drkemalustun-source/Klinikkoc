@@ -1,0 +1,52 @@
+name: Web yayını
+
+# Web sürümü (web dalı) GitHub Pages'te yayımlanır. Önce Denetim'deki adımların aynısı koşar; biri
+# başarısız olursa site yayımlanmaz. Depo ayarı: Settings › Pages › Source = GitHub Actions ve
+# Settings › Environments › github-pages içinde web dalına izin (bkz. BACKLOG.md).
+on:
+  push:
+    branches: [web]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: web-yayin
+  cancel-in-progress: true
+
+jobs:
+  yayin:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.yayimla.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: PDF çizici (makaleden şekil testi için)
+        run: pip install pypdfium2
+      - name: Yayın denetimi (özel içerik depoya girmesin)
+        run: python tools/yayin_denetimi.py
+      - name: Dersleri denetle
+        run: |
+          node tools/paketle.mjs
+          node tools/paketle.mjs --ornek
+          git diff --exit-code -- ornek-dersler lessons/katalog.json lessons/katalog.js onbellek-listesi.json
+      - name: Vaka kartlarını denetle
+        run: python tools/vaka_denetle.py
+      - name: Testler
+        run: python -m unittest discover -s tools/testler -v
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: yayimla
+        uses: actions/deploy-pages@v4
