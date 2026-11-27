@@ -367,12 +367,14 @@ class AnlamModeli:
             import onnxruntime as ort
             from tokenizers import Tokenizer
         except ImportError:
-            self.neden = "paketler kurulu değil (python tools/bilgi_bankasi.py --kur-anlam)"
+            import komut
+            self.neden = "paketler kurulu değil (%s)" % komut.yazi("bilgi_bankasi.py", "--kur-anlam")
             return
         model = os.path.join(klasor, "model.onnx")
         tok = os.path.join(klasor, "tokenizer.json")
         if not (os.path.exists(model) and os.path.exists(tok)):
-            self.neden = "model indirilmemiş (python tools/bilgi_bankasi.py --kur-anlam)"
+            import komut
+            self.neden = "model indirilmemiş (%s)" % komut.yazi("bilgi_bankasi.py", "--kur-anlam")
             return
         self.np = __import__("numpy")
         so = ort.SessionOptions()

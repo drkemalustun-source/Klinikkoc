@@ -63,7 +63,8 @@ import veri_yeri  # noqa: E402
 KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DUYU_REPO = "KaanAydinli/Duyu-small"
 DUYU_PAKETLER = ["numpy", "onnxruntime", "sentencepiece", "huggingface_hub"]
-KUR_KOMUTU = ("py tools\\sunucu.py --kur-duyu" if os.name == "nt" else "python3 tools/sunucu.py --kur-duyu")
+import komut  # noqa: E402
+KUR_KOMUTU = komut.yazi("sunucu.py", "--kur-duyu")  # programın kendi Python'u, tam yol (Ali'nin Öneri 1)
 # Duyu'nun paketleri ve modeli program klasörünün dışında, kalıcı veri klasöründe durur (güncellemede silinmez).
 DUYU_KLASORU = os.path.join(veri_yeri.veri_kok(), "duyu")
 DUYU_PAKET_KLASORU = os.path.join(DUYU_KLASORU, "paketler")
@@ -684,7 +685,7 @@ class Canli:
         try:
             import importlib.util as iu
             if iu.find_spec("piper") is None:
-                return "Piper kurulu değil (python tools/ses-uret.py --kur)"
+                return "Piper kurulu değil (%s)" % komut.yazi("ses-uret.py", "--kur")
         except Exception:
             pass
         return "yüklenecek"
@@ -728,7 +729,7 @@ class Canli:
         try:
             from piper import PiperVoice
         except ImportError:
-            raise RuntimeError("Piper kurulu değil (python tools/ses-uret.py --kur). Tarayıcı sesi kullanılıyor.")
+            raise RuntimeError("Piper kurulu değil (%s). Tarayıcı sesi kullanılıyor." % komut.yazi("ses-uret.py", "--kur"))
         model = mod.voice_files(pocket_ses.ayar().get("yedek") or "tr_TR-dfki-medium")
         self.ses = {"mod": mod, "voice": PiperVoice.load(model), "sozluk": mod.load_dictionary()}
         return self.ses

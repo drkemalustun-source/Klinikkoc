@@ -1566,8 +1566,9 @@ def ar_tahtayi_ac(_):
             if d:
                 break
         if not d:
+            import komut
             return metin({"durum": "hata", "hata": "Yerel sunucu açılamadı. Bilgisayarda şunu çalıştırın: "
-                                                    "python tools/sunucu.py --sayfa canli.html"}, hata=True)
+                                                    + komut.yazi("sunucu.py", "--sayfa", "canli.html")}, hata=True)
     if not d.get("bagli"):
         webbrowser.open("http://localhost:%d/canli.html" % PORT)
         for _ in range(40):
@@ -2609,7 +2610,8 @@ def kur(kaldir=False):
         print("sağ tık → Çık (Mac'te Cmd+Q). Sonra yeniden açın.")
         print("Denetim: Claude'da Ayarlar › Geliştirici ekranında '%s' \"Çalışıyor\" görünmeli." % AD)
         print("Görünmüyorsa: aynı ekranda \"Yapılandırmayı düzenle\"ye basın, açılan dosyanın yolunu")
-        print("  python tools/tahta-mcp.py --kur --ayar \"<yol>\"  ile verin.")
+        import komut
+        print("  %s  ile verin." % komut.yazi("tahta-mcp.py", "--kur", "--ayar", '"<yol>"'))
         print("Sonra Claude'a şunu yazın:  Tahtayı aç ve bana Şekil 2'yi anlat.")
         kayit_yeri_hazirla()
 
