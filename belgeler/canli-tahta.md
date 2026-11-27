@@ -20,7 +20,10 @@ Claude masaüstü  →  tools/tahta-mcp.py  →  tools/sunucu.py (localhost:8810
 ## Kurulum (bir kez)
 
 1. Klasördeki **KUR-Windows** dosyasına çift tıklayın (Mac'te **KUR-Mac**). Windows dosya uzantılarını
-   gizleyebilir; dosyanın adı yalnız "KUR-Windows" görünebilir. Kurulum üç adımdır:
+   gizleyebilir; dosyanın adı yalnız "KUR-Windows" görünebilir. Windows'ta kurulum önce uygun Python'u
+   (3.10–3.13) arar; yoksa yalnız KlinikKoç klasörüne Python 3.12 indirir (~70 MB, `.python`). Yeni indirilmiş
+   bir kopya `C:\KlinikKoc` klasörüne kopyalanır ve kurulum oradan sürer; daha önce kurulmuş klasör yerinde
+   kalır. Sonra üç adım gelir:
    1. Piper ses paketleri ve yedek ses dosyası (~63 MB).
    2. Claude'un ayar dosyasına "klinik-koc" eklenir (eski ayar `.yedek` olarak saklanır). Kurulum,
       Claude'un **gerçekten okuduğu** dosyayı bulur: Microsoft Store sürümünde
@@ -29,7 +32,8 @@ Claude masaüstü  →  tools/tahta-mcp.py  →  tools/sunucu.py (localhost:8810
       yerler "atlandı" diye yazılır.
    3. İsteğe bağlı doğal Türkçe kadın sesi (Pocket, ~1 GB indirme). Kurulum sorar (E/H). Pocket,
       Python 3.10–3.13 ister; kurulum uygun sürümü kendi arar (bilgisayardaki Python 3.14 ise başka bir sürüm
-      ya da `uv` aranır). Bulamazsa "python.org'dan 3.12 kurun" der; o zamana kadar yedek ses kullanılır.
+      ya da `uv` aranır). Windows'ta kurulumun seçtiği Python zaten uygundur; Mac'te bulamazsa "python.org'dan 3.12
+      kurun" der; o zamana kadar yedek ses kullanılır.
       Kurulumun sonunda Pocket kısa bir cümle söyler; sesi duyuyorsanız hazırdır.
 2. Claude masaüstü uygulamasını **tamamen** kapatın: saatin yanındaki **^** → Claude simgesi → sağ tık → **Çık**
    (Mac'te Cmd+Q). Yeniden açın.
@@ -270,7 +274,7 @@ sonda cep tabanını izleyerek derine iner, kemik geriler. Ders dosyasında da a
 |---|---|
 | Claude'da "klinik-koc" araçları görünmüyor | Claude'u tepsiden tamamen kapatıp açın (^ → Claude → sağ tık → Çık). **Ayarlar › Geliştirici**'de listede mi? Değilse `python tools/tahta-mcp.py --dene` ne diyor bakın; "Yapılandırmayı düzenle" ile açılan dosyanın yolunu `--kur --ayar "<yol>"` ile verin |
 | Listede "klinik-koc" var ama hata veriyor | `--dene` çıktısında "dosyası yok" yazıyorsa program klasörü taşınmıştır: KUR'u yeni klasörden yeniden çalıştırın |
-| Üst çubukta "Ses: tarayıcı sesi (yedek)" | Doğal ses kurulu değil ya da açılamadı. KUR'u yeniden çalıştırıp Pocket'e "E" deyin; Python 3.14 ise python.org'dan 3.12 kurun |
+| Üst çubukta "Ses: tarayıcı sesi (yedek)" | Doğal ses kurulu değil ya da açılamadı. KUR'u yeniden çalıştırıp Pocket'e "E" deyin (Windows'ta uygun Python'u kendisi bulur; Mac'te Python 3.14 ise python.org'dan 3.12 kurun) |
 | Ekranda "Sesi açmak için dokunun" | Tarayıcı sesi engelledi; düğmeye dokunun, anlatım kaldığı cümleden sürer |
 | Videonun üstünde büyük ▶ | Tarayıcı videonun kendiliğinden başlamasını engelledi; ▶'e dokunun |
 | "Bu tahta başka bir sekmede açık" | Aynı tahta iki sekmede açılmış; eski sekmeyi kapatın |

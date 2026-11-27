@@ -104,7 +104,15 @@ class KurulumYeri(unittest.TestCase):
             k = f.read()
         self.assertLess(k.index("kurulum_yeri.py --karar"), k.index('> "%KOK%.python\\secilen.txt"'))
         self.assertLess(k.index("call :python_bul"), k.index("kurulum_yeri.py --karar"))
-        self.assertIn('call "%YERHEDEF%\\KUR-Windows.bat"', k)
+        # oradaki KUR'a "call" olmadan devredilir: eski klasör sonra silinse de pencere hata vermez
+        self.assertIn('  "%YERHEDEF%\\KUR-Windows.bat"\n', k.replace("\r\n", "\n"))
+        self.assertNotIn('call "%YERHEDEF%', k)
+
+    def test_baslat_eski_kopyadan_sabit_yere_devreder(self):
+        with open(os.path.join(KOK, "BASLAT-Windows.bat"), encoding="ascii") as f:
+            b = f.read()
+        self.assertIn("kurulum_yeri.py --karar", b)
+        self.assertIn('"%YERHEDEF%\\BASLAT-Windows.bat"', b)
 
 
 if __name__ == "__main__":

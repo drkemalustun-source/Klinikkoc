@@ -17,8 +17,7 @@ set "YERHEDEF="
 for /f "tokens=1,*" %%a in ('%PY% tools\kurulum_yeri.py --karar') do (set "YER=%%a" & set "YERHEDEF=%%b")
 if "%YER%"=="ORADA" (
   echo KlinikKoc zaten %YERHEDEF% klasorunde kurulu; kurulum oradan suruyor.
-  call "%YERHEDEF%\KUR-Windows.bat"
-  exit /b
+  "%YERHEDEF%\KUR-Windows.bat"
 )
 if "%YER%"=="TASI" (
   echo KlinikKoc sabit yerine kopyalaniyor: %YERHEDEF% ...
@@ -26,8 +25,7 @@ if "%YER%"=="TASI" (
   if not errorlevel 1 (
     echo Kurulum %YERHEDEF% klasorunden suruyor. Indirdiginiz klasoru sonra silebilirsiniz.
     echo.
-    call "%YERHEDEF%\KUR-Windows.bat"
-    exit /b
+    "%YERHEDEF%\KUR-Windows.bat"
   )
 )
 if not exist "%KOK%.python" mkdir "%KOK%.python"
@@ -66,6 +64,7 @@ echo.
 echo Eski surum klasorleri araniyor (onayiniz olmadan hicbir sey silinmez)...
 %PY% tools\eski_surumler.py --sor
 echo.
+echo KlinikKoc klasoru: %KOK%
 echo Bitti. Claude'u tamamen kapatin: saatin yanindaki ^^ isareti, Claude simgesi, sag tik, Cik.
 echo Sonra Claude'u acin. Ayarlar, Gelistirici ekraninda klinik-koc "Calisiyor" gorunmeli.
 pause

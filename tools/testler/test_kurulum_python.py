@@ -53,6 +53,13 @@ class KurulumPython(unittest.TestCase):
         self.assertIn('set /p PYYOL=<".python\\secilen.txt"', b)
         self.assertIn('if defined PYYOL if exist "%PYYOL%" set PY="%PYYOL%"', b)
 
+    def test_surum_araligi_pocket_ile_ayni(self):
+        import pocket_ses
+        (a1, a2), (u1, u2) = pocket_ses.UYGUN
+        surumler = " ".join("%d.%d" % (a1, n) for n in range(u2, a2 - 1, -1))
+        self.assertIn("for %%%%v in (%s)" % surumler, self.kur)
+        self.assertIn("(%d, %d) <= sys.version_info[:2] <= (%d, %d)" % (a1, a2, u1, u2), self.kur)
+
     def test_python_klasoru_korunur(self):
         import eski_surumler
         import surum

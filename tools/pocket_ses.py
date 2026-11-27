@@ -250,8 +250,9 @@ def uygun_python(yaz=print):
     return None
 
 
-PYTHON_YOK = ("Pocket sesi için Python 3.10–3.13 gerekir (bu bilgisayardaki Python: %d.%d).\n"
-              "python.org/downloads adresinden Python 3.12'yi kurup KUR'u yeniden çalıştırın.\n"
+PYTHON_YOK = ("Pocket sesi için Python 3.10–3.13 gerekir (bu bilgisayardaki Python: %d.%d).\n" + (
+              "KUR-Windows'u yeniden çalıştırın; uygun Python'u kendisi bulur ya da indirir.\n" if os.name == "nt" else
+              "python.org/downloads adresinden Python 3.12'yi kurup KUR'u yeniden çalıştırın.\n") +
               "Şimdilik daha basit bir yedek ses kullanılacak; ders yine çalışır.")
 
 
