@@ -142,11 +142,11 @@
   }
 
   const DIS_DURUM = {
-    saglikli:      { mY: 28, sY: 32, jY: 37, cY: 41, g: 0.5, swell: 0, inflam: 0 },
-    gingivitis:    { mY: 24.5, sY: 32, jY: 37, cY: 41, g: 0.9, swell: 1.6, inflam: 1 },
-    periodontitis: { mY: 30, sY: 51, jY: 55, cY: 59.5, g: 1.7, swell: 0.8, inflam: 2 },
+    saglikli:      { mY: 28, sY: 32, jY: 37, cY: 41, g: 0.5, swell: 0, inflam: 0, plak: 0 },
+    gingivitis:    { mY: 24.5, sY: 32, jY: 37, cY: 41, g: 0.9, swell: 1.6, inflam: 1, plak: 1 },
+    periodontitis: { mY: 30, sY: 51, jY: 55, cY: 59.5, g: 1.7, swell: 0.8, inflam: 2, plak: 1 },
     // Dişeti çekilmesi: kenar mine-sement sınırının ~1,8 mm apikalinde, sığ oluk, iltihap yok.
-    cekilme:       { mY: 40, sY: 45, jY: 49, cY: 53.5, g: 0.5, swell: 0, inflam: 0 }
+    cekilme:       { mY: 40, sY: 45, jY: 49, cY: 53.5, g: 0.5, swell: 0, inflam: 0, plak: 0 }
   };
   const MGJ0 = 53; // mukogingival sınır sabit bir işarettir; hastalıkta yer değiştirmez (keratinize dişeti ≈ 7 mm)
 
@@ -283,19 +283,22 @@
     });
 
     // 4) Hastalık bulguları.
+    const plak = p.plak != null ? clamp(p.plak) : (p.inflam ? 1 : 0);
     if (p.inflam) {
       both((r) => {
         let d = '';
         const ys = range(p.mY + 2, p.sY + (p.inflam > 1 ? 2 : 1), p.inflam > 1 ? 2.2 : 1.6);
         ys.forEach((y, i) => { const x = toothX(y) - p.g - 1.6 - (i % 3) * 0.9; d += `M${f(x)},${f(y)} a0.45,0.45 0 1,0 0.01,0 `; });
-        tag(svg('path', { d, class: 'an-infiltrat' }, r), 'iltihap');
+        tag(svg('path', { d, class: 'an-infiltrat', opacity: f(clamp(p.inflam)) }, r), 'iltihap');
       });
+    }
+    if (plak > 0.01) {
       both((r) => { // plak: dişeti kenarında, dişe yapışık
         let d = '';
         const top = variant === 'periodontitis' ? p.mY - 4 : p.mY - 3.2;
         const bot = variant === 'periodontitis' ? p.sY - 1 : p.mY + 2;
         for (const y of range(top, bot, 1.2)) { const x = toothX(y); d += `M${f(x + 0.1)},${f(y)} a0.5,0.5 0 1,0 0.01,0 `; }
-        tag(svg('path', { d, class: 'an-plak' }, r), 'plak');
+        tag(svg('path', { d, class: 'an-plak', opacity: f(plak) }, r), 'plak');
       });
     }
     if (variant === 'periodontitis') {
@@ -405,9 +408,9 @@
   /* ---------------- İmplant ve peri-implant dokular ---------------- */
 
   const IMP_DURUM = {
-    saglikli:          { mY: 27.5, sY: 31, jY: 38, cY: 42.5, g: 0.5, swell: 0, inflam: 0, crater: 0 },
-    mukozitis:         { mY: 24.5, sY: 31.5, jY: 38, cY: 42.5, g: 1, swell: 1.7, inflam: 1, crater: 0 },
-    'peri-implantitis': { mY: 29, sY: 52, jY: 54.5, cY: 56.5, g: 1.8, swell: 0.9, inflam: 2, crater: 1 }
+    saglikli:          { mY: 27.5, sY: 31, jY: 38, cY: 42.5, g: 0.5, swell: 0, inflam: 0, crater: 0, plak: 0 },
+    mukozitis:         { mY: 24.5, sY: 31.5, jY: 38, cY: 42.5, g: 1, swell: 1.7, inflam: 1, crater: 0, plak: 1 },
+    'peri-implantitis': { mY: 29, sY: 52, jY: 54.5, cY: 56.5, g: 1.8, swell: 0.9, inflam: 2, crater: 1, plak: 1 }
   };
 
   // Sol yüzey: kuron (y < 33), dayanak (33–42), implant gövdesi (42–78; yiv çekirdeği 74,6).
@@ -528,6 +531,14 @@
       tag(svg('path', { d: ci, class: 'an-lif-kesit' }, lg), 'sirkuler-lif');
     });
     const bx = implantX(p.mY) - p.g * 0.7 - 0.6;
+    const plak = p.plak != null ? clamp(p.plak) : (p.inflam ? 1 : 0);
+    if (plak > 0.01) {
+      both((r) => {
+        let pl = '';
+        for (const yy of range(p.mY - 3.2, p.crater ? p.sY - 1 : p.mY + 2, 1.2)) { const x = yy < 42 ? implantX(yy) : (yy % 2.9 < 1.4 ? 73.2 : CORE); pl += `M${f(x + 0.1)},${f(yy)} a0.5,0.5 0 1,0 0.01,0 `; }
+        tag(svg('path', { d: pl, class: 'an-plak', opacity: f(plak) }, r), 'plak');
+      });
+    }
     if (p.inflam) {
       both((r) => {
         let d = '';
@@ -535,10 +546,7 @@
           const x = (yy < 42 ? implantX(yy) : 73) - p.g - 1.7 - (i % 3) * 0.9;
           d += `M${f(x)},${f(yy)} a0.45,0.45 0 1,0 0.01,0 `;
         });
-        tag(svg('path', { d, class: 'an-infiltrat' }, r), 'iltihap');
-        let pl = '';
-        for (const yy of range(p.mY - 3.2, p.crater ? p.sY - 1 : p.mY + 2, 1.2)) { const x = yy < 42 ? implantX(yy) : (yy % 2.9 < 1.4 ? 73.2 : CORE); pl += `M${f(x + 0.1)},${f(yy)} a0.5,0.5 0 1,0 0.01,0 `; }
-        tag(svg('path', { d: pl, class: 'an-plak' }, r), 'plak');
+        tag(svg('path', { d, class: 'an-infiltrat', opacity: f(clamp(p.inflam)) }, r), 'iltihap');
       });
       // Sondalamada kanama (ve peri-implantitiste süpürasyon) damlası.
       tag(svg('path', { d: `M${f(bx)},${f(p.mY - 3.6)} q-1.3,1.9 0,2.6 q1.3,-0.7 0,-2.6 Z`, class: 'an-kanama' }, g), 'kanama');
@@ -607,6 +615,35 @@
     return out;
   }
 
+  // Kademeli ara durum (t: 0–1): neden önce, sonuç sonra. Önce plak birikir (ya da temizlenir), iltihap ona cevap
+  // verir, dişeti şişer, cep genişler ve derinleşir, kemik en son değişir; son %8'de çizim durur (göz yerleşsin).
+  // Sıra iyileşmede de aynıdır: plak kalkar, iltihap söner, doku toparlanır. Her ölçü kendi aralığında yavaş başlayıp
+  // yumuşak oturur; aşma (overshoot) yoktur. Aralığı tanımlı olmayan şablonlar (bölge, kontur) eskisi gibi
+  // bütün süre boyunca birlikte değişir.
+  const EVRE = {
+    plak: [0, 0.25], inflam: [0.12, 0.5], swell: [0.2, 0.58], g: [0.3, 0.68],
+    sY: [0.4, 0.82], jY: [0.4, 0.82], cY: [0.55, 0.92], crater: [0.55, 0.92]
+  };
+  const EVRELI = { dis: 1, sondalama: 1, implant: 1 };
+  const yumusak = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
+  const yumusak0 = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2); // eski eğri
+  function kademeliDurum(template, p0, p1, t) {
+    if (!EVRELI[template]) return araDurum(template, p0, p1, yumusak0(t));
+    const v = (SABLONLAR[template] || {}).varsayilan || {};
+    const deger = (p, k) => (p[k] != null ? p[k] : v[k] || 0);
+    const evre = Object.assign({}, EVRE);
+    // Dişeti kenarı: şişlik değişiyorsa şişlikle birlikte, değişmiyorsa (çekilme) ataşmanla birlikte kayar.
+    evre.mY = Math.abs(deger(p1, 'swell') - deger(p0, 'swell')) > 0.01 ? EVRE.swell : EVRE.sY;
+    const out = {};
+    for (const k of new Set(Object.keys(p0).concat(Object.keys(p1)))) {
+      const [a, b] = evre[k] || [0, 0.92];
+      const u = yumusak(clamp((t - a) / (b - a)));
+      out[k] = deger(p0, k) + (deger(p1, k) - deger(p0, k)) * u;
+    }
+    return out;
+  }
+
+  const UZUN_ETIKET = 24;
   // Etiketleri iki sütuna dizer, çakışmayı önler, kılavuz çizgisi çeker.
   function etiketle(g, parts, labels, instant, eski) {
     const sol = [], sag = [];
@@ -617,17 +654,31 @@
       let at = pr.at;
       if (lab.side === 'sol' && at[0] > 80) at = [160 - at[0], at[1]];
       if (lab.side === 'sag' && at[0] < 80) at = [160 - at[0], at[1]];
-      (at[0] < 80 ? sol : sag).push({ text: lab.text || pr.ad, at, color: lab.color, yeni: eski ? !eski.has(lab.part) : !instant });
+      // Parça kendi yanını söyleyebilir (yan: 'sol'|'sag'): aynı noktayı gösteren etiketler iki sütuna dağılsın diye.
+      const solda = lab.side ? lab.side === 'sol' : pr.yan ? pr.yan === 'sol' : at[0] < 80;
+      (solda ? sol : sag).push({ text: lab.text || pr.ad, at, color: lab.color, yeni: eski ? !eski.has(lab.part) : !instant });
     }
     const yerlestir = (arr) => {
       arr.sort((a, b) => a.at[1] - b.at[1]);
       let last = -Infinity;
-      for (const a of arr) { a.y = Math.max(a.at[1], last + 4.8, 4); last = a.y; }
-      let over = last - 88;
+      // Uzun etiket küçültülmez, iki satıra bölünür (': ' ya da ortaya en yakın boşluktan); iki satırlı etiket daha çok yer tutar.
+      for (const a of arr) {
+        const t = String(a.text);
+        a.satirlar = [t];
+        if (t.length > UZUN_ETIKET) {
+          let k = t.indexOf(': ');
+          if (k > 0 && k < t.length - 3 && Math.max(k + 1, t.length - k - 2) <= UZUN_ETIKET) k += 1;
+          else { k = -1; for (let i = 1; i < t.length - 1; i++) if (t[i] === ' ' && (k < 0 || Math.abs(i - t.length / 2) < Math.abs(k - t.length / 2))) k = i; }
+          if (k > 0) a.satirlar = [t.slice(0, k).trim(), t.slice(k + 1).trim()];
+        }
+        a.h = 4.8 + 3.6 * (a.satirlar.length - 1);
+      }
+      for (const a of arr) { a.y = Math.max(a.at[1], last, 4); last = a.y + a.h; }
+      let over = (arr.length ? arr[arr.length - 1].y + arr[arr.length - 1].h - 4.8 : 0) - 88;
       for (let i = arr.length - 1; i >= 0 && over > 0; i--) {
         arr[i].y -= over;
         const prev = arr[i - 1];
-        over = prev ? prev.y - (arr[i].y - 4.8) : 0;
+        over = prev ? prev.y + prev.h - arr[i].y : 0;
       }
     };
     yerlestir(sol); yerlestir(sag);
@@ -638,9 +689,11 @@
       svg('path', { d: `M${tx + (side === 'sol' ? 0.8 : -0.8)},${f(a.y - 1.1)} L${f(a.at[0])},${f(a.at[1])}`, class: 'an-kilavuz' }, lg);
       svg('circle', { cx: f(a.at[0]), cy: f(a.at[1]), r: 0.65, class: 'an-nokta' }, lg);
       // Uzun etiket kenar sütununa (≈ 45 birim) sığsın diye küçülür.
-      const fs = Math.min(3.4, 45 / (String(a.text).length * 0.56));
+      const enUzun = Math.max(...a.satirlar.map((x) => x.length));
+      const fs = Math.min(3.4, 45 / (enUzun * 0.56));
       const t = svg('text', { x: tx, y: f(a.y), 'text-anchor': side === 'sol' ? 'end' : 'start', 'font-size': f(fs), class: 'an-yazi' }, lg);
-      t.textContent = a.text;
+      if (a.satirlar.length === 1) t.textContent = a.text;
+      else a.satirlar.forEach((x, i) => { svg('tspan', { x: tx, dy: i ? 3.6 : 0 }, t).textContent = x; });
       if (a.yeni) { lg.style.animationDelay = delay + 's'; lg.classList.add('fade-in'); delay += 0.35; }
     };
     sol.forEach((a) => ciz(a, 'sol'));
@@ -654,7 +707,11 @@
     if (!s) { console.warn('Bilinmeyen şablon:', c.template); return null; }
     const g = svg('g', { class: 'an-sablon' + (instant ? '' : ' fade-in') }, svgEl);
     const parts = s.ciz(g, c.variant || s.varyantlar[0], { probe: !!c.probe, p: c.p, olcu: c.olcu });
-    for (const h of [].concat(c.highlight || [])) {
+    // Eski parça kimlikleri (takma) yeni adlarına çevrilir: eski dersler bozulmasın.
+    const takma = s.takma || {};
+    const yeniAd = (k) => (takma[k] && !parts[k] ? takma[k] : k);
+    if (Array.isArray(c.labels)) c = Object.assign({}, c, { labels: c.labels.map((l) => (typeof l === 'string' ? yeniAd(l) : Object.assign({}, l, { part: yeniAd(l.part) }))) });
+    for (const h of [].concat(c.highlight || []).map(yeniAd)) {
       g.querySelectorAll(`[data-part="${h}"]`).forEach((n) => n.classList.add('an-vurgu'));
     }
     let labels = c.labels || [];
@@ -677,7 +734,7 @@
     return out;
   }
 
-  AT.anatomi = { ciz, liste, durum, araDurum, SABLONLAR, MM,
+  AT.anatomi = { ciz, liste, durum, araDurum, kademeliDurum, SABLONLAR, MM,
     // Başka şablon dosyalarının (anatomi-bolge.js) kullandığı çizim yardımcıları.
     _y: { svg, smooth, poly, ornekle, bant, rete, trabekul, range, clamp, f, etiRengi, uid: () => 'an' + (++uid) } };
 })(window.AT = window.AT || {});

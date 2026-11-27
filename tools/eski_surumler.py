@@ -30,10 +30,10 @@ import veri_yeri  # noqa: E402
 
 KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DERINLIK = 4
-ATLA = {"node_modules", "AppData", "Library", "Applications", ".git", ".ses-ortami", ".modeller", ".dizin",
+ATLA = {"node_modules", "AppData", "Library", "Applications", ".git", ".ses-ortami", ".python", ".modeller", ".dizin",
         "__pycache__", "vendor", "lessons", "ozel", "kayitlar", "$RECYCLE.BIN", "OneDriveTemp", "Pictures",
         "Music", "Movies", "Videos", "Resimler", "Müzik", "Filmler", "Videolar"}
-YEDEGE_GIRMEZ = (".ses-ortami", ".modeller", ".dizin", "__pycache__", "tools/.sesler", ".git")
+YEDEGE_GIRMEZ = (".ses-ortami", ".python", ".modeller", ".dizin", "__pycache__", "tools/.sesler", ".git")
 
 
 def _gercek(yol):

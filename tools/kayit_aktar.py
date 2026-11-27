@@ -180,6 +180,8 @@ def anonim_ders(k, baslangic, ham_yanitlar=False):
     return {
         "ders": k.get("ders"), "mod": k.get("mod"), "oturum_sayisi": len(k.get("oturumlar") or []),
         "oturum_gunleri": [g(o.get("tarih")) for o in k.get("oturumlar") or []],
+        # Sürüm damgaları: hangi günden itibaren hangi program ve eğitmen metni (kimlik içermez)
+        "surumler": [dict(_sec(x, ("program", "egitmen", "kural_izi")), gun=g(x.get("tarih"))) for x in k.get("surumler") or []],
         "hedefler": hedefler,
         "yanilgilar": {y: _sec(v, ("durum",)) for y, v in (k.get("yanilgilar") or {}).items()},
         "guven": [dict(_sec(x, ("hedef", "guven", "dogru")), gun=g(x.get("tarih"))) for x in k.get("guven") or []],

@@ -531,3 +531,33 @@ class IkinciRaporDuzeltmeleri(Gecici):
             def json(self, url):
                 return {"records": [{"pmid": 20664835, "status": "error"}]}
         self.assertIsNone(mb.pmid_ile_doi("20664835", Bos()))
+
+
+class UcuncuRaporDuzeltmeleri(unittest.TestCase):
+    """v4.1.1 deneme raporu (2026-11-14) düzeltmeleri."""
+
+    def test_sablon_adlari_duruma_gore(self):
+        import json
+        m = _mcp()
+        o = json.loads(m.ar_sablon_bilgisi({"template": "kontur-fasiyal", "variant": "kritik-alti-konveks"})["content"][0]["text"])
+        self.assertEqual(o["bu_varyantta"]["hacim"], "Fasiyal profil dolgunlaşır")
+        self.assertNotIn("kayma", o["bu_varyantta"])           # fizyolojik dış bükeylikte kenar oku yok
+        self.assertIn("labels listesinde olmasa da", o["not"])
+        o = json.loads(m.ar_sablon_bilgisi({"template": "kontur-fasiyal", "variant": "kritik-alti-asiri-konveks"})["content"][0]["text"])
+        self.assertIn("risk", o["bu_varyantta"])
+        self.assertIn("kayabilir", o["bu_varyantta"]["kayma"])
+        o = json.loads(m.ar_sablon_bilgisi({"template": "kontur-fasiyal"})["content"][0]["text"])
+        self.assertIn("hacim", o["adi_duruma_gore_degisen"])
+
+    def test_eski_parca_adi_uyari_vermez(self):
+        m = _mcp()
+        ciz = lambda **c: m.cizim_uyarilari([{"komutlar": [dict(type="draw", **c)]}])
+        self.assertEqual(ciz(template="papil", variant="duz", labels=["kuron", "dogal-dis"], highlight=["kuron"]), [])
+        self.assertIn("dogal-dis", m.sablonlar()["papil"]["parcalar"])
+        self.assertNotIn("kuron", m.sablonlar()["papil"]["parcalar"])
+
+    def test_surum_uyarisi_claude_uygulamasini_soyler(self):
+        m = _mcp()
+        u = m.surum_bilgisi({"surum": "0.0.1"})["uyari"]
+        self.assertIn("Claude masaüstü uygulamasını", u)
+        self.assertIn("simge alanında", u)

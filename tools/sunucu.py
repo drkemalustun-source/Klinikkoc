@@ -63,7 +63,8 @@ import veri_yeri  # noqa: E402
 KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DUYU_REPO = "KaanAydinli/Duyu-small"
 DUYU_PAKETLER = ["numpy", "onnxruntime", "sentencepiece", "huggingface_hub"]
-KUR_KOMUTU = ("py tools\\sunucu.py --kur-duyu" if os.name == "nt" else "python3 tools/sunucu.py --kur-duyu")
+import komut  # noqa: E402
+KUR_KOMUTU = komut.yazi("sunucu.py", "--kur-duyu")  # programın kendi Python'u, tam yol (Ali'nin Öneri 1)
 # Duyu'nun paketleri ve modeli program klasörünün dışında, kalıcı veri klasöründe durur (güncellemede silinmez).
 DUYU_KLASORU = os.path.join(veri_yeri.veri_kok(), "duyu")
 DUYU_PAKET_KLASORU = os.path.join(DUYU_KLASORU, "paketler")
@@ -489,7 +490,7 @@ class Canli:
                 return {"durum": "bağlı değil",
                         "hata": "Tahta sayfası açık değil. tahtayi_ac aracını çağırın ya da "
                                 "tarayıcıda http://localhost:8810/canli.html adresini açın."}
-            if self.konusmalar and komut.get("tur") not in ("dur", "devam", "goruntu"):
+            if self.konusmalar and komut.get("tur") not in ("dur", "devam", "goruntu", "sinav"):
                 # Kullanıcının cevaplanmamış sözü var: yeni anlatım onu ezmesin, önce o cevaplansın.
                 return self._konusma_ekle({
                     "durum": "kullanici_konustu", "gonderilmedi": True,
@@ -505,6 +506,10 @@ class Canli:
                 self.kuyruk = []
             self.kuyruk.append(dict(komut, no=no))
             self.kosul.notify_all()
+            if komut.get("tur") == "sinav":
+                # Sınav görünümü (Nilgün) yalnız bir görünüm komutudur: sonucu beklenmez ve kullanıcının bekleyen
+                # sözüne dokunulmaz (söz Claude'a bekle aracıyla gider; burada alınsaydı kaybolurdu).
+                return {"durum": "gonderildi", "no": no}
             return self._bekle(no, sure, bekleme, teslim)
 
     def sonuc(self, no, sure, bekleme=None, teslim=False):
@@ -684,12 +689,18 @@ class Canli:
         try:
             import importlib.util as iu
             if iu.find_spec("piper") is None:
-                return "Piper kurulu değil (python tools/ses-uret.py --kur)"
+                return "Piper kurulu değil (%s)" % komut.yazi("ses-uret.py", "--kur")
         except Exception:
             pass
         return "yüklenecek"
 
     def ses_bilgisi(self):
+        """_ses_bilgisi + "ses": ses/ses-ayari.json'daki Pocket sesi (tahtanın ⚙ Anlatıcı sesi seçimi yoksa bu kullanılır)."""
+        b = self._ses_bilgisi()
+        b["ses"] = pocket_ses.ayar().get("ses") or "female_3"
+        return b
+
+    def _ses_bilgisi(self):
         """Hangi sesin GERÇEKTEN kullanılacağı: {"motor": pocket|piper|tarayici, "yazi": kısa açıklama, "ayrinti": ...}."""
         a = pocket_ses.ayar()
         yedek = (a.get("yedek") or "tr_TR-dfki-medium").replace("tr_TR-", "").replace("-medium", "")
@@ -722,7 +733,7 @@ class Canli:
         try:
             from piper import PiperVoice
         except ImportError:
-            raise RuntimeError("Piper kurulu değil (python tools/ses-uret.py --kur). Tarayıcı sesi kullanılıyor.")
+            raise RuntimeError("Piper kurulu değil (%s). Tarayıcı sesi kullanılıyor." % komut.yazi("ses-uret.py", "--kur"))
         model = mod.voice_files(pocket_ses.ayar().get("yedek") or "tr_TR-dfki-medium")
         self.ses = {"mod": mod, "voice": PiperVoice.load(model), "sozluk": mod.load_dictionary()}
         return self.ses
@@ -730,8 +741,11 @@ class Canli:
     # Aynı cümle (selamlama, "Doğru.", sık geçen tanımlar) yeniden seslendirilmesin: son SES_ONBELLEK cümle bellekte.
     SES_ONBELLEK = 120
 
-    def seslendir(self, metin):
-        a = pocket_ses.ayar()
+    def seslendir(self, metin, ses=None):
+        """ses: tahtanın ⚙ Anlatıcı sesi seçimi (yalnız ANLATICI_SESLER); yoksa ses/ses-ayari.json'daki ses."""
+        a = dict(pocket_ses.ayar())
+        if ses in ANLATICI_SESLER:
+            a["ses"] = ses
         anahtar = (a.get("motor"), a.get("ses"), a.get("tohum"), a.get("yedek"), POCKET.durum == "hazır", metin)
         onb = self._ses_onbellek
         with self._onb_kilit:
@@ -751,7 +765,8 @@ class Canli:
                 mod = self._mod()
                 yazi = mod.pronounce(mod.plain(metin), mod.load_dictionary())
                 if yazi.strip():
-                    return POCKET.wav(yazi, a.get("ses") or "female_3", a.get("tohum"))
+                    ses = a.get("ses") or "female_3"
+                    return wav_duzey(POCKET.wav(yazi, ses, a.get("tohum")), ANLATICI_SESLER.get(ses, 1.0))
             except Exception as e:  # sessizce Piper'a dön
                 sys.stderr.write("  Ses: %s; Piper kullanılıyor.\n" % e)
         with self.ses_kilit:
@@ -773,6 +788,31 @@ class Canli:
 
 
 CANLI = Canli()
+# ⚙ Anlatıcı sesi (tahtadan seçilebilen Pocket sesleri) ve ses düzeyi çarpanı. 27 Kasım 2026 ölçümü: 6 cümlede
+# (sessizlik hariç) male_2, female_3'ten ortanca 1,21 kat (~1,7 dB) yüksek; 0,83 ile eşitlenir.
+ANLATICI_SESLER = {"female_3": 1.0, "male_2": 0.83}
+
+
+def wav_duzey(wav, carpan):
+    """16 bit mono WAV baytlarının ses düzeyini carpan ile ölçekler (carpan 1 ise olduğu gibi döner)."""
+    if carpan == 1.0:
+        return wav
+    import array
+    with wave.open(io.BytesIO(wav), "rb") as g:
+        params = g.getparams()
+        orn = array.array("h", g.readframes(g.getnframes()))
+    if sys.byteorder == "big":
+        orn.byteswap()
+    orn = array.array("h", (max(-32768, min(32767, int(x * carpan))) for x in orn))
+    if sys.byteorder == "big":
+        orn.byteswap()
+    tampon = io.BytesIO()
+    with wave.open(tampon, "wb") as w:
+        w.setparams(params)
+        w.writeframes(orn.tobytes())
+    return tampon.getvalue()
+
+
 POCKET = pocket_ses.PocketIsci()
 
 
@@ -946,7 +986,7 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
                 CANLI.bitti(int(veri.get("no", 0)), veri.get("sonuc"), veri.get("durum"))
                 return self._json(200, {"tamam": True})
             if yol == "ses":
-                wav = CANLI.seslendir(str(veri.get("metin", ""))[:2000])
+                wav = CANLI.seslendir(str(veri.get("metin", ""))[:2000], veri.get("ses"))
                 self.send_response(200)
                 self.send_header("Content-Type", "audio/wav")
                 self.send_header("Content-Length", str(len(wav)))
@@ -1173,7 +1213,7 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
                 return self._json(405, {"hata": "POST gerekli"})
             v = json.loads(govde.decode("utf-8")) if govde else {}
             if yol == "secim":
-                return self._json(200, A.secim_yaz(v.get("dersler"), v.get("pdfler")))
+                return self._json(200, A.secim_yaz(v.get("dersler"), v.get("pdfler"), v.get("sinav")))
             if yol == "guncelleme_denetle":
                 return self._json(200, surum_.denetle(zorla=True))
             if yol == "guncelle":

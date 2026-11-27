@@ -20,7 +20,10 @@ Claude masaüstü  →  tools/tahta-mcp.py  →  tools/sunucu.py (localhost:8810
 ## Kurulum (bir kez)
 
 1. Klasördeki **KUR-Windows** dosyasına çift tıklayın (Mac'te **KUR-Mac**). Windows dosya uzantılarını
-   gizleyebilir; dosyanın adı yalnız "KUR-Windows" görünebilir. Kurulum üç adımdır:
+   gizleyebilir; dosyanın adı yalnız "KUR-Windows" görünebilir. Windows'ta kurulum önce uygun Python'u
+   (3.10–3.14) arar; yoksa yalnız KlinikKoç klasörüne Python 3.12 indirir (~70 MB, `.python`). Yeni indirilmiş
+   bir kopya `C:\KlinikKoc` klasörüne kopyalanır ve kurulum oradan sürer; daha önce kurulmuş klasör yerinde
+   kalır. Sonra üç adım gelir:
    1. Piper ses paketleri ve yedek ses dosyası (~63 MB).
    2. Claude'un ayar dosyasına "klinik-koc" eklenir (eski ayar `.yedek` olarak saklanır). Kurulum,
       Claude'un **gerçekten okuduğu** dosyayı bulur: Microsoft Store sürümünde
@@ -29,7 +32,8 @@ Claude masaüstü  →  tools/tahta-mcp.py  →  tools/sunucu.py (localhost:8810
       yerler "atlandı" diye yazılır.
    3. İsteğe bağlı doğal Türkçe kadın sesi (Pocket, ~1 GB indirme). Kurulum sorar (E/H). Pocket,
       Python 3.10–3.13 ister; kurulum uygun sürümü kendi arar (bilgisayardaki Python 3.14 ise başka bir sürüm
-      ya da `uv` aranır). Bulamazsa "python.org'dan 3.12 kurun" der; o zamana kadar yedek ses kullanılır.
+      ya da `uv` aranır). Windows'ta kurulumun seçtiği Python zaten uygundur; Mac'te bulamazsa "python.org'dan 3.12
+      kurun" der; o zamana kadar yedek ses kullanılır.
       Kurulumun sonunda Pocket kısa bir cümle söyler; sesi duyuyorsanız hazırdır.
 2. Claude masaüstü uygulamasını **tamamen** kapatın: saatin yanındaki **^** → Claude simgesi → sağ tık → **Çık**
    (Mac'te Cmd+Q). Yeniden açın.
@@ -92,12 +96,35 @@ Her dersin bir eğitmeni vardır; hangisi olduğunu dersin `egitmen.json` dosyas
 
 - **İnci** lisans dersleri içindir: ders kitabı dili, kısa turlar, "bilmiyorum" denince önce anlatır,
   klinik akıl yürütmeyi (karşılaştır-ayır, karışık olgular) çalıştırır.
-- **Mercan** uzmanlık içindir: makale inceleme, kanıt düzeyi, yöntem ve istatistik tartışması.
+- **Mercan** uzmanlık içindir: makale inceleme, konu ve klinik protokol tartışması, kanıt düzeyi ve istatistik yanılgıları.
 
 İkisinin ortak kuralları `egitmenler/ortak.md`, kişilikleri `egitmenler/inci.md` ve `egitmenler/mercan.md`
 dosyalarındadır. Ortak kurallar: kaynağın dışına çıkmamak, öğretmen notlarına uymak, Bloom basamaklarıyla
-soru seçmek, açık uçlu yanıtı SOLO'ya göre değerlendirmek, yalnız olgu sorularında "ne kadar eminsin?" diye
+soru seçmek, açık uçlu yanıtı SOLO'ya göre değerlendirmek, olgu ve yanılgı sorularında "ne kadar eminsin?" diye
 sormak, cevabı erken vermemek, ısrara boyun eğmemek, mola/devam ve rapor.
+
+### Sınav: Nilgün
+
+Üçüncü persona **Nilgün** sınav hocasıdır. Yalnız öğrenci isteyince açılır ("sınav olmak istiyorum" ya da ana ekrandaki
+**Sözlü sınav ol** düğmesi); İnci ve Mercan sınav yapmaz, sınav önermez. Nilgün öğrencinin öz denetimi ve sınava
+hazırlığı içindir: sonuç öğrencinin bilgisayarında kalır, öğretmene gitmez, anonim araştırma aktarımına girmez, ders
+kaydındaki hedef düzeylerini değiştirmez. Metni `egitmenler/nilgun.md` dosyasındadır; ortak çekirdeği yüklemez.
+
+- **Sıra:** `sinav_hazirla` → `sinav_plani_kaydet` → `sinav_baslat` → `sinav_cevap` → `sinav_bitir`.
+- **Plan:** dersin hedefleri × Bloom düzeyi. Kısa sınav 6 hedef sorar (zayıf kalan ve hiç yoklanmamış hedefler önce),
+  tam sınav bütün hedefleri. Her hedef için hedef düzeyinde, bir alt ve (tam sınavda) bir üst düzeyde soru hazırlanır.
+- **Cevap anahtarı önce yazılır** ve kaydedilince değişmez. Program her soruyu denetler: anahtarın kaynakta dayanağı
+  zayıfsa, sayfası yoksa ya da soru pilot ölçme sorusuna benziyorsa soru sınava girmez.
+- **Kapsam sabit, güçlük değişir:** her hedef sorulur; cevap tamsa üst düzey soruya çıkılır ya da sıradaki hedefe
+  geçilir, eksikse alt düzey soruya inilir. Sırayı program belirler.
+- **Puan:** Nilgün her ölçüt için yalnız "karşılandı / karşılanmadı" der; puanı program hesaplar. Hedef başına: hedef
+  düzeyinde tam cevap 2, kısmen ya da yalnız alt düzeyde 1, hiçbiri 0. Toplam yüz üzerinden gösterilir.
+- **Tahta:** sınavda cevap kendiliğinden gönderilmez. Kutu çok satırlı olur; öğrenci düzeltir ve **Cevapla** ile
+  gönderir (düğme, Enter ya da sesli "cevapla").
+- **Sonuç:** puan ve öğrencinin tahminiyle farkı, emin ama yanlış cevaplar, her soruda beklenen cevap ve ölçütler,
+  güçlü ve zayıf hedefler, kendi önceki sınavıyla karşılaştırma, çalışma tavsiyesi. Kaçırılan sorular tekrar kartına
+  yazılır. Rapor ve sınav dosyası kayıt klasöründeki `sinavlar` alt klasöründedir.
+- Sınav şimdilik yalnız ders paketlerinden yapılır; öğrencinin kendi PDF'lerinden sınav sonraki aşamadır.
 
 Program derssiz gelir; önce öğretmenin verdiği ders paketini ekleyin (Claude'a **"İndirilenler'deki ders paketini kur"**
 deyin ya da paketi **Ders paketleri ve makaleler** sayfasına bırakın). Sonra Claude'a yazın:
@@ -240,6 +267,10 @@ sonda cep tabanını izleyerek derine iner, kemik geriler. Ders dosyasında da a
 
 - `gecis` 0–10 saniyedir; vermezseniz çizim eskisi gibi bir anda değişir. Geriye doğru (ör. tedaviden sonra
   periodontitis → gingivitis) da çalışır.
+- Geçiş sıralıdır (diş, sondalama ve implant şablonları): önce plak birikir, iltihap ona cevap verir, dişeti
+  şişer, cep genişleyip derinleşir, kemik en son değişir; sonda çizim kısa bir an durur. İyileşmede de sıra
+  aynıdır (önce plak kalkar, iltihap söner). Toplam süre `gecis` kadardır; bölge ve kontur şablonlarında
+  bütün ölçüler birlikte değişir.
 - Bir adım hem cümle hem geçiş bitince ilerler. Duraklat (⏸) canlandırmayı da durdurur.
 - Geçişin ilk yarısında eski etiketler dokuyla birlikte kayar; sonda yeni durumun etiketleri belirir.
 - Claude bütün animasyonu tek `tahta` çağrısıyla gönderir; ek bekleme ya da araç çağrısı gerekmez.
@@ -270,7 +301,7 @@ sonda cep tabanını izleyerek derine iner, kemik geriler. Ders dosyasında da a
 |---|---|
 | Claude'da "klinik-koc" araçları görünmüyor | Claude'u tepsiden tamamen kapatıp açın (^ → Claude → sağ tık → Çık). **Ayarlar › Geliştirici**'de listede mi? Değilse `python tools/tahta-mcp.py --dene` ne diyor bakın; "Yapılandırmayı düzenle" ile açılan dosyanın yolunu `--kur --ayar "<yol>"` ile verin |
 | Listede "klinik-koc" var ama hata veriyor | `--dene` çıktısında "dosyası yok" yazıyorsa program klasörü taşınmıştır: KUR'u yeni klasörden yeniden çalıştırın |
-| Üst çubukta "Ses: tarayıcı sesi (yedek)" | Doğal ses kurulu değil ya da açılamadı. KUR'u yeniden çalıştırıp Pocket'e "E" deyin; Python 3.14 ise python.org'dan 3.12 kurun |
+| Üst çubukta "Ses: tarayıcı sesi (yedek)" | Doğal ses kurulu değil ya da açılamadı. KUR'u yeniden çalıştırıp Pocket'e "E" deyin (Windows'ta uygun Python'u kendisi bulur; Mac'te Python 3.14 ise python.org'dan 3.12 kurun) |
 | Ekranda "Sesi açmak için dokunun" | Tarayıcı sesi engelledi; düğmeye dokunun, anlatım kaldığı cümleden sürer |
 | Videonun üstünde büyük ▶ | Tarayıcı videonun kendiliğinden başlamasını engelledi; ▶'e dokunun |
 | "Bu tahta başka bir sekmede açık" | Aynı tahta iki sekmede açılmış; eski sekmeyi kapatın |

@@ -8,6 +8,7 @@ kayitlar/
 # Her bilgisayarda yeniden üretilen dosyalar
 tools/.sesler/
 .ses-ortami/
+.python/
 .dizin/
 .modeller/
 lessons/*/audio/

@@ -8,6 +8,9 @@ import os
 import shutil
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import komut  # noqa: E402
+
 AD = "klinik-koc"
 TAHTA_MCP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tahta-mcp.py")
 
@@ -84,7 +87,7 @@ def ayar_dosyalari():
 YOL_GOSTER = ("Claude'un ayar dosyası bulunamadı.\n"
               "Claude masaüstü uygulamasını açın → Ayarlar → Geliştirici → \"Yapılandırmayı düzenle\".\n"
               "Açılan dosyanın yolunu kopyalayıp şunu çalıştırın:\n"
-              "  python tools/tahta-mcp.py --kur --ayar \"<dosyanın yolu>\"")
+              "  " + komut.yazi("tahta-mcp.py", "--kur", "--ayar", '"<dosyanın yolu>"'))
 
 
 def _ayar_yolu_arg():

@@ -41,7 +41,7 @@ OGRETMEN_DOSYALARI = (
     "sablonlar/ders-taslagi-bos.json", "belgeler/sihirbaz.md", "belgeler/ogretmen-kilavuzu.md",
 )
 # Güncellemenin hiç dokunmadığı yerler (kullanıcının kendi verisi ya da bilgisayarda üretilenler).
-KORUNAN = ("lessons/", "ozel/", "kayitlar/", ".git/", ".dizin/", ".modeller/", ".ses-ortami/", "tools/.sesler/",
+KORUNAN = ("lessons/", "ozel/", "kayitlar/", ".git/", ".dizin/", ".modeller/", ".ses-ortami/", ".python/", "tools/.sesler/",
            "__pycache__/", "SURUM-TURU")
 # Varsa üzerine yazılmayan ayar dosyaları (kullanıcı değiştirmiş olabilir).
 AYAR_DOSYALARI = ("ses/ses-ayari.json",)

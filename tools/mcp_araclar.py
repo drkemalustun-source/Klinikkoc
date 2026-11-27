@@ -5,7 +5,7 @@ işleyicisini (ISLEYICILER) de güncelleyin. Öğretmen araçları öğrenci pro
 """
 
 TALIMAT = """KlinikKoç: bu bilgisayardaki tarayıcıda açık bir kara tahta. Bu araçlarla
-tahtaya yazar, ders görsellerini gösterip işaretler ve Türkçe sesli anlatırsın (Pocket TTS Türkçe Kadın 3 sesi; hazır değilse Piper dfki).
+tahtaya yazar, ders görsellerini gösterip işaretler ve Türkçe sesli anlatırsın (Pocket TTS Türkçe; öğrenci ⚙'den kadın ya da erkek sesi seçer; hazır değilse Piper dfki).
 Öğrenci kimliği: egitmen_hazirla'yı öğrencinin adı ve kısa bir ayırt ediciyle (öğrenci numarasının son 3 hanesi
 ya da takma ad; ayirt alanı) çağır. Araç 'ayirt_gerekli' ya da 'ayni_ad_var' dönerse verdiği talimata uy
 ("Bu adla kayıt var, sen misin?"). Dönen kimliği sonraki bütün araçlarda ogrenci alanına yaz. Öğretmen
@@ -21,7 +21,11 @@ açıkça söylediğini aktar.
 Vakalar: Dersin vaka kartları varsa (vakalar aracı) vaka_oku ile bir vakayı aç ve dönen vaka kurallarına uy.
 Her cevaplanan soruyu ve vaka adımını kayit_yaz'ın cevaplar alanına işle (Bloom düzeyi ve rubrik puanıyla);
 öğrenci "karnem" derse karne aracını çağır.
-Sözlü sınav provası için sozlu_prova, bütün derslerden zayıf konu tekrarı için tekrar_listesi aracını kullan.
+Bütün derslerden zayıf konu tekrarı için tekrar_listesi aracını kullan.
+Sınav (Nilgün): Öğrenci sınav olmak isterse ("sınav olmak istiyorum", "sözlü yap", "sınav provası") eğitmen sınavı
+kendisi yapmaz: sinav_hazirla çağrılır ve dönen kurallarla Nilgün olunur. Sınavı sen önerme. Sınav boyunca ipucu,
+onay ve düzeltme yoktur; sıra sinav_plani_kaydet → sinav_baslat → sinav_cevap → sinav_bitir. Pilot ölçme testleri
+bundan ayrıdır.
 Karar ağacı: vaka ya da ayırıcı tanı anlatırken tahtada tree komutuyla ağacı adım adım kur.
 Pilot ölçme testleri (ön/son/gecikmeli) yalnız olcme_testi ve olcme_kaydet araçlarıyla, öğretmenin onayladığı
 sorularla yapılır; test sırasında ipucu ve açıklama verilmez.
@@ -127,7 +131,7 @@ KOMUT_SEMASI = {
                    "soket-koruma (pihti, granulasyon, orgu-kemik, olgun-kemik, demet-kemigi, rezorpsiyon, dikey-kayip, eski-hat, greft, kollajen-ortu). "
                    "template:kemik-ici variant: saglikli|uc-duvarli|iki-duvarli|tek-duvarli|krater (defekt, duvar, bukkal-duvar, lingual-duvar, "
                    "proksimal-duvar, septum). template:cekilme variant: saglikli|rt1|rt2|rt3 (Cairo; cekilme, acik-kok, sinif, papilla, temas, "
-                   "siyah-ucgen, ara-kayip, mgj, mine-sement). ŞABLONDA YANIT: template'li draw'a isaretle:{soru, dogru?:[parça], coklu?} eklersen öğrenci şablonda bir bölgeye dokunur ve seçtiği parça sana söz olarak gelir ('İşaretleme · soru: ad [parça] (doğru|yanlış)'); etiket_surukle:{etiketler:[parça], soru?} eklersen şablon etiketsiz çizilir, öğrenci etiketleri yerine sürükler, hepsi yerleşince sonuç gelir ('Etiket yerleştirme: 3/4 doğru (yanlış: …)'). Parça adlarını aşağıdaki listelerden al; işaretlemede yalnız çizimde şekli olan parçalar seçilebilir. template:papil variant: dis-dis|duz|konkav|konveks|kare-kron|ince-biyotip|implant-implant (diş–implant arası meziodistal kesit; papil, tepe, temas, olcum, kret, siyah-ucgen, kritik, kritik-alti, kron-sag, implant, kuron, kazanc, biyotip). template:kontur-fasiyal variant: duz|kritik-fazla|kritik-az|kritik-alti-konkav|kritik-alti-konveks (implant labio-palatinal kesit; kritik, kritik-alti, kenar, kayma, hacim, labial-kemik, labial-mukoza, palatinal-mukoza, kron, implant). papil: kritik altı kontur dış bükey (konveks) yapılınca papil tepesi koronale kayar, siyah üçgen küçülür. Bu iki şablondaki doku tepkisi ölçüleri (papil artışı, kenar kayması) yaklaşık gözlemdir; eşik gibi söyleme. Bu iki şablonda kritik kontur MAVİ, kritik altı kontur TURUNCU çizilir. Hazır etiketlerdeki sayılar (implant çapı, kemik ve mukoza kalınlığı, papil yüksekliği) şemanın çizim ölçüleridir; makaleye bağlı derste sayı makalede yoksa draw'a olcu:false ekle (sayılar yazılmaz). Şablon, varyant ya da parça adını yanlış yazarsan sonuçta cizim_uyarilari gelir ve geçerli adlar listelenir; güncel adlar için sablon_bilgisi aracı. template:sondalama variant: saglikli|gingivitis|periodontitis|cekilme "
+                   "siyah-ucgen, ara-kayip, mgj, mine-sement). ŞABLONDA YANIT: template'li draw'a isaretle:{soru, dogru?:[parça], coklu?} eklersen öğrenci şablonda bir bölgeye dokunur ve seçtiği parça sana söz olarak gelir ('İşaretleme · soru: ad [parça] (doğru|yanlış)'); etiket_surukle:{etiketler:[parça], soru?} eklersen şablon etiketsiz çizilir, öğrenci etiketleri yerine sürükler, hepsi yerleşince sonuç gelir ('Etiket yerleştirme: 3/4 doğru (yanlış: …)'). Parça adlarını aşağıdaki listelerden al; işaretlemede yalnız çizimde şekli olan parçalar seçilebilir. template:papil variant: dis-dis|duz|konkav|konveks|kare-kron|ince-biyotip|implant-implant (diş–implant arası meziodistal kesit; papil, tepe, temas, olcum, kret, siyah-ucgen, kritik, kritik-alti, kron-sag, implant, dogal-dis, kazanc, biyotip). template:kontur-fasiyal variant: duz|kritik-fazla|kritik-az|kritik-alti-konkav|kritik-alti-konveks|kritik-alti-asiri-konveks (implant labio-palatinal kesit; kritik, kritik-alti, kenar, kayma, hacim, kenar-duzeyi, risk, labial-kemik, labial-mukoza, palatinal-mukoza, kron, implant). kritik-alti-konveks fizyolojik sınır içindeki dış bükeyliktir (fasiyal profil dolgunlaşır, kenar düzeyi belirgin değişmez); kritik-alti-asiri-konveks sınırın aşılmasıdır (mukoza gerilir ve incelir, kenar apikale kayabilir). papil: kritik altı kontur dış bükey (konveks) yapılınca papil tepesi koronale kayar, siyah üçgen küçülür. Bu iki şablondaki doku tepkisi ölçüleri (papil artışı, kenar kayması) yaklaşık gözlemdir; eşik gibi söyleme. Bu iki şablonda kritik kontur MAVİ, kritik altı kontur TURUNCU çizilir. Hazır etiketlerdeki sayılar (implant çapı, kemik ve mukoza kalınlığı, papil yüksekliği) şemanın çizim ölçüleridir; makaleye bağlı derste sayı makalede yoksa draw'a olcu:false ekle (sayılar yazılmaz). Şablon, varyant ya da parça adını yanlış yazarsan sonuçta cizim_uyarilari gelir ve geçerli adlar listelenir; güncel adlar için sablon_bilgisi aracı. template:sondalama variant: saglikli|gingivitis|periodontitis|cekilme "
                    "(cep derinliği ve klinik ataşman ölçümü; dis parçalarına ek: olcum-cd, olcum-kas, olcum-gm, olcum-formul). "
                    "İNDEKSLER: template:plak-indeksi variant: pli-0..pli-3 (Silness–Löe) | qh-0..qh-5 (Quigley–Hein/Turesky, plak boyalı); "
                    "template:gingival-indeks variant: gi-0..gi-3 (Löe–Silness). Parçalar: dis, dis-eti, papilla, mgj, alveol-mukozasi, skor, olcut, "
@@ -209,7 +213,8 @@ ARACLAR = [
                        "ilk_deneme (true/false), ipucu (kullanılan ipucu sayısı), secenekli (seçeneklerden seçerek cevapladıysa true), vaka, dugum, tehlikeli (true/false), "
                        "karsilanan_olcutler [ölçüt metni, kısa], eksik_olcutler [ölçüt metni, kısa]}]. "
                        "mod: once_anlat|once_yanitla. mola: bekleyen nokta metni ya da null. oturum: {egitmen, ozet, sure_dk "
-                       "(oturumun yaklaşık süresi, dakika)}. "
+                       "(oturumun yaklaşık süresi, dakika), zorlandigi (öğrencinin kapanıştaki 'Bugün anlamakta en çok "
+                       "zorlandığın neydi?' sorusuna kısa cevabı)}. "
                        "Aralıklı tekrar tarihleri otomatik hesaplanır.",
         "inputSchema": {"type": "object", "properties": {
             "ogrenci": {"type": "string"}, "ders": {"type": "string"},
@@ -487,14 +492,72 @@ ARACLAR = [
             "required": ["ders", "vaka"]},
     },
     {
-        "name": "sozlu_prova",
-        "description": "Sözlü sınav provası hazırlar: dersin ve vakalarının açık uçlu sorularını (rubrik ve örnek cevapla), "
-                       "öğrencinin zayıf ve tekrar zamanı gelen hedeflerine göre sıralı verir; sınav hocası gibi yürütme "
-                       "kurallarını da verir. Öğrenci 'sözlü provası', 'sınav provası' derse çağır.",
+        "name": "sinav_hazirla",
+        "description": "Nilgün'ün sınavını hazırlamaya başlar. YALNIZ öğrenci isteyince çağır (\"sınav olmak istiyorum\", "
+                       "\"sözlü yap\", \"sınav provası\" ya da ana ekrandaki Sözlü sınav ol düğmesi); kendin sınav önerme. "
+                       "Nilgün'ün kurallarını, sorulacak hedefleri (Bloom düzeyleriyle), öğretmenin onayladığı soruları ve "
+                       "hazırlık adımlarını verir. Sınav öğrencinin kendisi içindir; sonuç bu bilgisayarda kalır.",
         "inputSchema": {"type": "object", "properties": {
-            "ders": {"type": "string"}, "ogrenci": {"type": "string"},
-            "soru_sayisi": {"type": "integer", "description": "1–12, varsayılan 5"}},
-            "required": ["ders"]},
+            "dersler": {"type": "array", "items": {"type": "string"}, "description": "sınavın yapılacağı ders kimlikleri"},
+            "sure": {"type": "string", "enum": ["kisa", "tam"],
+                     "description": "kisa: yaklaşık 15 dk, 6 hedef; tam: bütün hedefler. Öğrenci söylemediyse sor."},
+            "ogrenci": {"type": "string"}, "ogrenci_kimligi": {"type": "string"}, "ayirt": {"type": "string"},
+            "yeni_ogrenci": {"type": "boolean"}, "deneme": {"type": "boolean"}},
+            "required": ["dersler"]},
+    },
+    {
+        "name": "sinav_plani_kaydet",
+        "description": "Nilgün'ün hazırladığı soruları, cevap anahtarını ve ölçütleri sınav başlamadan kaydeder; sonra "
+                       "değiştirilemez. Program her soruyu denetler: anahtarın kaynakta dayanağı zayıfsa, sayfası yoksa ya "
+                       "da soru pilot ölçme sorusuna benziyorsa soruyu reddeder. Her hedefin hedef düzeyinde kabul edilmiş "
+                       "bir sorusu olmadan plan kaydedilmez.",
+        "inputSchema": {"type": "object", "properties": {
+            "ogrenci": {"type": "string"}, "sinav": {"type": "string", "description": "sinav_hazirla'nın verdiği sınav numarası"},
+            "sorular": {"type": "array", "items": {"type": "object", "properties": {
+                "ders": {"type": "string"}, "hedef": {"type": "string"},
+                "duzey": {"type": "string", "enum": ["hedef", "alt", "ust"]},
+                "bloom": {"type": "string"}, "soru": {"type": "string"},
+                "anahtar": {"type": "array", "items": {"type": "object", "properties": {
+                    "madde": {"type": "string"}, "sayfa": {"type": "integer"}}, "required": ["madde"]}},
+                "olcutler": {"type": "array", "items": {"type": "object", "properties": {
+                    "metin": {"type": "string"}, "zorunlu": {"type": "boolean"}}, "required": ["metin"]}},
+                "tam_icin": {"type": "integer", "description": "tam cevap için karşılanması gereken en az ölçüt sayısı "
+                                                               "(verilmezse ölçütlerin üçte ikisi)"}},
+                "required": ["ders", "hedef", "duzey", "soru", "anahtar", "olcutler"]}},
+            "cikarilan_hedefler": {"type": "array", "items": {"type": "object", "properties": {
+                "ders": {"type": "string"}, "hedef": {"type": "string"}, "neden": {"type": "string"}}},
+                "description": "kaynağa dayanan soru kurulamadığı için sorulmayacak hedefler; raporda görünür"}},
+            "required": ["ogrenci", "sinav", "sorular"]},
+    },
+    {
+        "name": "sinav_baslat",
+        "description": "Planı kaydedilmiş sınavı başlatır: tahtayı sınav görünümüne alır ve ilk soruyu verir. tahmin: "
+                       "öğrencinin \"Yüz üzerinden kaç bekliyorsun?\" sorusuna cevabı.",
+        "inputSchema": {"type": "object", "properties": {
+            "ogrenci": {"type": "string"}, "sinav": {"type": "string"}, "tahmin": {"type": "integer"}},
+            "required": ["ogrenci", "sinav"]},
+    },
+    {
+        "name": "sinav_cevap",
+        "description": "Sıradaki sınav sorusunun cevabını kaydeder. Nilgün yalnız hangi ölçütlerin karşılandığını söyler; "
+                       "puanı ve sıradaki soruyu program belirler (cevap tamsa üst düzey ya da sıradaki hedef, eksikse alt "
+                       "düzey soru).",
+        "inputSchema": {"type": "object", "properties": {
+            "ogrenci": {"type": "string"}, "sinav": {"type": "string"}, "no": {"type": "integer"},
+            "cevap": {"type": "string", "description": "öğrencinin cevabı, kelimesi kelimesine"},
+            "karsilanan": {"type": "array", "items": {"type": "string"}, "description": "karşılanan ölçütlerin id'leri (o1, o2 …)"},
+            "guven": {"type": "string", "enum": ["tahmin", "biraz", "emin"]}},
+            "required": ["ogrenci", "sinav", "no", "karsilanan"]},
+    },
+    {
+        "name": "sinav_bitir",
+        "description": "Sınavı bitirir: puanı hesaplar (hedef başına 0–2, yüz üzerinden), her soruda beklenen cevabı ve "
+                       "karşılanan/eksik ölçütleri, güçlü ve zayıf hedefleri, öğrencinin kendi önceki sınavıyla farkını ve "
+                       "çalışma tavsiyesini verir; kaçırılan soruları tekrar kartına yazar; raporu öğrencinin bilgisayarına "
+                       "kaydeder. Öğrenci yarıda bırakırsa yarim: true.",
+        "inputSchema": {"type": "object", "properties": {
+            "ogrenci": {"type": "string"}, "sinav": {"type": "string"}, "yarim": {"type": "boolean"}},
+            "required": ["ogrenci", "sinav"]},
     },
     {
         "name": "tekrar_listesi",

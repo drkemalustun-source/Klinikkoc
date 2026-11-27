@@ -17,17 +17,23 @@ const dokum = await s.evaluate(() => {
   const out = {};
   const S = window.AT.anatomi.SABLONLAR;
   for (const k of Object.keys(S)) {
-    const parcalar = {}, ayrinti = [], gorulen = {};
+    const parcalar = {}, ayrinti = [], gorulen = {}, adlar = {};
     for (const v of S[k].varyantlar) {
       const p = S[k].ciz(document.createElementNS(NS, 'g'), v, { probe: true, olcu: false }) || {};
       for (const id of Object.keys(p)) {
         if (!(id in parcalar)) { parcalar[id] = p[id].ad; if (p[id].ayrinti) ayrinti.push(id); }
         (gorulen[id] = gorulen[id] || []).push(v);
+        (adlar[id] = adlar[id] || {})[v] = p[id].ad;
       }
     }
     const yalniz = {};
     for (const id of Object.keys(gorulen)) if (gorulen[id].length < S[k].varyantlar.length) yalniz[id] = gorulen[id];
-    out[k] = { ad: S[k].ad, varyantlar: S[k].varyantlar, parcalar, ayrinti, yalniz };
+    // Adı duruma göre değişen parçalar (ör. hacim: 'Yumuşak doku hacmi artar' / 'Fasiyal profil dolgunlaşır').
+    const degisen = {};
+    for (const id of Object.keys(adlar)) if (new Set(Object.values(adlar[id])).size > 1) degisen[id] = adlar[id];
+    out[k] = { ad: S[k].ad, varyantlar: S[k].varyantlar, parcalar, ayrinti, yalniz, adlar: degisen };
+    if (S[k].takma) out[k].takma = S[k].takma;
+    if (S[k].not) out[k].not = S[k].not;
   }
   return out;
 });

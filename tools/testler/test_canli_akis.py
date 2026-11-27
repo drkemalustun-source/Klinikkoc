@@ -146,6 +146,17 @@ class SozKaybolmaz(AkisTemeli):
         self.assertTrue(self.bekle_ki(lambda: not self.c.ayrilan), "teslim onayı gelmeli")
         self.assertEqual(self.c.konusmalar, [])
 
+    def test_sinav_gorunumu_komutu_bekleyen_sozu_yutmaz(self):
+        """Nilgün'ün sınav görünümü komutu (tur: sinav) beklenmez ve öğrencinin bekleyen cevabına dokunmaz."""
+        self.soyle("cevabım şu")
+        r = self.c.gonder({"tur": "sinav", "acik": True, "etiket": "Hedef 2 / 6"}, 0.5)
+        self.assertEqual(r["durum"], "gonderildi")
+        self.assertNotIn("kullanici_konustu", r)
+        self.assertEqual([x["metin"] for x in self.c.konusmalar], ["cevabım şu"])
+        self.assertEqual(self.c.kuyruk[-1]["tur"], "sinav")
+        # öteki komutlar eskisi gibi: bekleyen söz varken tahtaya gönderilmez
+        self.assertTrue(self.c.gonder({"tur": "adimlar", "adimlar": []}, 0.5).get("gonderilmedi"))
+
     def test_iptalle_yaris_soz_geri_doner(self):
         """Söz verildiği anda çağrı iptal edildiyse söz kuyruğa geri konur (Claude'a yazılmadı)."""
         self.c.soyle("ilk")

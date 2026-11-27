@@ -68,7 +68,7 @@ Yetersiz kalan vaka adımlarının aralıklı tekrar zamanı gelince vakayı yen
 
 ## Sözlü sınav provası ve dersler arası tekrar
 
-- **Sözlü prova**, Hedefler ekranından ya da canlı modda `sozlu_prova` aracıyla açılır. Dersin ve vakaların açık uçlu soruları
+- **Sözlü prova**, Hedefler ekranından açılır. Canlı modda sınavı Nilgün yapar (`sinav_hazirla`; bkz. canli-tahta.md). Dersin ve vakaların açık uçlu soruları
   zayıf hedeflerden başlayarak sorulur. Öğrenci sesli cevap verir; bir soru için 90 sn önerilir. Sonra örnek cevap ve rubrik gelir,
   en sonda da sınav tarzı geri bildirim.
 - **Bugünkü tekrar**, ders listesinin üstünde görünür. Bütün derslerde tekrar zamanı gelen soruları ve zayıf vaka adımlarını

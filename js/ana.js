@@ -149,6 +149,7 @@
           : 'Bir ya da birkaç ders ya da PDF işaretleyin. ',
         el('span', { class: 'k-soluk' }, 'Claude\'a “… dersini aç” demeniz de yeter.'));
       calis.disabled = !n;
+      sinavDugme.disabled = !secili.dersler.size;
     };
     const satir = (tur, kimlik, sol, orta, sag) => {
       const k = el('input', { type: 'checkbox', class: 'k-kutu', 'aria-label': 'Seç' });
@@ -189,8 +190,34 @@
     const calis = el('button', { class: 'k-btn buyuk', type: 'button', html: ikon('oynat').replace('<svg', '<svg width="18" height="18" fill="currentColor"') + ' Seçilenlerle çalış', onclick: calismayaBasla });
     alt.append(yazi);
     if (OZ.tekrar_karti) alt.append(el('button', { class: 'k-btn sade', type: 'button', onclick: () => tekrarPenceresi() }, `Tekrar kartları (${OZ.tekrar_karti})`));
-    alt.append(calis);
+    // Sözlü sınav (Nilgün): yalnız işaretli ders paketlerinden; öğrenci isteyince.
+    const MIK = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>';
+    const sinavDugme = el('button', { class: 'k-btn buyuk mavi', type: 'button', id: 'sinavDugme', html: MIK + ' Sözlü sınav ol',
+      title: 'Nilgün, işaretlediğiniz derslerden sözlü sınav yapar. Not için değildir; sonuç bu bilgisayarda kalır.',
+      onclick: () => sinavaBasla('kisa') });
+    alt.append(sinavDugme, calis);
     guncelle();
+  }
+  async function sinavaBasla(sure) {
+    let s;
+    try { s = await api('ana/secim', { dersler: [...secili.dersler], pdfler: [], sinav: { sure } }); } catch (e) {
+      return pencere(el('h2', {}, 'Seçim kaydedilemedi'), el('p', {}, e.message), el('div', { class: 'k-alt' }, el('button', { class: 'k-btn sade', onclick: pencereKapat }, 'Kapat')));
+    }
+    OZ.secim = s;
+    const cumle = s.claude_cumlesi || 'Sınav olmak istiyorum.';
+    const sureDugme = (deger, yazi) => el('button', { class: 'k-btn kucuk ' + (sure === deger ? 'mavi' : 'sade'), type: 'button',
+      'aria-pressed': String(sure === deger), onclick: () => { if (sure !== deger) sinavaBasla(deger); } }, yazi);
+    pencere(el('h2', {}, 'Sözlü sınav: Nilgün'),
+      el('p', {}, s.ders_adlari.join(' · ')),
+      el('div', { class: 'k-sinav-sure', role: 'group', 'aria-label': 'Sınav süresi' }, el('b', {}, 'Süre:'),
+        sureDugme('kisa', 'Kısa · yaklaşık 15 dk'), sureDugme('tam', 'Tam · bütün hedefler')),
+      el('p', {}, 'Şimdi Claude masaüstü uygulamasına şunu yazın (ya da yalnızca “sınav olmak istiyorum” deyin):'),
+      el('div', { class: 'k-claude' }, el('q', {}, cumle), el('button', { class: 'k-btn kucuk sade', onclick: (e) => kopyala(cumle, e.currentTarget) }, 'Kopyala')),
+      el('p', { class: 'k-soluk' }, 'Nilgün önce soruları ve cevap anahtarını hazırlar; bu birkaç dakika sürer. Sınav not için değildir, sonuç yalnız bu bilgisayarda kalır.',
+        secili.pdfler.size ? ' Sınav şimdilik yalnız ders paketlerinden yapılır; işaretli PDF\'ler sınava girmez.' : ''),
+      el('div', { class: 'k-alt' }, el('button', { class: 'k-btn sade', onclick: pencereKapat }, 'Seçimi değiştir'),
+        el('a', { class: 'k-btn', href: 'canli.html' }, 'Tahtayı aç')));
+    kopyala(cumle);
   }
   function tekrarPenceresi() {
     const cumle = 'Bugünkü tekrar kartlarımı soralım.';
@@ -629,7 +656,7 @@
     }
     pencere(el('h2', {}, 'Güncelleme tamam'),
       el('p', {}, `KlinikKoç ${surum} kuruldu.`),
-      el('p', {}, el('b', {}, 'Son adım: Claude masaüstü uygulamasını tamamen kapatıp yeniden açın. '), 'Böylece Claude da yeni sürümün araçlarını görür.'),
+      el('p', {}, el('b', {}, 'Son adım: Claude masaüstü uygulamasını tamamen kapatıp yeniden açın. '), 'Pencereyi kapatmak yetmez: Windows’ta saatin yanındaki simge alanında Claude simgesine sağ tıklayıp “Çıkış” deyin, Mac’te menüden Claude › Çıkış (⌘Q). Böylece Claude da yeni sürümün araçlarını görür.'),
       el('div', { class: 'k-alt' }, el('button', { class: 'k-btn', onclick: () => location.reload() }, 'Tamam')));
   }
 
