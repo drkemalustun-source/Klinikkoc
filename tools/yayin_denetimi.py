@@ -43,7 +43,7 @@ def _json_oku(yol):
         return json.load(f)
 
 
-YASAK_KLASORLER = ("kayitlar/", "ozel/", ".dizin/", ".modeller/", ".ses-ortami/", "tools/.sesler/")
+YASAK_KLASORLER = ("kayitlar/", "ozel/", ".dizin/", ".modeller/", ".ses-ortami/", ".python/", "tools/.sesler/")
 EN_BUYUK = 20 * 1024 * 1024
 
 
