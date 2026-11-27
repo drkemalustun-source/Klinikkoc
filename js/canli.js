@@ -459,7 +459,7 @@
       dokEl.classList.remove('dinleniyor');
       dokEl.style.removeProperty('--seviye');
       dokEl.classList.remove('seviyeli');
-      yaziEl.placeholder = YER_TUTUCU;
+      yaziEl.placeholder = yerTutucu();
     },
 
     // --- tarayıcı ---
@@ -487,6 +487,13 @@
         this.metin = finals.join(' ').trim();
         // "Bitirdim" ya da "gönder" diye bitirilirse beklemeden gönderilir (söz yazıya girmez).
         const son = /[\s,.]*\b(bitirdim|gönder|gonder)[.!]?\s*$/i;
+        if (sinav.acik && SINAV_GONDER.test(this.metin)) {
+          // Sınavda "cevapla" (ya da "gönder"): kutudaki cevap beklemeden gönderilir.
+          this.metin = this.metin.replace(SINAV_GONDER, '').trim();
+          sinav.hemen = true;
+          yaziEl.value = [this.onceki, this.metin].join(' ').replace(/\s+/g, ' ').trim();
+          return this.bitir();
+        }
         if (son.test(this.metin)) {
           this.metin = this.metin.replace(son, '').trim();
           yaziEl.value = [this.onceki, this.metin].join(' ').replace(/\s+/g, ' ').trim();
@@ -600,12 +607,12 @@
         const j = await r.json();
         if (!r.ok || j.hata) throw new Error(j.hata || ('sunucu ' + r.status));
         this.isleniyor = false;
-        yaziEl.placeholder = YER_TUTUCU;
+        yaziEl.placeholder = yerTutucu();
         if (!(j.metin || '').trim()) return this.bos();
         onay.baslat(this.birlestir(j.metin), this.birlestir(j.ham_metin || j.metin), 'duyu', j.duzeltmeler);
       } catch (e) {
         this.isleniyor = false;
-        yaziEl.placeholder = YER_TUTUCU;
+        yaziEl.placeholder = yerTutucu();
         if (!calisan) durumEl.textContent = hazirYazisi();
         toast('Duyu yazıya çeviremedi: ' + e.message + '. Tarayıcı tanıyıcısını seçebilir ya da yazabilirsiniz.', 8000);
         if (durak.soz && !yaziEl.value.trim()) durak.devam();
@@ -663,6 +670,40 @@
     return out;
   }
 
+  // ---------- Sınav görünümü (Nilgün) ----------
+  // Claude (Nilgün) sınavı başlatınca sunucudan {tur:'sinav', acik:true, etiket:'Hedef 3 / 12'} gelir. Bu görünümde
+  // cevap kendiliğinden gönderilmez, yazı kutusu çok satırlıdır ve gönder düğmesi "Cevapla" olur. Ders tarafı değişmez.
+  const sinav = { acik: false, hemen: false, oncekiAd: null, t: null };
+  const SINAV_GONDER = /[\s,.]*\b(cevapla|gönder|gonder)[.!]?\s*$/i;
+  const sinavRozetEl = $('#sinavRozet');
+  const sinavIpucuEl = $('#sinavIpucu');
+  function sinavBoy() {
+    const y = $('#yazi');
+    if (!sinav.acik) { y.style.height = ''; return; }
+    y.style.height = 'auto';
+    y.style.height = Math.min(y.scrollHeight, 160) + 'px';
+  }
+  function sinavModu(k) {
+    const ac = !!(k && k.acik);
+    const y = $('#yazi'), g = $('#gonder');
+    if (ac && !sinav.acik) sinav.oncekiAd = dersAdiEl.textContent;
+    sinav.acik = ac;
+    sinav.hemen = false;
+    $('#lesson').classList.toggle('sinav-modu', ac);
+    sinavRozetEl.hidden = !ac;
+    sinavRozetEl.textContent = ac ? String(k.etiket || 'Sınav') : '';
+    if (ac) dersAdiEl.textContent = 'Sözlü sınav · Nilgün';
+    else if (sinav.oncekiAd != null) { dersAdiEl.textContent = sinav.oncekiAd; sinav.oncekiAd = null; }
+    y.placeholder = ac ? 'Cevabınızı söyleyin ya da yazın…' : 'Claude\'a yazın…';
+    y.setAttribute('aria-label', ac ? 'Cevabınız' : 'Claude\'a yazın');
+    g.setAttribute('aria-label', ac ? 'Cevapla' : 'Gönder');
+    g.title = ac ? 'Cevapla (Enter)' : 'Gönder (Enter)';
+    clearInterval(sinav.t);
+    sinav.t = ac ? setInterval(sinavBoy, 400) : null; // dikte ara sonuçlarında da kutu boyu cevaba uysun
+    if (!ac) sinavIpucuEl.hidden = true;
+    sinavBoy();
+  }
+
   // ---------- Onay: tanınan metin 3 sn kutuda görünür ----------
   const onay = {
     t: null,
@@ -670,6 +711,23 @@
     baslat(metin, ham, motor, duzeltmeler, guven) {
       this.bilgi = { ham_metin: ham, motor };
       if (guven != null) this.bilgi.guven = guven;
+      if (sinav.acik) {
+        // Sınav (Nilgün): cevap kendiliğinden gönderilmez. Kutuda bekler; öğrenci düzeltir ve "Cevapla" ile gönderir
+        // (düğme, Enter ya da sesli "cevapla"). Yanlış yazıya çevrilmiş cevap puanlanmasın diye.
+        let hemen = sinav.hemen;
+        sinav.hemen = false;
+        if (SINAV_GONDER.test(metin)) { metin = metin.replace(SINAV_GONDER, '').trim(); hemen = true; }
+        yaziEl.value = metin;
+        gonderBtn.disabled = !metin;
+        clearTimeout(this.t);
+        this.t = null;
+        dokEl.classList.remove('onayda');
+        sinavBoy();
+        if (hemen) return this.gonder();
+        sinavIpucuEl.hidden = !metin;
+        durumEl.textContent = metin ? 'Cevabınız bekliyor' : hazirYazisi();
+        return;
+      }
       yaziEl.value = metin;
       gonderBtn.disabled = !metin;
       dokEl.classList.remove('onayda');
@@ -721,6 +779,8 @@
 
   async function sozGonder(metin, ek) {
     yaziEl.value = '';
+    sinavIpucuEl.hidden = true;
+    sinavBoy();
     gonderBtn.disabled = true;
     altyazi(metin, 'Siz');
     const govde = { metin, motor: (ek && ek.motor) || 'yazi' };
@@ -745,11 +805,12 @@
   }
 
   // Yazı kutusu: yazmaya başlamak söz almaktır; Enter ya da ↑ gönderir.
-  const YER_TUTUCU = 'Claude\'a yazın…';
+  const YER_TUTUCU_DERS = 'Claude\'a yazın…';
+  const yerTutucu = () => (sinav.acik ? 'Cevabınızı söyleyin ya da yazın…' : YER_TUTUCU_DERS);
   const yaziEl = $('#yazi');
   const gonderBtn = $('#gonder');
   const dokEl = $('#dok');
-  yaziEl.placeholder = YER_TUTUCU;
+  yaziEl.placeholder = yerTutucu();
   yaziEl.addEventListener('input', () => {
     onay.durdur();
     const dolu = !!yaziEl.value.trim();
@@ -1336,6 +1397,11 @@
           son = Math.max(son, k.no);
           if (k.tur === 'dur') durdur(k);
           else if (k.tur === 'goruntu') goruntuVer(k); // Claude tahtaya bakmak istiyor: sırayı beklemez
+          else if (k.tur === 'sinav') {
+            // Sınav görünümü (Nilgün): sırayı beklemez, anlatımı kesmez.
+            sinavModu(k);
+            api('bitti', { no: k.no, sonuc: { durum: 'bitti' }, durum: durum() }).catch(() => {});
+          }
           else if (k.tur === 'devam') {
             // Araya giren cevap öğrenci konuştuğu için duraklamışsa (söz/⏸) onu bekleme: Claude anlatıma dönmek ya da
             // anlatımı bırakmak istiyor; duraklayan cevap (açık soru dahil) kapanır, devam/bırak hemen uygulanır.

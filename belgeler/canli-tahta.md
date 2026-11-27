@@ -103,6 +103,29 @@ dosyalarındadır. Ortak kurallar: kaynağın dışına çıkmamak, öğretmen n
 soru seçmek, açık uçlu yanıtı SOLO'ya göre değerlendirmek, olgu ve yanılgı sorularında "ne kadar eminsin?" diye
 sormak, cevabı erken vermemek, ısrara boyun eğmemek, mola/devam ve rapor.
 
+### Sınav: Nilgün
+
+Üçüncü persona **Nilgün** sınav hocasıdır. Yalnız öğrenci isteyince açılır ("sınav olmak istiyorum" ya da ana ekrandaki
+**Sözlü sınav ol** düğmesi); İnci ve Mercan sınav yapmaz, sınav önermez. Nilgün öğrencinin öz denetimi ve sınava
+hazırlığı içindir: sonuç öğrencinin bilgisayarında kalır, öğretmene gitmez, anonim araştırma aktarımına girmez, ders
+kaydındaki hedef düzeylerini değiştirmez. Metni `egitmenler/nilgun.md` dosyasındadır; ortak çekirdeği yüklemez.
+
+- **Sıra:** `sinav_hazirla` → `sinav_plani_kaydet` → `sinav_baslat` → `sinav_cevap` → `sinav_bitir`.
+- **Plan:** dersin hedefleri × Bloom düzeyi. Kısa sınav 6 hedef sorar (zayıf kalan ve hiç yoklanmamış hedefler önce),
+  tam sınav bütün hedefleri. Her hedef için hedef düzeyinde, bir alt ve (tam sınavda) bir üst düzeyde soru hazırlanır.
+- **Cevap anahtarı önce yazılır** ve kaydedilince değişmez. Program her soruyu denetler: anahtarın kaynakta dayanağı
+  zayıfsa, sayfası yoksa ya da soru pilot ölçme sorusuna benziyorsa soru sınava girmez.
+- **Kapsam sabit, güçlük değişir:** her hedef sorulur; cevap tamsa üst düzey soruya çıkılır ya da sıradaki hedefe
+  geçilir, eksikse alt düzey soruya inilir. Sırayı program belirler.
+- **Puan:** Nilgün her ölçüt için yalnız "karşılandı / karşılanmadı" der; puanı program hesaplar. Hedef başına: hedef
+  düzeyinde tam cevap 2, kısmen ya da yalnız alt düzeyde 1, hiçbiri 0. Toplam yüz üzerinden gösterilir.
+- **Tahta:** sınavda cevap kendiliğinden gönderilmez. Kutu çok satırlı olur; öğrenci düzeltir ve **Cevapla** ile
+  gönderir (düğme, Enter ya da sesli "cevapla").
+- **Sonuç:** puan ve öğrencinin tahminiyle farkı, emin ama yanlış cevaplar, her soruda beklenen cevap ve ölçütler,
+  güçlü ve zayıf hedefler, kendi önceki sınavıyla karşılaştırma, çalışma tavsiyesi. Kaçırılan sorular tekrar kartına
+  yazılır. Rapor ve sınav dosyası kayıt klasöründeki `sinavlar` alt klasöründedir.
+- Sınav şimdilik yalnız ders paketlerinden yapılır; öğrencinin kendi PDF'lerinden sınav sonraki aşamadır.
+
 Program derssiz gelir; önce öğretmenin verdiği ders paketini ekleyin (Claude'a **"İndirilenler'deki ders paketini kur"**
 deyin ya da paketi **Ders paketleri ve makaleler** sayfasına bırakın). Sonra Claude'a yazın:
 **"Tahtayı aç, akut periodontal lezyonlar dersine başlayalım. Adım Ayşe."**

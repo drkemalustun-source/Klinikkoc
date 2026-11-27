@@ -2502,6 +2502,12 @@ def ar_calisma_secimi(_):
     if not s["dersler"] and not s["pdfler"]:
         return metin({"secim": None, "not": "Ana ekranda işaretlenmiş bir ders ya da PDF yok. Öğrenciye hangi dersi "
                                             "çalışmak istediğini sor; dersler aracıyla listeyi görebilirsin."})
+    if s.get("sinav") and s["dersler"]:
+        return metin({"sinav": True, "sure": s["sinav"]["sure"], "secim_tarihi": s["tarih"],
+                      "dersler": [{"ders": d, "baslik": b} for d, b in zip(s["dersler"], s["ders_adlari"])],
+                      "not": "Öğrenci ana ekranda 'Sözlü sınav ol' düğmesine bastı: ders anlatma. "
+                             "sinav_hazirla(dersler=%s, sure='%s') çağır ve dönen kurallarla Nilgün ol."
+                             % (json.dumps(s["dersler"], ensure_ascii=False), s["sinav"]["sure"])})
     ana = s["dersler"][0] if s["dersler"] else makale_bulucu.KENDI
     diger = s["dersler"][1:]
     out = {"dersler": [{"ders": d, "baslik": b} for d, b in zip(s["dersler"], s["ders_adlari"])],

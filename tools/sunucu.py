@@ -506,6 +506,10 @@ class Canli:
                 self.kuyruk = []
             self.kuyruk.append(dict(komut, no=no))
             self.kosul.notify_all()
+            if komut.get("tur") == "sinav":
+                # Sınav görünümü (Nilgün) yalnız bir görünüm komutudur: sonucu beklenmez ve kullanıcının bekleyen
+                # sözüne dokunulmaz (söz Claude'a bekle aracıyla gider; burada alınsaydı kaybolurdu).
+                return {"durum": "gonderildi", "no": no}
             return self._bekle(no, sure, bekleme, teslim)
 
     def sonuc(self, no, sure, bekleme=None, teslim=False):
@@ -1209,7 +1213,7 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
                 return self._json(405, {"hata": "POST gerekli"})
             v = json.loads(govde.decode("utf-8")) if govde else {}
             if yol == "secim":
-                return self._json(200, A.secim_yaz(v.get("dersler"), v.get("pdfler")))
+                return self._json(200, A.secim_yaz(v.get("dersler"), v.get("pdfler"), v.get("sinav")))
             if yol == "guncelleme_denetle":
                 return self._json(200, surum_.denetle(zorla=True))
             if yol == "guncelle":

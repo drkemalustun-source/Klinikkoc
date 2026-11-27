@@ -16,7 +16,7 @@
     <header class="topbar">
       <span class="canli-dot" id="dot" title="Bağlantı"></span>
       <div class="topbar-titles">
-        <div class="lesson-name" id="dersAdi">Canlı tahta · Claude</div><span class="canli-surum" id="surumEtiket" title="KlinikKoç sürümü"></span>
+        <div class="lesson-name" id="dersAdi">Canlı tahta · Claude</div><span class="canli-surum" id="surumEtiket" title="KlinikKoç sürümü"></span><span class="canli-sinav-rozet" id="sinavRozet" role="status" hidden></span>
         <div class="section-name" id="durum">Bağlanıyor…</div>
       </div>
       <span class="canli-ses" id="sesMotor" role="status" hidden></span>
@@ -98,6 +98,7 @@
         <div class="canli-serit">
           <div class="canli-ileti eski" id="onceki" hidden></div>
           <div class="canli-ileti caption" id="caption" aria-live="polite"></div>
+          <div class="canli-ileti canli-sinav-ipucu" id="sinavIpucu" role="status" hidden>Cevabınız kendiliğinden gönderilmez. Klavyeyle düzeltebilirsiniz; göndermek için Cevapla’ya basın ya da “cevapla” deyin.</div>
           <div class="canli-durak" id="durakIsaret" role="status" hidden>⏸ Duraklatıldı · devam için ▶, P ya da Boşluk</div>
         </div>
         <div class="canli-satir">
@@ -120,12 +121,13 @@
               <span class="canli-komut" id="motorKomut" hidden><code id="motorKomutYazi"></code><button type="button" class="btn" id="motorKopyala">Kopyala</button></span></span></label>
             <label class="canli-secenek"><input type="radio" name="motor" id="motorTarayici">
               <span><b>Tarayıcı</b><small id="motorTarayiciDurum"></small></span></label>
-            <div class="canli-menu-not">Söylediğiniz terim sözlüğünden geçer ve göndermeden önce 2–3 sn kutuda görünür; düzeltmek için kutuya dokunun.</div>
+            <div class="canli-menu-not">Söylediğiniz terim sözlüğünden geçer ve göndermeden önce 2–3 sn kutuda görünür; düzeltmek için kutuya dokunun. Sınavda cevap kendiliğinden gönderilmez; “Cevapla” ile gönderilir.</div>
           </div>
           <div class="canli-kutu">
-            <input id="yazi" type="text" autocomplete="off" enterkeyhint="send" aria-label="Claude'a yazın">
+            <textarea id="yazi" rows="1" autocomplete="off" enterkeyhint="send" aria-label="Claude'a yazın"></textarea>
             <span class="canli-dalga" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
             <button class="canli-gonder" id="gonder" aria-label="Gönder" title="Gönder (Enter)" disabled>
+              <span class="canli-gonder-yazi">Cevapla</span>
               <svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
             </button>
           </div>

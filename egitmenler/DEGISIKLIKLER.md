@@ -21,8 +21,9 @@ Kural: Eğitmen metinleri Kemal Üstün'ün onayı olmadan değişmez. Her deği
 | `mercan.md` giriş | Konu tanımı elindeki araçlarla sınırlandı: makale inceleme, konu ve klinik protokol; istatistik bu tartışmaların içindeki yanılgılar üzerinden. Tez değerlendirme için araç seti olmadığı açıkça yazıldı. | Metin "tez değerlendirme, istatistik ve araştırma yöntemi" vaat ediyordu ama bunların yöntemi yoktu. Tez seti, ilk tez dersi gerektiğinde yazılacak. |
 | `mercan.md` Üslup | Dört satır eklendi: doğru gözlemi adıyla teslim etme, otoriteyle değil kaynakla konuşma, emin olunmayan yeri gösterme, ölçülü espri. | Mercan'ın dosyası üç satır üslup, gerisi araç listesiydi; İnci kadar belirgin bir sesi yoktu. |
 | `nilgun.md` (yeni) | Nilgün'ün metni: üslup, değişmeyen kurallar, sınavdan önce, sınav, sınavdan sonra. Ortak çekirdeği yüklemez; kendi kısa çekirdeği var. | Yeni sınav personası (aşağıda). Program desteği gelene kadar dosya hiçbir yerde yüklenmez. |
+| `ortak.md` §11 (yeni) | Sınav isteği Nilgün'e bırakılır; eğitmen sınav yapmaz, sınav önermez. Sınavdan dönüşte öğrenci "sen seç" derse sınavda zayıf kalan hedeflerden başlanır; puan gündeme getirilmez. | Nilgün'ün gelişiyle eğitmenlerin sınav işi ona geçti (`sozlu_prova` aracı kalktı). |
 
-Aynı gün alınan, metne henüz girmeyen kararlar: sınav isteğinin Nilgün'e bırakılması ve sınavdan dönüş (Nilgün'le birlikte girecek); ara düzeyler için şimdilik değişiklik yok (yalnız not).
+Aynı gün alınan, metne girmeyen karar: ara düzeyler için şimdilik değişiklik yok (yalnız not).
 
 ### Nilgün: Kemal Üstün'ün 27 Kasım 2026 kararları
 

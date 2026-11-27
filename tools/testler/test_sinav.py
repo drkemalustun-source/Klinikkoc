@@ -355,5 +355,71 @@ class MetinlerVeAraclar(unittest.TestCase):
             self.assertIn(parca, m)
 
 
+class Arayuz(unittest.TestCase):
+    """Görünüşünü Kemal Üstün'ün 27 Kasım 2026'da onayladığı arayüz: ana ekranda düğme, tahtada sınav görünümü."""
+
+    def test_ana_ekranda_sozlu_sinav_dugmesi(self):
+        js = oku("js", "ana.js")
+        for parca in ("Sözlü sınav ol", "sinavaBasla", "Sözlü sınav: Nilgün", "Kısa · yaklaşık 15 dk", "Tam · bütün hedefler",
+                      "sonuç yalnız bu bilgisayarda kalır", "sinavDugme.disabled = !secili.dersler.size"):
+            self.assertIn(parca, js)
+        self.assertIn(".k-sinav-sure", oku("css", "kil.css"))
+
+    def test_secim_sinav_istegini_tasir(self):
+        import ana_ekran as A
+        with tempfile.TemporaryDirectory() as g:
+            eski = (A.secim_yolu, A.dersler, A.pdfler)
+            A.secim_yolu = lambda: os.path.join(g, "secim.json")
+            A.dersler = lambda: [{"ders": "d1", "baslik": "Bir"}, {"ders": "d2", "baslik": "İki"}]
+            A.pdfler = lambda: [{"id": "p1", "baslik": "Makalem"}]
+            try:
+                s = A.secim_yaz(["d1"], ["p1"], {"sure": "kisa"})
+                self.assertEqual((s["sinav"], s["pdfler"]), ({"sure": "kisa"}, []))  # PDF sınava girmez
+                self.assertEqual(s["claude_cumlesi"], "Seçtiğim dersten kısa bir sözlü sınav olmak istiyorum.")
+                self.assertEqual(A.secim_yaz(["d1", "d2"], [], {"sure": "tam"})["claude_cumlesi"],
+                                 "Seçtiğim derslerden tam bir sözlü sınav olmak istiyorum.")
+                self.assertEqual(A.secim_oku()["sinav"], {"sure": "tam"})
+                # "Seçilenlerle çalış" sınav isteğini siler
+                s = A.secim_yaz(["d1"], ["p1"])
+                self.assertIsNone(s["sinav"])
+                self.assertIn("dersini çalışalım", s["claude_cumlesi"])
+                self.assertIsNone(A.secim_yaz([], ["p1"], {"sure": "kisa"})["sinav"])  # ders yoksa sınav da yok
+            finally:
+                A.secim_yolu, A.dersler, A.pdfler = eski
+
+    def test_calisma_secimi_sinava_yonlendirir(self):
+        spec = importlib.util.spec_from_file_location("tahta_mcp_secim", os.path.join(KOK, "tools", "tahta-mcp.py"))
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        eski = m.ana_ekran.secim_metni
+        m.ana_ekran.secim_metni = lambda: {"dersler": [DERS], "pdfler": [], "ders_adlari": ["Peri"], "pdf_adlari": [],
+                                           "tarih": "2026-11-27 18:00", "sinav": {"sure": "tam"}, "claude_cumlesi": "x"}
+        try:
+            r = json.loads(m.ISLEYICILER["calisma_secimi"]({})["content"][0]["text"])
+        finally:
+            m.ana_ekran.secim_metni = eski
+        self.assertTrue(r["sinav"])
+        self.assertIn("sinav_hazirla", r["not"])
+        self.assertIn("sure='tam'", r["not"])
+        self.assertNotIn("egitmen_hazirla", r["not"])
+
+    def test_tahtada_sinav_gorunumu(self):
+        html, js, css = oku("canli.html"), oku("js", "canli.js"), oku("css", "canli.css")
+        self.assertIn('<textarea id="yazi" rows="1"', html)
+        self.assertIn('id="sinavRozet"', html)
+        self.assertIn('<span class="canli-gonder-yazi">Cevapla</span>', html)
+        self.assertIn("Cevabınız kendiliğinden gönderilmez.", html)
+        for parca in ("function sinavModu(k)", "k.tur === 'sinav'", "if (sinav.acik) {", "SINAV_GONDER",
+                      "(cevapla|gönder|gonder)", "Sözlü sınav · Nilgün"):
+            self.assertIn(parca, js)
+        # sınavda süre sayacı kurulmaz: sınav dalı, ONAY_MS zamanlayıcısından önce döner
+        baslat = js[js.index("    baslat(metin, ham, motor, duzeltmeler, guven) {"):js.index("    // Öğrenci kutuya dokundu")]
+        self.assertLess(baslat.index("if (sinav.acik) {"), baslat.index("setTimeout(() => this.gonder(), ONAY_MS)"))
+        self.assertIn(".canli.sinav-modu .canli-kutu textarea", css)
+        self.assertIn(".canli-gonder-yazi { display: none; }", css)
+        # derste kutu tek satır kalır
+        self.assertIn(".canli-kutu textarea { resize: none; padding: 0; margin: 0; line-height: 1.4; height: 1.4em;", css)
+
+
 if __name__ == "__main__":
     unittest.main()
