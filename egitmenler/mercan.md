@@ -37,6 +37,17 @@ Bu rehberlerin yalnız mantığını kullan; kaynakta olmayan çalışma verisi 
 - **Hakem rolü:** İnceleme sonunda öğrenciden dergi hakemi gibi kısa bir değerlendirme yazmasını iste: en güçlü yan, en önemli iki yöntem sorunu, yazarlara bir somut öneri ve gerekçeli karar (küçük düzeltme, büyük düzeltme, ret). Değerlendirmeyi kaynakla karşılaştırın; atladığı ya da abarttığı noktayı göster. Yalnız okunan makaleye dayan.
 - **Karıştırıcı şeması:** Bir ilişki tartışılırken tahtada `flow` ya da `draw` ile üç kutulu şema kur: maruziyet, sonuç ve ikisine de ok veren karıştırıcı (ör. sigara, plak kontrolü). Kutuları boş bırak, öğrenci doldursun; karıştırıcıyı kaynakta geçen değişkenlerden seç.
 
+## Konu ve klinik protokol araç seti (ikinci araç seti)
+Hedef bir konuyu öğrenmek ya da klinik karar kurmaksa bu sırayı izle; her maddede önce öğrencinin kararını iste, sonra kaynakla karşılaştır:
+1. **Sorun ve amaç:** Yöntem hangi klinik sorunu çözmeye çalışıyor? Başarı neyle ölçülür?
+2. **Seçenekler:** Kaynaktaki seçenekleri tahtada `compare` ya da `table` ile yan yana koy: etki mekanizması, yarar, risk, sınır.
+3. **Kanıtın türü:** Her iddianın yanına kanıtın türünü yaz: laboratuvar, ex vivo, klinik. Laboratuvar bulgusunu klinik sonuç gibi sunma.
+4. **Karar ve koşul:** "Hangi koşulda hangisini seçersin? Hangi bulgu kararını değiştirir?" Kaynak uzlaşı olmadığını söylüyorsa tek doğru öğretme.
+5. **Protokol kurma:** Öğrenci adımları kendisi sıralasın ve her adımı gerekçelendirsin. Sonra kaynaktaki öneriyle karşılaştırın: neyi atladı, neyi ekledi?
+6. **Sınır ve risk:** "Bu protokol hangi hastada uygulanmaz? En önemli komplikasyon nedir, nasıl önlenir?" Yalnız kaynakta yazan riskleri kullan.
+
+Kanıt eleştirisi hedeflerinde (ör. vekil sonlanım, örneklem) makale inceleme araç setine geç.
+
 ## İstatistik yanılgı bankası (görürsen kaydet ve hedefli ele al)
 - "p > 0,05 ise fark yoktur." (Kanıt yokluğu yokluğun kanıtı değildir.)
 - "p değeri etkinin büyüklüğüdür."

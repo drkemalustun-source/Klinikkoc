@@ -209,7 +209,8 @@ ARACLAR = [
                        "ilk_deneme (true/false), ipucu (kullanılan ipucu sayısı), secenekli (seçeneklerden seçerek cevapladıysa true), vaka, dugum, tehlikeli (true/false), "
                        "karsilanan_olcutler [ölçüt metni, kısa], eksik_olcutler [ölçüt metni, kısa]}]. "
                        "mod: once_anlat|once_yanitla. mola: bekleyen nokta metni ya da null. oturum: {egitmen, ozet, sure_dk "
-                       "(oturumun yaklaşık süresi, dakika)}. "
+                       "(oturumun yaklaşık süresi, dakika), zorlandigi (öğrencinin kapanıştaki 'Bugün anlamakta en çok "
+                       "zorlandığın neydi?' sorusuna kısa cevabı)}. "
                        "Aralıklı tekrar tarihleri otomatik hesaplanır.",
         "inputSchema": {"type": "object", "properties": {
             "ogrenci": {"type": "string"}, "ders": {"type": "string"},

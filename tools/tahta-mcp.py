@@ -577,6 +577,40 @@ def tekrar_zamani_gelenler(k):
                   key=lambda h: k["hedefler"][h]["sonraki_tekrar"])
 
 
+# ---------- Sürüm damgası ----------
+# Hangi oturumun hangi eğitmen metniyle yapıldığı kayıttan okunabilsin diye: programın sürümü, eğitmen ve eğitmen
+# metninin parmak izi (ortak.md + kişilik dosyası). Metin değişince iz kendiliğinden değişir; elle sürüm tutulmaz.
+# Değişikliklerin ne olduğu egitmenler/DEGISIKLIKLER.md'de yazar.
+_SON_EGITMEN = {}  # ders -> bu çalıştırmada egitmen_hazirla'nın seçtiği eğitmen
+
+
+def kural_izi(egitmen):
+    """ortak.md + <egitmen>.md metninin kısa parmak izi. Satır sonu biçimi ve satır sonundaki boşluk izi değiştirmez."""
+    h = hashlib.sha256()
+    for ad in ("ortak", egitmen):
+        try:
+            m = _metin_oku(os.path.join(KOK, "egitmenler", ad + ".md"))
+        except OSError:
+            m = ""
+        duz = "\n".join(x.rstrip() for x in m.replace("\r\n", "\n").replace("\r", "\n").split("\n")).strip()
+        h.update((ad + "\x00" + duz + "\x00").encode("utf-8"))
+    return h.hexdigest()[:10]
+
+
+def surum_damgasi(ders, eg=None):
+    e = _SON_EGITMEN.get(ders) or (eg or {}).get("egitmen") or "inci"
+    return {"program": SURUM, "egitmen": e, "kural_izi": kural_izi(e)}
+
+
+def damgala(k, ders, eg, gun):
+    """Kayda sürüm damgasını işler: yalnız değiştiğinde yeni satır açar (bir damga, sonraki damgaya kadar geçerlidir)."""
+    d = surum_damgasi(ders, eg)
+    son = (k.get("surumler") or [None])[-1]
+    if not son or any(son.get(x) != d[x] for x in d):
+        k.setdefault("surumler", []).append(dict(d, tarih=gun))
+    return d
+
+
 def kayit_ozeti(k, eg):
     hedefler = {x["id"]: x for x in (eg or {}).get("hedefler", [])}
     ozet = {}
@@ -590,6 +624,9 @@ def kayit_ozeti(k, eg):
             "tekrar_zamani_gelen": tekrar_zamani_gelenler(k),
             "mola": k.get("mola"), "mod": k.get("mod"),
             "oturum_sayisi": len(k.get("oturumlar", [])),
+            # Öğrencinin son oturum kapanışında "en çok zorlandığım" dediği konu (ortak.md §9)
+            "son_zorlandigi": next(({"tarih": o.get("tarih"), "metin": o["zorlandigi"]}
+                                    for o in reversed(k.get("oturumlar", [])) if o.get("zorlandigi")), None),
             "testler": [{"tur": t.get("tur"), "tarih": t.get("tarih"), "puan": t.get("puan"), "toplam": t.get("toplam"),
                          "secilen_yanilgilar": t.get("secilen_yanilgilar")} for t in k.get("testler", [])]}
 
@@ -658,6 +695,7 @@ def ar_egitmen_hazirla(a):
         secilen = eg.get("egitmen")
     if secilen not in EGITMENLER:
         raise ValueError("Bilinmeyen eğitmen: %s" % secilen)
+    _SON_EGITMEN[ders] = secilen
     kurallar = _metin_oku(os.path.join(KOK, "egitmenler", "ortak.md")) + "\n\n" + \
         _metin_oku(os.path.join(KOK, "egitmenler", secilen + ".md"))
     out = {"egitmen": EGITMENLER[secilen], "izinli_egitmenler": [EGITMENLER.get(x, x) for x in izinli],
@@ -827,8 +865,9 @@ def ar_kayit_yaz(a):
         k["mod"] = a["mod"]
     if "mola" in a:
         k["mola"] = a.get("mola")
+    damga = damgala(k, a.get("ders"), eg, b)
     if a.get("oturum"):
-        o = dict(a["oturum"], tarih=b)
+        o = dict(a["oturum"], tarih=b, surum=damga)
         if k["oturumlar"] and k["oturumlar"][-1].get("tarih") == b and not a["oturum"].get("yeni"):
             k["oturumlar"][-1].update(o)
         else:
@@ -845,10 +884,15 @@ def ar_rapor_yaz(a):
     k = kayit_yukle(a.get("ogrenci"), ders)
     eg = egitmen_json(ders) or {}
     hed = {x["id"]: x for x in eg.get("hedefler", [])}
+    dm = (k.get("surumler") or [{}])[-1]
     y = ["# Çalışma raporu — %s" % (eg.get("baslik") or ders), "",
          "Öğrenci: %s · Tarih: %s · Eğitmen: %s · Oturum sayısı: %d" % (
-             k["ogrenci"], bugun(), EGITMENLER.get(eg.get("egitmen"), "-"), len(k.get("oturumlar", []))),
-         "", "Bu rapor not için değildir. Öğrencinin bilgisayarında üretildi; otomatik gönderilmedi.", ""]
+             k["ogrenci"], bugun(), EGITMENLER.get(dm.get("egitmen") or eg.get("egitmen"), "-"),
+             len(k.get("oturumlar", []))),
+         ""]
+    if dm:
+        y += ["Program sürümü: %s · Eğitmen metni: %s" % (dm.get("program"), dm.get("kural_izi")), ""]
+    y += ["Bu rapor not için değildir. Öğrencinin bilgisayarında üretildi; otomatik gönderilmedi.", ""]
     if k.get("deneme"):
         y += ["> **DENEME KAYDI:** öğretmen denemesidir; araştırma verisine katılmaz.", ""]
     y += [
@@ -868,8 +912,8 @@ def ar_rapor_yaz(a):
                                               (" — " + v["not"]) if v.get("not") else ""))
     yanlis_emin = [g for g in k.get("guven", []) if g.get("guven") == "emin" and g.get("dogru") is False]
     if k.get("guven"):
-        y += ["", "## Güven ve doğruluk (olgu soruları)", "",
-              "Toplam %d olgu sorusu; emin ama yanlış: %d." % (len(k["guven"]), len(yanlis_emin))]
+        y += ["", "## Güven ve doğruluk (olgu ve yanılgı soruları)", "",
+              "Toplam %d güven sorusu; emin ama yanlış: %d." % (len(k["guven"]), len(yanlis_emin))]
         for g in yanlis_emin:
             y.append("- %s: %s" % (g.get("hedef", ""), g.get("soru", "")))
     if k.get("sorular"):
@@ -1391,6 +1435,7 @@ def ar_olcme_kaydet(a):
              "yarim_kaldi": bool(a.get("yarim_kaldi") or eksik), "yanitlar": ayrinti}
     if eksik:
         kayit["cevapsiz"] = eksik
+    damgala(k, ders, eg, bugun())
     k.setdefault("testler", []).append(kayit)
     yol = kayit_kaydet(k)
     out = {"durum": "kaydedildi", "dosya": yol, "test": TEST_AD[tur], "puan": puan,
@@ -2607,5 +2652,10 @@ if __name__ == "__main__":
         kayit_yeri_hazirla()
     elif "--dene" in sys.argv:
         kendini_dene()
+    elif "--kural-izi" in sys.argv:
+        # Eğitmen metinlerinin güncel parmak izleri (egitmenler/DEGISIKLIKLER.md'ye yazmak için)
+        print("KlinikKoç sürümü:", SURUM)
+        for _e in EGITMENLER:
+            print("%s: %s" % (_e, kural_izi(_e)))
     else:
         calis()
