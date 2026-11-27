@@ -244,6 +244,10 @@ sonda cep tabanını izleyerek derine iner, kemik geriler. Ders dosyasında da a
 
 - `gecis` 0–10 saniyedir; vermezseniz çizim eskisi gibi bir anda değişir. Geriye doğru (ör. tedaviden sonra
   periodontitis → gingivitis) da çalışır.
+- Geçiş sıralıdır (diş, sondalama ve implant şablonları): önce plak birikir, iltihap ona cevap verir, dişeti
+  şişer, cep genişleyip derinleşir, kemik en son değişir; sonda çizim kısa bir an durur. İyileşmede de sıra
+  aynıdır (önce plak kalkar, iltihap söner). Toplam süre `gecis` kadardır; bölge ve kontur şablonlarında
+  bütün ölçüler birlikte değişir.
 - Bir adım hem cümle hem geçiş bitince ilerler. Duraklat (⏸) canlandırmayı da durdurur.
 - Geçişin ilk yarısında eski etiketler dokuyla birlikte kayar; sonda yeni durumun etiketleri belirir.
 - Claude bütün animasyonu tek `tahta` çağrısıyla gönderir; ek bekleme ya da araç çağrısı gerekmez.

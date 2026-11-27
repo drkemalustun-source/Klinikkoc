@@ -142,11 +142,11 @@
   }
 
   const DIS_DURUM = {
-    saglikli:      { mY: 28, sY: 32, jY: 37, cY: 41, g: 0.5, swell: 0, inflam: 0 },
-    gingivitis:    { mY: 24.5, sY: 32, jY: 37, cY: 41, g: 0.9, swell: 1.6, inflam: 1 },
-    periodontitis: { mY: 30, sY: 51, jY: 55, cY: 59.5, g: 1.7, swell: 0.8, inflam: 2 },
+    saglikli:      { mY: 28, sY: 32, jY: 37, cY: 41, g: 0.5, swell: 0, inflam: 0, plak: 0 },
+    gingivitis:    { mY: 24.5, sY: 32, jY: 37, cY: 41, g: 0.9, swell: 1.6, inflam: 1, plak: 1 },
+    periodontitis: { mY: 30, sY: 51, jY: 55, cY: 59.5, g: 1.7, swell: 0.8, inflam: 2, plak: 1 },
     // Dişeti çekilmesi: kenar mine-sement sınırının ~1,8 mm apikalinde, sığ oluk, iltihap yok.
-    cekilme:       { mY: 40, sY: 45, jY: 49, cY: 53.5, g: 0.5, swell: 0, inflam: 0 }
+    cekilme:       { mY: 40, sY: 45, jY: 49, cY: 53.5, g: 0.5, swell: 0, inflam: 0, plak: 0 }
   };
   const MGJ0 = 53; // mukogingival sınır sabit bir işarettir; hastalıkta yer değiştirmez (keratinize dişeti ≈ 7 mm)
 
@@ -283,19 +283,22 @@
     });
 
     // 4) Hastalık bulguları.
+    const plak = p.plak != null ? clamp(p.plak) : (p.inflam ? 1 : 0);
     if (p.inflam) {
       both((r) => {
         let d = '';
         const ys = range(p.mY + 2, p.sY + (p.inflam > 1 ? 2 : 1), p.inflam > 1 ? 2.2 : 1.6);
         ys.forEach((y, i) => { const x = toothX(y) - p.g - 1.6 - (i % 3) * 0.9; d += `M${f(x)},${f(y)} a0.45,0.45 0 1,0 0.01,0 `; });
-        tag(svg('path', { d, class: 'an-infiltrat' }, r), 'iltihap');
+        tag(svg('path', { d, class: 'an-infiltrat', opacity: f(clamp(p.inflam)) }, r), 'iltihap');
       });
+    }
+    if (plak > 0.01) {
       both((r) => { // plak: dişeti kenarında, dişe yapışık
         let d = '';
         const top = variant === 'periodontitis' ? p.mY - 4 : p.mY - 3.2;
         const bot = variant === 'periodontitis' ? p.sY - 1 : p.mY + 2;
         for (const y of range(top, bot, 1.2)) { const x = toothX(y); d += `M${f(x + 0.1)},${f(y)} a0.5,0.5 0 1,0 0.01,0 `; }
-        tag(svg('path', { d, class: 'an-plak' }, r), 'plak');
+        tag(svg('path', { d, class: 'an-plak', opacity: f(plak) }, r), 'plak');
       });
     }
     if (variant === 'periodontitis') {
@@ -405,9 +408,9 @@
   /* ---------------- İmplant ve peri-implant dokular ---------------- */
 
   const IMP_DURUM = {
-    saglikli:          { mY: 27.5, sY: 31, jY: 38, cY: 42.5, g: 0.5, swell: 0, inflam: 0, crater: 0 },
-    mukozitis:         { mY: 24.5, sY: 31.5, jY: 38, cY: 42.5, g: 1, swell: 1.7, inflam: 1, crater: 0 },
-    'peri-implantitis': { mY: 29, sY: 52, jY: 54.5, cY: 56.5, g: 1.8, swell: 0.9, inflam: 2, crater: 1 }
+    saglikli:          { mY: 27.5, sY: 31, jY: 38, cY: 42.5, g: 0.5, swell: 0, inflam: 0, crater: 0, plak: 0 },
+    mukozitis:         { mY: 24.5, sY: 31.5, jY: 38, cY: 42.5, g: 1, swell: 1.7, inflam: 1, crater: 0, plak: 1 },
+    'peri-implantitis': { mY: 29, sY: 52, jY: 54.5, cY: 56.5, g: 1.8, swell: 0.9, inflam: 2, crater: 1, plak: 1 }
   };
 
   // Sol yüzey: kuron (y < 33), dayanak (33–42), implant gövdesi (42–78; yiv çekirdeği 74,6).
@@ -528,6 +531,14 @@
       tag(svg('path', { d: ci, class: 'an-lif-kesit' }, lg), 'sirkuler-lif');
     });
     const bx = implantX(p.mY) - p.g * 0.7 - 0.6;
+    const plak = p.plak != null ? clamp(p.plak) : (p.inflam ? 1 : 0);
+    if (plak > 0.01) {
+      both((r) => {
+        let pl = '';
+        for (const yy of range(p.mY - 3.2, p.crater ? p.sY - 1 : p.mY + 2, 1.2)) { const x = yy < 42 ? implantX(yy) : (yy % 2.9 < 1.4 ? 73.2 : CORE); pl += `M${f(x + 0.1)},${f(yy)} a0.5,0.5 0 1,0 0.01,0 `; }
+        tag(svg('path', { d: pl, class: 'an-plak', opacity: f(plak) }, r), 'plak');
+      });
+    }
     if (p.inflam) {
       both((r) => {
         let d = '';
@@ -535,10 +546,7 @@
           const x = (yy < 42 ? implantX(yy) : 73) - p.g - 1.7 - (i % 3) * 0.9;
           d += `M${f(x)},${f(yy)} a0.45,0.45 0 1,0 0.01,0 `;
         });
-        tag(svg('path', { d, class: 'an-infiltrat' }, r), 'iltihap');
-        let pl = '';
-        for (const yy of range(p.mY - 3.2, p.crater ? p.sY - 1 : p.mY + 2, 1.2)) { const x = yy < 42 ? implantX(yy) : (yy % 2.9 < 1.4 ? 73.2 : CORE); pl += `M${f(x + 0.1)},${f(yy)} a0.5,0.5 0 1,0 0.01,0 `; }
-        tag(svg('path', { d: pl, class: 'an-plak' }, r), 'plak');
+        tag(svg('path', { d, class: 'an-infiltrat', opacity: f(clamp(p.inflam)) }, r), 'iltihap');
       });
       // Sondalamada kanama (ve peri-implantitiste süpürasyon) damlası.
       tag(svg('path', { d: `M${f(bx)},${f(p.mY - 3.6)} q-1.3,1.9 0,2.6 q1.3,-0.7 0,-2.6 Z`, class: 'an-kanama' }, g), 'kanama');
@@ -603,6 +611,34 @@
       const a = p0[k] != null ? p0[k] : v[k] || 0;
       const b = p1[k] != null ? p1[k] : v[k] || 0;
       out[k] = a + (b - a) * t;
+    }
+    return out;
+  }
+
+  // Kademeli ara durum (t: 0–1): neden önce, sonuç sonra. Önce plak birikir (ya da temizlenir), iltihap ona cevap
+  // verir, dişeti şişer, cep genişler ve derinleşir, kemik en son değişir; son %8'de çizim durur (göz yerleşsin).
+  // Sıra iyileşmede de aynıdır: plak kalkar, iltihap söner, doku toparlanır. Her ölçü kendi aralığında yavaş başlayıp
+  // yumuşak oturur; aşma (overshoot) yoktur. Aralığı tanımlı olmayan şablonlar (bölge, kontur) eskisi gibi
+  // bütün süre boyunca birlikte değişir.
+  const EVRE = {
+    plak: [0, 0.25], inflam: [0.12, 0.5], swell: [0.2, 0.58], g: [0.3, 0.68],
+    sY: [0.4, 0.82], jY: [0.4, 0.82], cY: [0.55, 0.92], crater: [0.55, 0.92]
+  };
+  const EVRELI = { dis: 1, sondalama: 1, implant: 1 };
+  const yumusak = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
+  const yumusak0 = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2); // eski eğri
+  function kademeliDurum(template, p0, p1, t) {
+    if (!EVRELI[template]) return araDurum(template, p0, p1, yumusak0(t));
+    const v = (SABLONLAR[template] || {}).varsayilan || {};
+    const deger = (p, k) => (p[k] != null ? p[k] : v[k] || 0);
+    const evre = Object.assign({}, EVRE);
+    // Dişeti kenarı: şişlik değişiyorsa şişlikle birlikte, değişmiyorsa (çekilme) ataşmanla birlikte kayar.
+    evre.mY = Math.abs(deger(p1, 'swell') - deger(p0, 'swell')) > 0.01 ? EVRE.swell : EVRE.sY;
+    const out = {};
+    for (const k of new Set(Object.keys(p0).concat(Object.keys(p1)))) {
+      const [a, b] = evre[k] || [0, 0.92];
+      const u = yumusak(clamp((t - a) / (b - a)));
+      out[k] = deger(p0, k) + (deger(p1, k) - deger(p0, k)) * u;
     }
     return out;
   }
@@ -698,7 +734,7 @@
     return out;
   }
 
-  AT.anatomi = { ciz, liste, durum, araDurum, SABLONLAR, MM,
+  AT.anatomi = { ciz, liste, durum, araDurum, kademeliDurum, SABLONLAR, MM,
     // Başka şablon dosyalarının (anatomi-bolge.js) kullandığı çizim yardımcıları.
     _y: { svg, smooth, poly, ornekle, bant, rete, trabekul, range, clamp, f, etiRengi, uid: () => 'an' + (++uid) } };
 })(window.AT = window.AT || {});

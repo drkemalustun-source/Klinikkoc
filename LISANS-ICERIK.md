@@ -16,6 +16,8 @@ Atıf örneği: *"KlinikKoç katkıcıları, KlinikKoç (2026), CC BY 4.0, https
   *Factors influencing the effectiveness of surgical therapy of peri-implantitis.* Periodontol 2000. 2026.
   doi:10.1111/prd.70052, CC BY 4.0. Şekiller makaleden kırpılmıştır. Türkçe anlatım ve sorular bu derse
   aittir; yazarların onayı anlamına gelmez.
+- Şablon canlandırmasının sıra ve zamanlama kuralları (`js/anatomi.js`, `kademeliDurum`): cinecode'un hareket
+  kılavuzundan uyarlanmıştır (Sarp Yıldız, https://github.com/sarpstar/cinecode, MIT). Kod kopyalanmamıştır.
 - `vendor/`: üçüncü taraf kitaplıklar kendi lisanslarıyla: [vendor/LISANSLAR.md](vendor/LISANSLAR.md).
 - Anlam araması modeli (`multilingual-e5-small`, MIT) ve ses modelleri depoda değildir; kurulumda indirilir.
 

@@ -859,9 +859,9 @@
       const c0 = prev._c || { template: c.template, variant: prev.dataset.variant, probe: c.probe };
       const bas = prev._p || A.durum(c.template, prev.dataset.variant);
       const hedef = A.durum(c.template, c.variant);
-      const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
+      // Kademeli geçiş (anatomi.js kademeliDurum): neden önce, sonuç sonra; plak → iltihap → şişlik → cep → kemik.
       const kare = (t) => {
-        const p = A.araDurum(c.template, bas, hedef, ease(t));
+        const p = A.kademeliDurum(c.template, bas, hedef, t);
         // İlk yarıda eski etiketler dokuyla birlikte kayar; ikinci yarıda yeni durumun ayrıntıları (diştaşı,
         // eski kemik çizgisi) belirir, etiketler sonda gelir.
         const k = t < 0.5 ? Object.assign({}, c0, { p }) : Object.assign({}, c, { labels: [], highlight: [], p });

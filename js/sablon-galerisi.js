@@ -22,8 +22,8 @@
     if (!bas || !hedef) { simdiki = hedef; ciz(undefined, true); return; }
     const t0 = performance.now(), sure = 2500;
     const adim = (t) => {
-      const k = Math.min(1, (t - t0) / sure), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-      if (k < 1) { ciz(A.araDurum(sablon, bas, hedef, e), false); kare = requestAnimationFrame(adim); }
+      const k = Math.min(1, (t - t0) / sure);
+      if (k < 1) { ciz(A.kademeliDurum(sablon, bas, hedef, k), false); kare = requestAnimationFrame(adim); }
       else { simdiki = hedef; ciz(undefined, true); }
     };
     kare = requestAnimationFrame(adim);
