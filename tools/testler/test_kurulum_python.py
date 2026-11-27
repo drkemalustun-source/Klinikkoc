@@ -27,10 +27,13 @@ class KurulumPython(unittest.TestCase):
 
     def test_once_bilgisayardaki_uygun_python(self):
         k = self.kur
-        self.assertIn("for %%v in (3.13 3.12 3.11 3.10)", k)
-        self.assertLess(k.index("for %%v in (3.13 3.12 3.11 3.10)"), k.index("Invoke-WebRequest"))
-        self.assertIn("(3, 10) <= sys.version_info[:2] <= (3, 13)", k)
-        self.assertLess(k.index("set \"PY=python\")"), k.index("Invoke-WebRequest"))
+        self.assertIn("for %%v in (3.14 3.13 3.12 3.11 3.10)", k)
+        self.assertLess(k.index("for %%v in (3.14 3.13 3.12 3.11 3.10)"), k.index("Invoke-WebRequest"))
+        self.assertIn("(3, 10) <= sys.version_info[:2] <= (3, 14)", k)
+        # Eski kurulumlar "python" ile kayıtlı: uygunsa o önce seçilir (Duyu paketleri o Python'a kurulu)
+        self.assertLess(k.index('set "PY=python"'), k.index("for %%v in (3.14 3.13 3.12 3.11 3.10)"))
+        # Gizli denemeler girdi beklemesin
+        self.assertIn('<nul >nul 2>nul && set "PY=python"', k)
 
     def test_indirme_sabit_surum_ve_sisteme_dokunmaz(self):
         k = self.kur
@@ -53,12 +56,14 @@ class KurulumPython(unittest.TestCase):
         self.assertIn('set /p PYYOL=<".python\\secilen.txt"', b)
         self.assertIn('if defined PYYOL if exist "%PYYOL%" set PY="%PYYOL%"', b)
 
-    def test_surum_araligi_pocket_ile_ayni(self):
+    def test_sunucu_araligi_pocketi_kapsar(self):
+        """Sunucu için 3.10–3.14 (bugün çalışan 3.14 kurulumları değişmesin; Kemal'in bilgisayarı 3.14). Pocket
+        kendi ortamını 3.10–3.13 ile ayrıca kurar (pocket_ses.UYGUN); sunucu aralığı onu kapsamalı."""
         import pocket_ses
         (a1, a2), (u1, u2) = pocket_ses.UYGUN
-        surumler = " ".join("%d.%d" % (a1, n) for n in range(u2, a2 - 1, -1))
-        self.assertIn("for %%%%v in (%s)" % surumler, self.kur)
-        self.assertIn("(%d, %d) <= sys.version_info[:2] <= (%d, %d)" % (a1, a2, u1, u2), self.kur)
+        self.assertEqual((a1, a2), (3, 10))
+        self.assertLessEqual((u1, u2), (3, 14))
+        self.assertIn("(3, 10) <= sys.version_info[:2] <= (3, 14)", self.kur)
 
     def test_python_klasoru_korunur(self):
         import eski_surumler

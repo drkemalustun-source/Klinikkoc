@@ -71,15 +71,16 @@ pause
 exit /b 0
 
 :python_bul
-rem KlinikKoc ve ses paketleri Python 3.10-3.13 ister (daha yenisi icin ses paketleri henuz yok).
-rem Sira: py -3.13 ... -3.10, python, daha once indirilen (.python klasoru), en son indirme.
+rem Ses ve dikte paketleri (Piper, Duyu) Python 3.10-3.14 ile calisiyor; 3.15 icin henuz yok (Ali, 27 Kasim 2026).
+rem Dogal ses (Pocket) kendi ortamini 3.10-3.13 ile ayrica kurar. Sira: python (3.10-3.14 ise; eski kurulumlar
+rem bununla kayitli, bugunku davranis), py -3.14 ... -3.10, daha once indirilen (.python), en son indirme.
 rem Bilgisayarda uygun Python varsa hicbir sey indirilmez.
 set "PY="
-for %%v in (3.13 3.12 3.11 3.10) do if not defined PY (py -%%v -c "import sys" >nul 2>nul && set "PY=py -%%v")
-if not defined PY (python -c "import sys; sys.exit(0 if (3, 10) <= sys.version_info[:2] <= (3, 13) else 1)" >nul 2>nul && set "PY=python")
+python -c "import sys; sys.exit(0 if (3, 10) <= sys.version_info[:2] <= (3, 14) else 1)" <nul >nul 2>nul && set "PY=python"
+for %%v in (3.14 3.13 3.12 3.11 3.10) do if not defined PY (py -%%v -c "import sys" <nul >nul 2>nul && set "PY=py -%%v")
 if not defined PY for /d %%d in ("%KOK%.python\cpython-3.12*") do if exist "%%d\python.exe" set PY="%%d\python.exe"
 if defined PY exit /b 0
-echo Bu bilgisayarda uygun Python (3.10-3.13) yok. KlinikKoc'un kendi Python'u indiriliyor
+echo Bu bilgisayarda uygun Python (3.10-3.14) yok. KlinikKoc'un kendi Python'u indiriliyor
 echo (yaklasik 70 MB, bir kez; yalniz KlinikKoc klasorune kurulur, bilgisayarin ayarlarina dokunmaz)...
 set "UVZIP=%TEMP%\klinikkoc-uv.zip"
 set "UVDIR=%TEMP%\klinikkoc-uv"

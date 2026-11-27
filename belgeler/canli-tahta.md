@@ -21,7 +21,7 @@ Claude masaüstü  →  tools/tahta-mcp.py  →  tools/sunucu.py (localhost:8810
 
 1. Klasördeki **KUR-Windows** dosyasına çift tıklayın (Mac'te **KUR-Mac**). Windows dosya uzantılarını
    gizleyebilir; dosyanın adı yalnız "KUR-Windows" görünebilir. Windows'ta kurulum önce uygun Python'u
-   (3.10–3.13) arar; yoksa yalnız KlinikKoç klasörüne Python 3.12 indirir (~70 MB, `.python`). Yeni indirilmiş
+   (3.10–3.14) arar; yoksa yalnız KlinikKoç klasörüne Python 3.12 indirir (~70 MB, `.python`). Yeni indirilmiş
    bir kopya `C:\KlinikKoc` klasörüne kopyalanır ve kurulum oradan sürer; daha önce kurulmuş klasör yerinde
    kalır. Sonra üç adım gelir:
    1. Piper ses paketleri ve yedek ses dosyası (~63 MB).

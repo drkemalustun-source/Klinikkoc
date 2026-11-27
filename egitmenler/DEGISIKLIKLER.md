@@ -6,7 +6,11 @@ Program her öğrenci kaydına bir **sürüm damgası** yazar: programın sürü
 
 Kural: Eğitmen metinleri Kemal Üstün'ün onayı olmadan değişmez. Her değişiklik buraya tarihiyle yazılır; sürüm yayımlanınca o sürümün izleri eklenir.
 
-## 4.1.2 (henüz yayımlanmadı)
+## 4.1.2 (yayımlandı: 27 Kasım 2026)
+
+Yayımdaki kural izleri: `inci` 73aa226834, `mercan` e01a157225, `nilgun` 698004732a.
+
+Kemal Üstün'ün yayım kararı (27 Kasım 2026, 18:50): sürüm yayımlanır, denemeleri gerçek öğrenciler yapar, sonraki düzenlemeler gelen veriye göre yapılır. Bu yüzden Nilgün'ün yayım öncesi güvenceleri (akut lezyonlardan üç sınavın cevap anahtarı denetimi, aynı on cevabın üç kez puanlatılması) ve iki kural yükü önlemi yayım koşulu olmaktan çıktı; yayımdan sonra izlenecek. Dayanak eşiği değişmedi (`ZAYIF_KABUL = False`: dayanağı zayıf soru sınava girmez); öğrenci verisiyle yeniden değerlendirilecek.
 
 ### 2026-11-27 — Kemal Üstün'ün tek tek onayladığı değişiklikler
 
