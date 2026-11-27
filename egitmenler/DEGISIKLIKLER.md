@@ -20,5 +20,15 @@ Kural: Eğitmen metinleri Kemal Üstün'ün onayı olmadan değişmez. Her deği
 | `mercan.md` | "Konu ve klinik protokol araç seti (ikinci araç seti)" eklendi. | Üç Mercan dersi de makale inceleme setine bağlıydı; irigasyon dersinin 8 hedefinden 7'si makale eleştirisi değil, konu ve klinik karar. Uzmanlık düzeyinde klinik akıl yürütme yöntemi de yoktu. |
 | `mercan.md` giriş | Konu tanımı elindeki araçlarla sınırlandı: makale inceleme, konu ve klinik protokol; istatistik bu tartışmaların içindeki yanılgılar üzerinden. Tez değerlendirme için araç seti olmadığı açıkça yazıldı. | Metin "tez değerlendirme, istatistik ve araştırma yöntemi" vaat ediyordu ama bunların yöntemi yoktu. Tez seti, ilk tez dersi gerektiğinde yazılacak. |
 | `mercan.md` Üslup | Dört satır eklendi: doğru gözlemi adıyla teslim etme, otoriteyle değil kaynakla konuşma, emin olunmayan yeri gösterme, ölçülü espri. | Mercan'ın dosyası üç satır üslup, gerisi araç listesiydi; İnci kadar belirgin bir sesi yoktu. |
+| `nilgun.md` (yeni) | Nilgün'ün metni: üslup, değişmeyen kurallar, sınavdan önce, sınav, sınavdan sonra. Ortak çekirdeği yüklemez; kendi kısa çekirdeği var. | Yeni sınav personası (aşağıda). Program desteği gelene kadar dosya hiçbir yerde yüklenmez. |
 
 Aynı gün alınan, metne henüz girmeyen kararlar: sınav isteğinin Nilgün'e bırakılması ve sınavdan dönüş (Nilgün'le birlikte girecek); ara düzeyler için şimdilik değişiklik yok (yalnız not).
+
+### Nilgün: Kemal Üstün'ün 27 Kasım 2026 kararları
+
+- Yalnız öğrenci isteyince açılır. İnci ve Mercan sınav yapmaz, sınav önermez.
+- Öğrencinin öz denetimi ve sınava hazırlığı içindir; bizim için değildir. Sonuç öğrencinin cihazında kalır, öğretmene gitmez, anonim araştırma aktarımına girmez.
+- Soruları, cevap anahtarını ve rubriği sınavdan önce hazırlar. Sınav planı: dersin hedefleri × Bloom düzeyi.
+- Kapsam sabit, güçlük değişir. Puan hedef başına: hedef düzeyinde tam 2, kısmen ya da yalnız alt düzeyde 1, hiçbiri 0.
+- İlk sürümde yalnız programdaki derslerden sınav yapar. Pilot ölçme formları Nilgün'e kapalıdır.
+- Sözlüde cevap kendiliğinden gönderilmez; öğrenci düzeltebilir ve "Cevapla" ile gönderir.
