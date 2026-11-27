@@ -21,7 +21,11 @@ açıkça söylediğini aktar.
 Vakalar: Dersin vaka kartları varsa (vakalar aracı) vaka_oku ile bir vakayı aç ve dönen vaka kurallarına uy.
 Her cevaplanan soruyu ve vaka adımını kayit_yaz'ın cevaplar alanına işle (Bloom düzeyi ve rubrik puanıyla);
 öğrenci "karnem" derse karne aracını çağır.
-Sözlü sınav provası için sozlu_prova, bütün derslerden zayıf konu tekrarı için tekrar_listesi aracını kullan.
+Bütün derslerden zayıf konu tekrarı için tekrar_listesi aracını kullan.
+Sınav (Nilgün): Öğrenci sınav olmak isterse ("sınav olmak istiyorum", "sözlü yap", "sınav provası") eğitmen sınavı
+kendisi yapmaz: sinav_hazirla çağrılır ve dönen kurallarla Nilgün olunur. Sınavı sen önerme. Sınav boyunca ipucu,
+onay ve düzeltme yoktur; sıra sinav_plani_kaydet → sinav_baslat → sinav_cevap → sinav_bitir. Pilot ölçme testleri
+bundan ayrıdır.
 Karar ağacı: vaka ya da ayırıcı tanı anlatırken tahtada tree komutuyla ağacı adım adım kur.
 Pilot ölçme testleri (ön/son/gecikmeli) yalnız olcme_testi ve olcme_kaydet araçlarıyla, öğretmenin onayladığı
 sorularla yapılır; test sırasında ipucu ve açıklama verilmez.
@@ -488,14 +492,72 @@ ARACLAR = [
             "required": ["ders", "vaka"]},
     },
     {
-        "name": "sozlu_prova",
-        "description": "Sözlü sınav provası hazırlar: dersin ve vakalarının açık uçlu sorularını (rubrik ve örnek cevapla), "
-                       "öğrencinin zayıf ve tekrar zamanı gelen hedeflerine göre sıralı verir; sınav hocası gibi yürütme "
-                       "kurallarını da verir. Öğrenci 'sözlü provası', 'sınav provası' derse çağır.",
+        "name": "sinav_hazirla",
+        "description": "Nilgün'ün sınavını hazırlamaya başlar. YALNIZ öğrenci isteyince çağır (\"sınav olmak istiyorum\", "
+                       "\"sözlü yap\", \"sınav provası\" ya da ana ekrandaki Sözlü sınav ol düğmesi); kendin sınav önerme. "
+                       "Nilgün'ün kurallarını, sorulacak hedefleri (Bloom düzeyleriyle), öğretmenin onayladığı soruları ve "
+                       "hazırlık adımlarını verir. Sınav öğrencinin kendisi içindir; sonuç bu bilgisayarda kalır.",
         "inputSchema": {"type": "object", "properties": {
-            "ders": {"type": "string"}, "ogrenci": {"type": "string"},
-            "soru_sayisi": {"type": "integer", "description": "1–12, varsayılan 5"}},
-            "required": ["ders"]},
+            "dersler": {"type": "array", "items": {"type": "string"}, "description": "sınavın yapılacağı ders kimlikleri"},
+            "sure": {"type": "string", "enum": ["kisa", "tam"],
+                     "description": "kisa: yaklaşık 15 dk, 6 hedef; tam: bütün hedefler. Öğrenci söylemediyse sor."},
+            "ogrenci": {"type": "string"}, "ogrenci_kimligi": {"type": "string"}, "ayirt": {"type": "string"},
+            "yeni_ogrenci": {"type": "boolean"}, "deneme": {"type": "boolean"}},
+            "required": ["dersler"]},
+    },
+    {
+        "name": "sinav_plani_kaydet",
+        "description": "Nilgün'ün hazırladığı soruları, cevap anahtarını ve ölçütleri sınav başlamadan kaydeder; sonra "
+                       "değiştirilemez. Program her soruyu denetler: anahtarın kaynakta dayanağı zayıfsa, sayfası yoksa ya "
+                       "da soru pilot ölçme sorusuna benziyorsa soruyu reddeder. Her hedefin hedef düzeyinde kabul edilmiş "
+                       "bir sorusu olmadan plan kaydedilmez.",
+        "inputSchema": {"type": "object", "properties": {
+            "ogrenci": {"type": "string"}, "sinav": {"type": "string", "description": "sinav_hazirla'nın verdiği sınav numarası"},
+            "sorular": {"type": "array", "items": {"type": "object", "properties": {
+                "ders": {"type": "string"}, "hedef": {"type": "string"},
+                "duzey": {"type": "string", "enum": ["hedef", "alt", "ust"]},
+                "bloom": {"type": "string"}, "soru": {"type": "string"},
+                "anahtar": {"type": "array", "items": {"type": "object", "properties": {
+                    "madde": {"type": "string"}, "sayfa": {"type": "integer"}}, "required": ["madde"]}},
+                "olcutler": {"type": "array", "items": {"type": "object", "properties": {
+                    "metin": {"type": "string"}, "zorunlu": {"type": "boolean"}}, "required": ["metin"]}},
+                "tam_icin": {"type": "integer", "description": "tam cevap için karşılanması gereken en az ölçüt sayısı "
+                                                               "(verilmezse ölçütlerin üçte ikisi)"}},
+                "required": ["ders", "hedef", "duzey", "soru", "anahtar", "olcutler"]}},
+            "cikarilan_hedefler": {"type": "array", "items": {"type": "object", "properties": {
+                "ders": {"type": "string"}, "hedef": {"type": "string"}, "neden": {"type": "string"}}},
+                "description": "kaynağa dayanan soru kurulamadığı için sorulmayacak hedefler; raporda görünür"}},
+            "required": ["ogrenci", "sinav", "sorular"]},
+    },
+    {
+        "name": "sinav_baslat",
+        "description": "Planı kaydedilmiş sınavı başlatır: tahtayı sınav görünümüne alır ve ilk soruyu verir. tahmin: "
+                       "öğrencinin \"Yüz üzerinden kaç bekliyorsun?\" sorusuna cevabı.",
+        "inputSchema": {"type": "object", "properties": {
+            "ogrenci": {"type": "string"}, "sinav": {"type": "string"}, "tahmin": {"type": "integer"}},
+            "required": ["ogrenci", "sinav"]},
+    },
+    {
+        "name": "sinav_cevap",
+        "description": "Sıradaki sınav sorusunun cevabını kaydeder. Nilgün yalnız hangi ölçütlerin karşılandığını söyler; "
+                       "puanı ve sıradaki soruyu program belirler (cevap tamsa üst düzey ya da sıradaki hedef, eksikse alt "
+                       "düzey soru).",
+        "inputSchema": {"type": "object", "properties": {
+            "ogrenci": {"type": "string"}, "sinav": {"type": "string"}, "no": {"type": "integer"},
+            "cevap": {"type": "string", "description": "öğrencinin cevabı, kelimesi kelimesine"},
+            "karsilanan": {"type": "array", "items": {"type": "string"}, "description": "karşılanan ölçütlerin id'leri (o1, o2 …)"},
+            "guven": {"type": "string", "enum": ["tahmin", "biraz", "emin"]}},
+            "required": ["ogrenci", "sinav", "no", "karsilanan"]},
+    },
+    {
+        "name": "sinav_bitir",
+        "description": "Sınavı bitirir: puanı hesaplar (hedef başına 0–2, yüz üzerinden), her soruda beklenen cevabı ve "
+                       "karşılanan/eksik ölçütleri, güçlü ve zayıf hedefleri, öğrencinin kendi önceki sınavıyla farkını ve "
+                       "çalışma tavsiyesini verir; kaçırılan soruları tekrar kartına yazar; raporu öğrencinin bilgisayarına "
+                       "kaydeder. Öğrenci yarıda bırakırsa yarim: true.",
+        "inputSchema": {"type": "object", "properties": {
+            "ogrenci": {"type": "string"}, "sinav": {"type": "string"}, "yarim": {"type": "boolean"}},
+            "required": ["ogrenci", "sinav"]},
     },
     {
         "name": "tekrar_listesi",

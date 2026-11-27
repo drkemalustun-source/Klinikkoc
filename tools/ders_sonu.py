@@ -354,6 +354,38 @@ def kartlari_guncelle(kimlik, ders, kayit, klasor):
     return d["kartlar"][ders]
 
 
+def sinav_kartlari_ekle(kimlik, ders, sorular):
+    """Nilgün'ün sınavında kaçırılan sorulardan tekrar kartı ekler; var olan kartların düzeni korunur.
+    sorular: [{soru, hedef, ornek_cevap, sayfalar}]. Ders başına en çok EN_COK_KART kart; eklenenleri döndürür."""
+    d = kartlari_oku(kimlik)
+    liste = list(d["kartlar"].get(ders, []))
+    var = {k["id"] for k in liste}
+    eklenen = []
+    for s in sorular or []:
+        soru = _kisalt(s.get("soru"))
+        if not soru:
+            continue
+        kid = kart_kimligi(ders, {"soru": "sinav|" + soru})
+        if kid in var:
+            continue
+        if len(liste) >= EN_COK_KART:
+            ogrenilen = next((k for k in liste if k.get("ogrenildi")), None)
+            if ogrenilen is None:
+                break
+            liste.remove(ogrenilen)
+        sayfa = ", ".join("s. %s" % x for x in s.get("sayfalar") or [])
+        kart = {"id": kid, "soru": soru, "hedef": s.get("hedef"), "ornek_cevap": _kisalt(s.get("ornek_cevap")),
+                "kaynak": "sınav (Nilgün)" + ((" · " + sayfa) if sayfa else ""),
+                "kutu": 1, "sonraki_tekrar": gun_ekle(bugun(), KART_GUN[1]), "eklenme": bugun()}
+        liste.append(kart)
+        var.add(kid)
+        eklenen.append(kart)
+    if eklenen:
+        d["kartlar"][ders] = liste
+        _json_yaz(kart_yolu(kimlik), d)
+    return eklenen
+
+
 def zamani_gelen_kartlar(kimlik, gun=None):
     gun = gun or bugun()
     out = []
