@@ -11,6 +11,25 @@ if not defined PY (
   pause
   exit /b 1
 )
+rem Yeni kurulum sabit bir yere (C:\KlinikKoc) kopyalanir; daha once kurulmus klasor yerinde kalir.
+set "YER=BURADA"
+set "YERHEDEF="
+for /f "tokens=1,*" %%a in ('%PY% tools\kurulum_yeri.py --karar') do (set "YER=%%a" & set "YERHEDEF=%%b")
+if "%YER%"=="ORADA" (
+  echo KlinikKoc zaten %YERHEDEF% klasorunde kurulu; kurulum oradan suruyor.
+  call "%YERHEDEF%\KUR-Windows.bat"
+  exit /b
+)
+if "%YER%"=="TASI" (
+  echo KlinikKoc sabit yerine kopyalaniyor: %YERHEDEF% ...
+  %PY% tools\kurulum_yeri.py --kopyala
+  if not errorlevel 1 (
+    echo Kurulum %YERHEDEF% klasorunden suruyor. Indirdiginiz klasoru sonra silebilirsiniz.
+    echo.
+    call "%YERHEDEF%\KUR-Windows.bat"
+    exit /b
+  )
+)
 if not exist "%KOK%.python" mkdir "%KOK%.python"
 %PY% -X utf8 -c "import sys; print(sys.executable)" > "%KOK%.python\secilen.txt"
 echo Kullanilan Python:
