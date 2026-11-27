@@ -62,7 +62,7 @@ if not defined PY (python -c "import sys; sys.exit(0 if (3, 10) <= sys.version_i
 if not defined PY for /d %%d in ("%KOK%.python\cpython-3.12*") do if exist "%%d\python.exe" set PY="%%d\python.exe"
 if defined PY exit /b 0
 echo Bu bilgisayarda uygun Python (3.10-3.13) yok. KlinikKoc'un kendi Python'u indiriliyor
-echo (yaklasik 40 MB, bir kez; yalniz KlinikKoc klasorune kurulur, bilgisayarin ayarlarina dokunmaz)...
+echo (yaklasik 70 MB, bir kez; yalniz KlinikKoc klasorune kurulur, bilgisayarin ayarlarina dokunmaz)...
 set "UVZIP=%TEMP%\klinikkoc-uv.zip"
 set "UVDIR=%TEMP%\klinikkoc-uv"
 set "UVARCH=x86_64"
