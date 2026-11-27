@@ -44,6 +44,7 @@ class AnlaticiSesi(unittest.TestCase):
         orn, oran = _ornekler(sunucu.wav_duzey(wav, 0.7))
         self.assertEqual(oran, 24000)
         self.assertEqual(orn, [700, -700, 22936, -22937, 0])
+        self.assertEqual(sunucu.ANLATICI_SESLER["male_2"], 0.83)
 
     def _seslendir_dene(self, istek_sesi):
         """Pocket hazırmış gibi davranır; işçiye giden sesi ve dönen wav'ı yakalar."""
@@ -73,7 +74,7 @@ class AnlaticiSesi(unittest.TestCase):
         return giden.get("ses"), _ornekler(wav)[0][0]
 
     def test_secim_gecer_ve_duzey_esitlenir(self):
-        self.assertEqual(self._seslendir_dene("male_2"), ("male_2", 7000))
+        self.assertEqual(self._seslendir_dene("male_2"), ("male_2", 8300))
 
     def test_secim_yoksa_ayar_dosyasi(self):
         self.assertEqual(self._seslendir_dene(None), ("female_3", 10000))

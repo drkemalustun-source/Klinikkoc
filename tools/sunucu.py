@@ -783,9 +783,9 @@ class Canli:
 
 
 CANLI = Canli()
-# ⚙ Anlatıcı sesi (tahtadan seçilebilen Pocket sesleri) ve ses düzeyi çarpanı. 27 Kasım 2026 denemesinde aynı metinde
-# male_2'nin ortalama düzeyi female_3'ten ~3 dB yüksekti (0,138 / 0,096); 0,70 ile eşitlenir.
-ANLATICI_SESLER = {"female_3": 1.0, "male_2": 0.70}
+# ⚙ Anlatıcı sesi (tahtadan seçilebilen Pocket sesleri) ve ses düzeyi çarpanı. 27 Kasım 2026 ölçümü: 6 cümlede
+# (sessizlik hariç) male_2, female_3'ten ortanca 1,21 kat (~1,7 dB) yüksek; 0,83 ile eşitlenir.
+ANLATICI_SESLER = {"female_3": 1.0, "male_2": 0.83}
 
 
 def wav_duzey(wav, carpan):
