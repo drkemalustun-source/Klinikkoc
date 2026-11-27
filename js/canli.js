@@ -18,7 +18,8 @@
  *   ışık Claude'un dinleyip dinlemediğini gösterir.
  * Duraklat: ⏸ tuşu (ya da P / Boşluk) anlatımı iptal etmeden bekletir; yeniden basınca aynı cümlenin
  *   kaldığı yerinden sürer. Sunucuya /api/canli/duraklat ile bildirilir; Claude 'duraklatildi' görür.
- * Ses: bu bilgisayardaki sunucu sesi (/api/canli/ses; ses/ses-ayari.json, varsayılan Pocket TTS kadın 3,
+ * Ses: bu bilgisayardaki sunucu sesi (/api/canli/ses; ses/ses-ayari.json, varsayılan Pocket TTS kadın 3; ⚙ Anlatıcı sesi
+ *   ile Kadın 3 / Erkek 2 seçilebilir,
  *   yedek Piper dfki); o da yoksa tarayıcının Türkçe sesi. */
 (function (AT) {
   'use strict';
@@ -85,7 +86,8 @@
 
     // Bir cümlenin sesi en çok SES_SURE ms beklenir; gelmezse o cümle tarayıcı sesiyle okunur (anlatım takılmaz).
     async wav(metin) {
-      const r = await api('ses', { metin }, SES_SURE);
+      const ses = anlaticiSecili(); // ⚙ Anlatıcı sesi; seçilmemişse sunucunun ayarı (ses/ses-ayari.json)
+      const r = await api('ses', ses ? { metin, ses } : { metin }, SES_SURE);
       return URL.createObjectURL(await r.blob());
     },
     hata: 0,
@@ -201,11 +203,38 @@
     if (!b || !sesEl) return;
     if (sesYedekKalici && !kalici) return;
     if (kalici) sesYedekKalici = true;
+    if (b.ses) sunucuSesi = b.ses;
+    const dogal = b.motor === 'pocket';
+    const secili = anlaticiGorunen();
     sesEl.hidden = false;
-    sesEl.textContent = 'Ses: ' + b.yazi;
+    sesEl.textContent = 'Ses: ' + (dogal && ANLATICI[secili] ? 'Pocket · ' + ANLATICI[secili] : b.yazi);
     sesEl.title = b.ayrinti || b.yazi;
-    sesEl.classList.toggle('yedek', b.motor !== 'pocket');
+    sesEl.classList.toggle('yedek', !dogal);
     sesEl.classList.toggle('yukleniyor', /yükleniyor/i.test(b.yazi || '')); // asıl ses (Pocket) hâlâ yükleniyor
+    anlaticiGuncelle(dogal, /yükleniyor/i.test(b.yazi || ''));
+  }
+
+  // ⚙ Anlatıcı sesi (Kemal, 27 Kasım 2026): Pocket'ın Kadın 3 ya da Erkek 2 sesi. Seçim bu bilgisayarda (tarayıcıda)
+  // tutulur ve her ses isteğiyle sunucuya gider; ses/ses-ayari.json değişmez. Yalnız doğal ses (Pocket) hazırken
+  // seçilebilir; yedek seste (Piper/tarayıcı) soluk görünür.
+  const ANLATICI = { female_3: 'Kadın', male_2: 'Erkek' };
+  let sunucuSesi = null; // ses/ses-ayari.json'daki ses (sunucu bildirir)
+  function anlaticiSecili() {
+    try {
+      const a = JSON.parse(localStorage.getItem('klinikkoc.tahtaAyar') || '{}') || {};
+      return ANLATICI[a.anlatici] ? a.anlatici : null;
+    } catch (e) { return null; }
+  }
+  function anlaticiGorunen() { return anlaticiSecili() || (ANLATICI[sunucuSesi] ? sunucuSesi : 'female_3'); }
+  function anlaticiGuncelle(dogal, yukleniyor) {
+    const grup = $('#anlaticiSecim'), not = $('#anlaticiNot');
+    if (!grup) return;
+    const secili = anlaticiGorunen();
+    for (const r of grup.querySelectorAll('input')) { r.disabled = !dogal; r.checked = r.value === secili; }
+    grup.classList.toggle('kapali', !dogal);
+    not.hidden = dogal;
+    not.textContent = yukleniyor ? 'Doğal ses yükleniyor; hazır olunca seçilebilir.'
+      : 'Doğal ses hazır değil; yedek ses kullanılıyor.';
   }
 
   // Tarayıcı otomatik oynatmayı engellediyse büyük "Sesi açmak için dokunun" düğmesi. true: dokunuldu;
@@ -1415,7 +1444,8 @@
   const ayar = (() => {
     let a = {};
     try { a = JSON.parse(localStorage.getItem(AYAR_ANAHTAR) || '{}') || {}; } catch (e) { a = {}; }
-    return { zemin: a.zemin === 'koyu' ? 'koyu' : 'acik', akis: !!a.akis, ilerleme: !!a.ilerleme };
+    return { zemin: a.zemin === 'koyu' ? 'koyu' : 'acik', akis: !!a.akis, ilerleme: !!a.ilerleme,
+      anlatici: ANLATICI[a.anlatici] ? a.anlatici : null };
   })();
   const lessonEl = $('#lesson');
   const ayarMenu = $('#ayarMenu'), ayarBtn = $('#ayarAc'), yanPanel = $('#yanPanel');
@@ -1453,6 +1483,15 @@
   $('#zeminKoyu').addEventListener('change', () => { ayar.zemin = 'koyu'; ayarKaydet(); ayarUygula(); });
   $('#panelAkis').addEventListener('change', (e) => { ayar.akis = e.target.checked; ayarKaydet(); ayarUygula(); });
   $('#panelIlerleme').addEventListener('change', (e) => { ayar.ilerleme = e.target.checked; ayarKaydet(); ayarUygula(); });
+  for (const r of document.querySelectorAll('input[name="anlatici"]')) {
+    r.addEventListener('change', (e) => {
+      if (!ANLATICI[e.target.value]) return;
+      ayar.anlatici = e.target.value; ayarKaydet();
+      if (sesEl && !sesEl.classList.contains('yedek')) sesEl.textContent = 'Ses: Pocket · ' + ANLATICI[ayar.anlatici];
+      toast('Anlatıcı sesi: ' + ANLATICI[ayar.anlatici] + '. Birkaç cümle içinde yeni sesle sürer.', 4000);
+    });
+  }
+  anlaticiGuncelle(false, false);
 
   // Ders akışı: bu oturumda tahtaya gelen başlıklar (sırayla) ve anlatımın neresinde olunduğu.
   const akis = [];

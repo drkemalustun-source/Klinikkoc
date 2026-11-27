@@ -690,6 +690,12 @@ class Canli:
         return "yüklenecek"
 
     def ses_bilgisi(self):
+        """_ses_bilgisi + "ses": ses/ses-ayari.json'daki Pocket sesi (tahtanın ⚙ Anlatıcı sesi seçimi yoksa bu kullanılır)."""
+        b = self._ses_bilgisi()
+        b["ses"] = pocket_ses.ayar().get("ses") or "female_3"
+        return b
+
+    def _ses_bilgisi(self):
         """Hangi sesin GERÇEKTEN kullanılacağı: {"motor": pocket|piper|tarayici, "yazi": kısa açıklama, "ayrinti": ...}."""
         a = pocket_ses.ayar()
         yedek = (a.get("yedek") or "tr_TR-dfki-medium").replace("tr_TR-", "").replace("-medium", "")
@@ -730,8 +736,11 @@ class Canli:
     # Aynı cümle (selamlama, "Doğru.", sık geçen tanımlar) yeniden seslendirilmesin: son SES_ONBELLEK cümle bellekte.
     SES_ONBELLEK = 120
 
-    def seslendir(self, metin):
-        a = pocket_ses.ayar()
+    def seslendir(self, metin, ses=None):
+        """ses: tahtanın ⚙ Anlatıcı sesi seçimi (yalnız ANLATICI_SESLER); yoksa ses/ses-ayari.json'daki ses."""
+        a = dict(pocket_ses.ayar())
+        if ses in ANLATICI_SESLER:
+            a["ses"] = ses
         anahtar = (a.get("motor"), a.get("ses"), a.get("tohum"), a.get("yedek"), POCKET.durum == "hazır", metin)
         onb = self._ses_onbellek
         with self._onb_kilit:
@@ -751,7 +760,8 @@ class Canli:
                 mod = self._mod()
                 yazi = mod.pronounce(mod.plain(metin), mod.load_dictionary())
                 if yazi.strip():
-                    return POCKET.wav(yazi, a.get("ses") or "female_3", a.get("tohum"))
+                    ses = a.get("ses") or "female_3"
+                    return wav_duzey(POCKET.wav(yazi, ses, a.get("tohum")), ANLATICI_SESLER.get(ses, 1.0))
             except Exception as e:  # sessizce Piper'a dön
                 sys.stderr.write("  Ses: %s; Piper kullanılıyor.\n" % e)
         with self.ses_kilit:
@@ -773,6 +783,31 @@ class Canli:
 
 
 CANLI = Canli()
+# ⚙ Anlatıcı sesi (tahtadan seçilebilen Pocket sesleri) ve ses düzeyi çarpanı. 27 Kasım 2026 denemesinde aynı metinde
+# male_2'nin ortalama düzeyi female_3'ten ~3 dB yüksekti (0,138 / 0,096); 0,70 ile eşitlenir.
+ANLATICI_SESLER = {"female_3": 1.0, "male_2": 0.70}
+
+
+def wav_duzey(wav, carpan):
+    """16 bit mono WAV baytlarının ses düzeyini carpan ile ölçekler (carpan 1 ise olduğu gibi döner)."""
+    if carpan == 1.0:
+        return wav
+    import array
+    with wave.open(io.BytesIO(wav), "rb") as g:
+        params = g.getparams()
+        orn = array.array("h", g.readframes(g.getnframes()))
+    if sys.byteorder == "big":
+        orn.byteswap()
+    orn = array.array("h", (max(-32768, min(32767, int(x * carpan))) for x in orn))
+    if sys.byteorder == "big":
+        orn.byteswap()
+    tampon = io.BytesIO()
+    with wave.open(tampon, "wb") as w:
+        w.setparams(params)
+        w.writeframes(orn.tobytes())
+    return tampon.getvalue()
+
+
 POCKET = pocket_ses.PocketIsci()
 
 
@@ -946,7 +981,7 @@ class Isleyici(http.server.SimpleHTTPRequestHandler):
                 CANLI.bitti(int(veri.get("no", 0)), veri.get("sonuc"), veri.get("durum"))
                 return self._json(200, {"tamam": True})
             if yol == "ses":
-                wav = CANLI.seslendir(str(veri.get("metin", ""))[:2000])
+                wav = CANLI.seslendir(str(veri.get("metin", ""))[:2000], veri.get("ses"))
                 self.send_response(200)
                 self.send_header("Content-Type", "audio/wav")
                 self.send_header("Content-Length", str(len(wav)))
