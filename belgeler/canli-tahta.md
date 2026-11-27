@@ -96,7 +96,7 @@ Her dersin bir eğitmeni vardır; hangisi olduğunu dersin `egitmen.json` dosyas
 
 - **İnci** lisans dersleri içindir: ders kitabı dili, kısa turlar, "bilmiyorum" denince önce anlatır,
   klinik akıl yürütmeyi (karşılaştır-ayır, karışık olgular) çalıştırır.
-- **Mercan** uzmanlık içindir: makale inceleme, kanıt düzeyi, yöntem ve istatistik tartışması.
+- **Mercan** uzmanlık içindir: makale inceleme, konu ve klinik protokol tartışması, kanıt düzeyi ve istatistik yanılgıları.
 
 İkisinin ortak kuralları `egitmenler/ortak.md`, kişilikleri `egitmenler/inci.md` ve `egitmenler/mercan.md`
 dosyalarındadır. Ortak kurallar: kaynağın dışına çıkmamak, öğretmen notlarına uymak, Bloom basamaklarıyla

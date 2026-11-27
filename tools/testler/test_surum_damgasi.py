@@ -163,6 +163,10 @@ class EgitmenMetinleri27Kasim(unittest.TestCase):
         self.assertIn("## Konu ve klinik protokol araç seti (ikinci araç seti)", mercan)
         self.assertIn("## Makale inceleme araç seti (ilk araç seti)", mercan)
         self.assertIn("Laboratuvar bulgusunu klinik sonuç gibi sunma.", mercan)
+        self.assertIn("Tez değerlendirme için henüz araç setin yok", mercan)
+        self.assertNotIn("tez değerlendirme, istatistik ve araştırma yöntemi", mercan)
+        self.assertIn("Katılmadığında otoriteyle değil kaynakla konuş", mercan)
+        self.assertIn("Kesinlik taklidi yapma.", mercan)
 
     def test_degisiklik_gunlugu(self):
         g = oku("egitmenler", "DEGISIKLIKLER.md")
