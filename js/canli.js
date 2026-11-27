@@ -18,7 +18,8 @@
  *   ışık Claude'un dinleyip dinlemediğini gösterir.
  * Duraklat: ⏸ tuşu (ya da P / Boşluk) anlatımı iptal etmeden bekletir; yeniden basınca aynı cümlenin
  *   kaldığı yerinden sürer. Sunucuya /api/canli/duraklat ile bildirilir; Claude 'duraklatildi' görür.
- * Ses: bu bilgisayardaki sunucu sesi (/api/canli/ses; ses/ses-ayari.json, varsayılan Pocket TTS kadın 3,
+ * Ses: bu bilgisayardaki sunucu sesi (/api/canli/ses; ses/ses-ayari.json, varsayılan Pocket TTS kadın 3; ⚙ Anlatıcı sesi
+ *   ile Kadın 3 / Erkek 2 seçilebilir,
  *   yedek Piper dfki); o da yoksa tarayıcının Türkçe sesi. */
 (function (AT) {
   'use strict';
@@ -85,7 +86,8 @@
 
     // Bir cümlenin sesi en çok SES_SURE ms beklenir; gelmezse o cümle tarayıcı sesiyle okunur (anlatım takılmaz).
     async wav(metin) {
-      const r = await api('ses', { metin }, SES_SURE);
+      const ses = anlaticiSecili(); // ⚙ Anlatıcı sesi; seçilmemişse sunucunun ayarı (ses/ses-ayari.json)
+      const r = await api('ses', ses ? { metin, ses } : { metin }, SES_SURE);
       return URL.createObjectURL(await r.blob());
     },
     hata: 0,
@@ -201,11 +203,38 @@
     if (!b || !sesEl) return;
     if (sesYedekKalici && !kalici) return;
     if (kalici) sesYedekKalici = true;
+    if (b.ses) sunucuSesi = b.ses;
+    const dogal = b.motor === 'pocket';
+    const secili = anlaticiGorunen();
     sesEl.hidden = false;
-    sesEl.textContent = 'Ses: ' + b.yazi;
+    sesEl.textContent = 'Ses: ' + (dogal && ANLATICI[secili] ? 'Pocket · ' + ANLATICI[secili] : b.yazi);
     sesEl.title = b.ayrinti || b.yazi;
-    sesEl.classList.toggle('yedek', b.motor !== 'pocket');
+    sesEl.classList.toggle('yedek', !dogal);
     sesEl.classList.toggle('yukleniyor', /yükleniyor/i.test(b.yazi || '')); // asıl ses (Pocket) hâlâ yükleniyor
+    anlaticiGuncelle(dogal, /yükleniyor/i.test(b.yazi || ''));
+  }
+
+  // ⚙ Anlatıcı sesi (Kemal, 27 Kasım 2026): Pocket'ın Kadın 3 ya da Erkek 2 sesi. Seçim bu bilgisayarda (tarayıcıda)
+  // tutulur ve her ses isteğiyle sunucuya gider; ses/ses-ayari.json değişmez. Yalnız doğal ses (Pocket) hazırken
+  // seçilebilir; yedek seste (Piper/tarayıcı) soluk görünür.
+  const ANLATICI = { female_3: 'Kadın', male_2: 'Erkek' };
+  let sunucuSesi = null; // ses/ses-ayari.json'daki ses (sunucu bildirir)
+  function anlaticiSecili() {
+    try {
+      const a = JSON.parse(localStorage.getItem('klinikkoc.tahtaAyar') || '{}') || {};
+      return ANLATICI[a.anlatici] ? a.anlatici : null;
+    } catch (e) { return null; }
+  }
+  function anlaticiGorunen() { return anlaticiSecili() || (ANLATICI[sunucuSesi] ? sunucuSesi : 'female_3'); }
+  function anlaticiGuncelle(dogal, yukleniyor) {
+    const grup = $('#anlaticiSecim'), not = $('#anlaticiNot');
+    if (!grup) return;
+    const secili = anlaticiGorunen();
+    for (const r of grup.querySelectorAll('input')) { r.disabled = !dogal; r.checked = r.value === secili; }
+    grup.classList.toggle('kapali', !dogal);
+    not.hidden = dogal;
+    not.textContent = yukleniyor ? 'Doğal ses yükleniyor; hazır olunca seçilebilir.'
+      : 'Doğal ses hazır değil; yedek ses kullanılıyor.';
   }
 
   // Tarayıcı otomatik oynatmayı engellediyse büyük "Sesi açmak için dokunun" düğmesi. true: dokunuldu;
@@ -430,7 +459,7 @@
       dokEl.classList.remove('dinleniyor');
       dokEl.style.removeProperty('--seviye');
       dokEl.classList.remove('seviyeli');
-      yaziEl.placeholder = YER_TUTUCU;
+      yaziEl.placeholder = yerTutucu();
     },
 
     // --- tarayıcı ---
@@ -458,6 +487,13 @@
         this.metin = finals.join(' ').trim();
         // "Bitirdim" ya da "gönder" diye bitirilirse beklemeden gönderilir (söz yazıya girmez).
         const son = /[\s,.]*\b(bitirdim|gönder|gonder)[.!]?\s*$/i;
+        if (sinav.acik && SINAV_GONDER.test(this.metin)) {
+          // Sınavda "cevapla" (ya da "gönder"): kutudaki cevap beklemeden gönderilir.
+          this.metin = this.metin.replace(SINAV_GONDER, '').trim();
+          sinav.hemen = true;
+          yaziEl.value = [this.onceki, this.metin].join(' ').replace(/\s+/g, ' ').trim();
+          return this.bitir();
+        }
         if (son.test(this.metin)) {
           this.metin = this.metin.replace(son, '').trim();
           yaziEl.value = [this.onceki, this.metin].join(' ').replace(/\s+/g, ' ').trim();
@@ -571,12 +607,12 @@
         const j = await r.json();
         if (!r.ok || j.hata) throw new Error(j.hata || ('sunucu ' + r.status));
         this.isleniyor = false;
-        yaziEl.placeholder = YER_TUTUCU;
+        yaziEl.placeholder = yerTutucu();
         if (!(j.metin || '').trim()) return this.bos();
         onay.baslat(this.birlestir(j.metin), this.birlestir(j.ham_metin || j.metin), 'duyu', j.duzeltmeler);
       } catch (e) {
         this.isleniyor = false;
-        yaziEl.placeholder = YER_TUTUCU;
+        yaziEl.placeholder = yerTutucu();
         if (!calisan) durumEl.textContent = hazirYazisi();
         toast('Duyu yazıya çeviremedi: ' + e.message + '. Tarayıcı tanıyıcısını seçebilir ya da yazabilirsiniz.', 8000);
         if (durak.soz && !yaziEl.value.trim()) durak.devam();
@@ -634,6 +670,40 @@
     return out;
   }
 
+  // ---------- Sınav görünümü (Nilgün) ----------
+  // Claude (Nilgün) sınavı başlatınca sunucudan {tur:'sinav', acik:true, etiket:'Hedef 3 / 12'} gelir. Bu görünümde
+  // cevap kendiliğinden gönderilmez, yazı kutusu çok satırlıdır ve gönder düğmesi "Cevapla" olur. Ders tarafı değişmez.
+  const sinav = { acik: false, hemen: false, oncekiAd: null, t: null };
+  const SINAV_GONDER = /[\s,.]*\b(cevapla|gönder|gonder)[.!]?\s*$/i;
+  const sinavRozetEl = $('#sinavRozet');
+  const sinavIpucuEl = $('#sinavIpucu');
+  function sinavBoy() {
+    const y = $('#yazi');
+    if (!sinav.acik) { y.style.height = ''; return; }
+    y.style.height = 'auto';
+    y.style.height = Math.min(y.scrollHeight, 160) + 'px';
+  }
+  function sinavModu(k) {
+    const ac = !!(k && k.acik);
+    const y = $('#yazi'), g = $('#gonder');
+    if (ac && !sinav.acik) sinav.oncekiAd = dersAdiEl.textContent;
+    sinav.acik = ac;
+    sinav.hemen = false;
+    $('#lesson').classList.toggle('sinav-modu', ac);
+    sinavRozetEl.hidden = !ac;
+    sinavRozetEl.textContent = ac ? String(k.etiket || 'Sınav') : '';
+    if (ac) dersAdiEl.textContent = 'Sözlü sınav · Nilgün';
+    else if (sinav.oncekiAd != null) { dersAdiEl.textContent = sinav.oncekiAd; sinav.oncekiAd = null; }
+    y.placeholder = ac ? 'Cevabınızı söyleyin ya da yazın…' : 'Claude\'a yazın…';
+    y.setAttribute('aria-label', ac ? 'Cevabınız' : 'Claude\'a yazın');
+    g.setAttribute('aria-label', ac ? 'Cevapla' : 'Gönder');
+    g.title = ac ? 'Cevapla (Enter)' : 'Gönder (Enter)';
+    clearInterval(sinav.t);
+    sinav.t = ac ? setInterval(sinavBoy, 400) : null; // dikte ara sonuçlarında da kutu boyu cevaba uysun
+    if (!ac) sinavIpucuEl.hidden = true;
+    sinavBoy();
+  }
+
   // ---------- Onay: tanınan metin 3 sn kutuda görünür ----------
   const onay = {
     t: null,
@@ -641,6 +711,23 @@
     baslat(metin, ham, motor, duzeltmeler, guven) {
       this.bilgi = { ham_metin: ham, motor };
       if (guven != null) this.bilgi.guven = guven;
+      if (sinav.acik) {
+        // Sınav (Nilgün): cevap kendiliğinden gönderilmez. Kutuda bekler; öğrenci düzeltir ve "Cevapla" ile gönderir
+        // (düğme, Enter ya da sesli "cevapla"). Yanlış yazıya çevrilmiş cevap puanlanmasın diye.
+        let hemen = sinav.hemen;
+        sinav.hemen = false;
+        if (SINAV_GONDER.test(metin)) { metin = metin.replace(SINAV_GONDER, '').trim(); hemen = true; }
+        yaziEl.value = metin;
+        gonderBtn.disabled = !metin;
+        clearTimeout(this.t);
+        this.t = null;
+        dokEl.classList.remove('onayda');
+        sinavBoy();
+        if (hemen) return this.gonder();
+        sinavIpucuEl.hidden = !metin;
+        durumEl.textContent = metin ? 'Cevabınız bekliyor' : hazirYazisi();
+        return;
+      }
       yaziEl.value = metin;
       gonderBtn.disabled = !metin;
       dokEl.classList.remove('onayda');
@@ -692,6 +779,8 @@
 
   async function sozGonder(metin, ek) {
     yaziEl.value = '';
+    sinavIpucuEl.hidden = true;
+    sinavBoy();
     gonderBtn.disabled = true;
     altyazi(metin, 'Siz');
     const govde = { metin, motor: (ek && ek.motor) || 'yazi' };
@@ -716,11 +805,12 @@
   }
 
   // Yazı kutusu: yazmaya başlamak söz almaktır; Enter ya da ↑ gönderir.
-  const YER_TUTUCU = 'Claude\'a yazın…';
+  const YER_TUTUCU_DERS = 'Claude\'a yazın…';
+  const yerTutucu = () => (sinav.acik ? 'Cevabınızı söyleyin ya da yazın…' : YER_TUTUCU_DERS);
   const yaziEl = $('#yazi');
   const gonderBtn = $('#gonder');
   const dokEl = $('#dok');
-  yaziEl.placeholder = YER_TUTUCU;
+  yaziEl.placeholder = yerTutucu();
   yaziEl.addEventListener('input', () => {
     onay.durdur();
     const dolu = !!yaziEl.value.trim();
@@ -1144,7 +1234,7 @@
       if (!AT.tahtaGoruntu) throw new Error('tahta-goruntu.js yüklenmedi');
       const g = await AT.tahtaGoruntu(document.getElementById('board'), { enFazla: k.en_fazla || 1400 });
       sonuc = { durum: 'bitti', png: g.png, en: g.en, boy: g.boy,
-        baslik: (document.querySelector('#board .board-title') || {}).textContent || '' };
+        baslik: durum().baslik };
     } catch (e) {
       sonuc = { durum: 'hata', hata: String(e && e.message || e) };
     }
@@ -1307,6 +1397,11 @@
           son = Math.max(son, k.no);
           if (k.tur === 'dur') durdur(k);
           else if (k.tur === 'goruntu') goruntuVer(k); // Claude tahtaya bakmak istiyor: sırayı beklemez
+          else if (k.tur === 'sinav') {
+            // Sınav görünümü (Nilgün): sırayı beklemez, anlatımı kesmez.
+            sinavModu(k);
+            api('bitti', { no: k.no, sonuc: { durum: 'bitti' }, durum: durum() }).catch(() => {});
+          }
           else if (k.tur === 'devam') {
             // Araya giren cevap öğrenci konuştuğu için duraklamışsa (söz/⏸) onu bekleme: Claude anlatıma dönmek ya da
             // anlatımı bırakmak istiyor; duraklayan cevap (açık soru dahil) kapanır, devam/bırak hemen uygulanır.
@@ -1415,7 +1510,8 @@
   const ayar = (() => {
     let a = {};
     try { a = JSON.parse(localStorage.getItem(AYAR_ANAHTAR) || '{}') || {}; } catch (e) { a = {}; }
-    return { zemin: a.zemin === 'koyu' ? 'koyu' : 'acik', akis: !!a.akis, ilerleme: !!a.ilerleme };
+    return { zemin: a.zemin === 'koyu' ? 'koyu' : 'acik', akis: !!a.akis, ilerleme: !!a.ilerleme,
+      anlatici: ANLATICI[a.anlatici] ? a.anlatici : null };
   })();
   const lessonEl = $('#lesson');
   const ayarMenu = $('#ayarMenu'), ayarBtn = $('#ayarAc'), yanPanel = $('#yanPanel');
@@ -1453,6 +1549,15 @@
   $('#zeminKoyu').addEventListener('change', () => { ayar.zemin = 'koyu'; ayarKaydet(); ayarUygula(); });
   $('#panelAkis').addEventListener('change', (e) => { ayar.akis = e.target.checked; ayarKaydet(); ayarUygula(); });
   $('#panelIlerleme').addEventListener('change', (e) => { ayar.ilerleme = e.target.checked; ayarKaydet(); ayarUygula(); });
+  for (const r of document.querySelectorAll('input[name="anlatici"]')) {
+    r.addEventListener('change', (e) => {
+      if (!ANLATICI[e.target.value]) return;
+      ayar.anlatici = e.target.value; ayarKaydet();
+      if (sesEl && !sesEl.classList.contains('yedek')) sesEl.textContent = 'Ses: Pocket · ' + ANLATICI[ayar.anlatici];
+      toast('Anlatıcı sesi: ' + ANLATICI[ayar.anlatici] + '. Birkaç cümle içinde yeni sesle sürer.', 4000);
+    });
+  }
+  anlaticiGuncelle(false, false);
 
   // Ders akışı: bu oturumda tahtaya gelen başlıklar (sırayla) ve anlatımın neresinde olunduğu.
   const akis = [];

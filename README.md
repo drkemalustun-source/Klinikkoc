@@ -59,7 +59,9 @@ sonunda .zip ders paketi). Bu depodan indirilen kopya öğretmen sürümüdür. 
 - Güncelleme: yeni sürüm çıkınca ana ekranda **Güncelle** düğmesi belirir; tek tuşla kurulur, dersleriniz ve
   kayıtlarınız yerinde kalır.
 - Yalnız oynatıcı: `index.html` dosyasına çift tıklamak da yeter, ama ders paketi BASLAT ya da Claude ile eklenir.
-- Canlı eğitmen: [Python](https://www.python.org/downloads/) ve Claude masaüstü uygulaması kurulu olmalı.
+- Canlı eğitmen: Claude masaüstü uygulaması kurulu olmalı. Windows'ta Python'u kurulum kendisi bulur, uygun
+  sürüm yoksa yalnız KlinikKoç için indirir; yeni kurulum `C:\KlinikKoc` klasörüne kopyalanır (indirdiğiniz klasörü
+  sonra silebilirsiniz). Mac'te [Python](https://www.python.org/downloads/) kurulu olmalı.
   `KUR-Windows` dosyasına çift tıklayın, Claude uygulamasını tamamen kapatıp açın, sonra yazın:
   **"Tahtayı aç, akut periodontal lezyonlar dersine başlayalım. Adım Ayşe, numaramın son üç hanesi 123."**
   Windows dosya uzantılarını gizleyebilir; adı yalnız **KUR-Windows** görünen dosyaya çift tıklayın.

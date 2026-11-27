@@ -74,6 +74,32 @@
    "kemik-kaybi": [
     "periodontitis"
    ]
+  },
+  "adlar": {
+   "dis-eti": {
+    "saglikli": "Serbest dişeti",
+    "gingivitis": "Dişeti (iltihaplı)",
+    "periodontitis": "Dişeti (iltihaplı)",
+    "cekilme": "Serbest dişeti"
+   },
+   "cep": {
+    "saglikli": "Dişeti oluğu (sulkus)",
+    "gingivitis": "Yalancı cep",
+    "periodontitis": "Periodontal cep",
+    "cekilme": "Dişeti oluğu (sulkus)"
+   },
+   "oluk-epiteli": {
+    "saglikli": "Oluk epiteli",
+    "gingivitis": "Cep epiteli",
+    "periodontitis": "Cep epiteli",
+    "cekilme": "Cep epiteli"
+   },
+   "sonda": {
+    "saglikli": "Sondalama derinliği ≈ 1 mm",
+    "gingivitis": "Sondalama derinliği ≈ 2 mm",
+    "periodontitis": "Sondalama derinliği ≈ 6 mm",
+    "cekilme": "Sondalama derinliği ≈ 1 mm"
+   }
   }
  },
  "sondalama": {
@@ -155,6 +181,50 @@
    "kemik-kaybi": [
     "periodontitis"
    ]
+  },
+  "adlar": {
+   "dis-eti": {
+    "saglikli": "Serbest dişeti",
+    "gingivitis": "Dişeti (iltihaplı)",
+    "periodontitis": "Dişeti (iltihaplı)",
+    "cekilme": "Serbest dişeti"
+   },
+   "cep": {
+    "saglikli": "Dişeti oluğu (sulkus)",
+    "gingivitis": "Yalancı cep",
+    "periodontitis": "Periodontal cep",
+    "cekilme": "Dişeti oluğu (sulkus)"
+   },
+   "oluk-epiteli": {
+    "saglikli": "Oluk epiteli",
+    "gingivitis": "Cep epiteli",
+    "periodontitis": "Cep epiteli",
+    "cekilme": "Cep epiteli"
+   },
+   "sonda": {
+    "saglikli": "Sondalama derinliği ≈ 1 mm",
+    "gingivitis": "Sondalama derinliği ≈ 2 mm",
+    "periodontitis": "Sondalama derinliği ≈ 6 mm",
+    "cekilme": "Sondalama derinliği ≈ 1 mm"
+   },
+   "olcum-cd": {
+    "saglikli": "CD (cep derinliği) ≈ 1.2 mm",
+    "gingivitis": "CD (cep derinliği) ≈ 2.2 mm",
+    "periodontitis": "CD (cep derinliği) ≈ 6.2 mm",
+    "cekilme": "CD (cep derinliği) ≈ 1.5 mm"
+   },
+   "olcum-kas": {
+    "saglikli": "KAS (klinik ataşman) ≈ 0 mm",
+    "gingivitis": "KAS (klinik ataşman) ≈ 0 mm",
+    "periodontitis": "KAS (klinik ataşman) ≈ 5 mm",
+    "cekilme": "KAS (klinik ataşman) ≈ 3.2 mm"
+   },
+   "olcum-gm": {
+    "saglikli": "Kenar MSS'nin 1.8 mm koronalinde",
+    "gingivitis": "Kenar MSS'nin 2.8 mm koronalinde",
+    "periodontitis": "Kenar MSS'nin 1.2 mm koronalinde",
+    "cekilme": "Çekilme ≈ 1.8 mm (kenar MSS apikalinde)"
+   }
   }
  },
  "implant": {
@@ -217,6 +287,28 @@
    "acik-yiv": [
     "peri-implantitis"
    ]
+  },
+  "adlar": {
+   "mukoza": {
+    "saglikli": "Peri-implant mukoza",
+    "mukozitis": "Mukoza (iltihaplı)",
+    "peri-implantitis": "Mukoza (iltihaplı)"
+   },
+   "cep": {
+    "saglikli": "Peri-implant oluk",
+    "mukozitis": "Derinleşmiş oluk",
+    "peri-implantitis": "Peri-implant cep"
+   },
+   "oluk-epiteli": {
+    "saglikli": "Oluk epiteli",
+    "mukozitis": "Cep epiteli",
+    "peri-implantitis": "Cep epiteli"
+   },
+   "sonda": {
+    "saglikli": "Sondalama derinliği ≈ 1 mm",
+    "mukozitis": "Sondalama derinliği ≈ 2 mm",
+    "peri-implantitis": "Sondalama derinliği ≈ 7 mm"
+   }
   }
  },
  "sinus": {
@@ -294,6 +386,22 @@
    "implant": [
     "sinus-lifti"
    ]
+  },
+  "adlar": {
+   "membran": {
+    "dis": "Schneider membranı",
+    "cekim-sonrasi": "Schneider membranı",
+    "dissiz": "Schneider membranı",
+    "ileri-atrofi": "Schneider membranı",
+    "sinus-lifti": "Yükseltilmiş membran"
+   },
+   "rezidu": {
+    "dis": "Rezidüel kemik ≈ 8.6 mm",
+    "cekim-sonrasi": "Rezidüel kemik ≈ 8.6 mm",
+    "dissiz": "Rezidüel kemik ≈ 3.6 mm",
+    "ileri-atrofi": "Rezidüel kemik ≈ 1.1 mm",
+    "sinus-lifti": "Rezidüel kemik ≈ 3.6 mm"
+   }
   }
  },
  "mandibula": {
@@ -375,6 +483,24 @@
    "guvenlik": [
     "implant"
    ]
+  },
+  "adlar": {
+   "yukseklik": {
+    "dis": "Kretten kanala ≈ 15.6 mm",
+    "cekim-sonrasi": "Kretten kanala ≈ 15.3 mm",
+    "cawood-3": "Kretten kanala ≈ 12.1 mm",
+    "cawood-4": "Kretten kanala ≈ 10.3 mm",
+    "cawood-5": "Kretten kanala ≈ 5.6 mm",
+    "cawood-6": "Kretten kanala ≈ 1.4 mm",
+    "implant": "Kretten kanala ≈ 12.1 mm"
+   },
+   "sinif": {
+    "cekim-sonrasi": "Cawood-Howell sınıf II",
+    "cawood-3": "Cawood-Howell sınıf III",
+    "cawood-4": "Cawood-Howell sınıf IV",
+    "cawood-5": "Cawood-Howell sınıf V",
+    "cawood-6": "Cawood-Howell sınıf VI"
+   }
   }
  },
  "furkasyon": {
@@ -410,6 +536,19 @@
     "derece-2",
     "derece-3"
    ]
+  },
+  "adlar": {
+   "furkasyon-girisi": {
+    "saglikli": "Furkasyon girişi (kemikle kapalı)",
+    "derece-1": "Açığa çıkmış furkasyon girişi",
+    "derece-2": "Açığa çıkmış furkasyon girişi",
+    "derece-3": "Açığa çıkmış furkasyon girişi"
+   },
+   "defekt": {
+    "derece-1": "Hamp I: yatay ≈ 2 mm",
+    "derece-2": "Hamp II: yatay ≈ 5 mm",
+    "derece-3": "Hamp III: boydan boya"
+   }
   }
  },
  "furkasyon-ust": {
@@ -456,6 +595,27 @@
     "derece-2",
     "derece-3"
    ]
+  },
+  "adlar": {
+   "bukkal-giris": {
+    "saglikli": "Bukkal giriş (kemikle kapalı)",
+    "bukkal-1": "Açığa çıkmış bukkal giriş",
+    "derece-2": "Açığa çıkmış bukkal giriş",
+    "derece-3": "Açığa çıkmış bukkal giriş"
+   },
+   "bukkal-defekt": {
+    "bukkal-1": "Bukkal: Hamp I",
+    "derece-2": "Bukkal: Hamp II",
+    "derece-3": "Bukkal: Hamp III"
+   },
+   "mezyal-defekt": {
+    "derece-2": "Mezyal: Hamp I",
+    "derece-3": "Mezyal: Hamp III"
+   },
+   "distal-defekt": {
+    "derece-2": "Distal: Hamp I",
+    "derece-3": "Distal: Hamp III"
+   }
   }
  },
  "soket": {
@@ -532,6 +692,30 @@
    "kollajen-ortu": [
     "soket-koruma"
    ]
+  },
+  "adlar": {
+   "mukoza": {
+    "taze": "Dişeti (yara kenarı)",
+    "birinci-hafta": "Mukoza (kapanmış)",
+    "dorduncu-hafta": "Mukoza (kapanmış)",
+    "sekizinci-hafta": "Mukoza (kapanmış)",
+    "alti-ay": "Mukoza (kapanmış)",
+    "soket-koruma": "Mukoza (kapanmış)"
+   },
+   "rezorpsiyon": {
+    "birinci-hafta": "Yatay kayıp ≈ 1 mm",
+    "dorduncu-hafta": "Yatay kayıp ≈ 1.9 mm",
+    "sekizinci-hafta": "Yatay kayıp ≈ 2.8 mm",
+    "alti-ay": "Yatay kayıp ≈ 3.8 mm",
+    "soket-koruma": "Yatay kayıp ≈ 1.5 mm"
+   },
+   "dikey-kayip": {
+    "birinci-hafta": "Bukkal dikey kayıp ≈ 0.3 mm",
+    "dorduncu-hafta": "Bukkal dikey kayıp ≈ 0.6 mm",
+    "sekizinci-hafta": "Bukkal dikey kayıp ≈ 0.9 mm",
+    "alti-ay": "Bukkal dikey kayıp ≈ 1.2 mm",
+    "soket-koruma": "Bukkal dikey kayıp ≈ 0.5 mm"
+   }
   }
  },
  "kemik-ici": {
@@ -585,6 +769,20 @@
     "iki-duvarli",
     "tek-duvarli"
    ]
+  },
+  "adlar": {
+   "defekt": {
+    "uc-duvarli": "Kemik içi defekt ≈ 5 mm",
+    "iki-duvarli": "Kemik içi defekt ≈ 5 mm",
+    "tek-duvarli": "Kemik içi defekt ≈ 5 mm",
+    "krater": "İnterdental krater ≈ 4 mm"
+   },
+   "duvar": {
+    "uc-duvarli": "Üç duvarlı defekt",
+    "iki-duvarli": "İki duvarlı defekt",
+    "tek-duvarli": "Tek duvarlı defekt",
+    "krater": "İki duvarlı (krater)"
+   }
   }
  },
  "cekilme": {
@@ -638,6 +836,34 @@
     "rt2",
     "rt3"
    ]
+  },
+  "adlar": {
+   "papilla": {
+    "saglikli": "Papilla (doluluk ≈ %100)",
+    "rt1": "Papilla (doluluk ≈ %100)",
+    "rt2": "Papilla (doluluk ≈ %40)",
+    "rt3": "Papilla (doluluk ≈ %10)"
+   },
+   "kret-temas": {
+    "saglikli": "Kret–temas ≈ 4.6 mm",
+    "rt1": "Kret–temas ≈ 4.6 mm",
+    "rt2": "Kret–temas ≈ 6.6 mm",
+    "rt3": "Kret–temas ≈ 9.1 mm"
+   },
+   "cekilme": {
+    "rt1": "Bukkal çekilme ≈ 3 mm",
+    "rt2": "Bukkal çekilme ≈ 3.5 mm",
+    "rt3": "Bukkal çekilme ≈ 3.5 mm"
+   },
+   "sinif": {
+    "rt1": "Cairo RT1",
+    "rt2": "Cairo RT2",
+    "rt3": "Cairo RT3"
+   },
+   "ara-kayip": {
+    "rt2": "Ara yüz kaybı ≈ 2 mm",
+    "rt3": "Ara yüz kaybı ≈ 4.5 mm"
+   }
   }
  },
  "plak-indeksi": {
@@ -693,6 +919,42 @@
     "qh-4",
     "qh-5"
    ]
+  },
+  "adlar": {
+   "skor": {
+    "pli-0": "Silness–Löe PlI = 0",
+    "pli-1": "Silness–Löe PlI = 1",
+    "pli-2": "Silness–Löe PlI = 2",
+    "pli-3": "Silness–Löe PlI = 3",
+    "qh-0": "Quigley–Hein (Turesky) = 0",
+    "qh-1": "Quigley–Hein (Turesky) = 1",
+    "qh-2": "Quigley–Hein (Turesky) = 2",
+    "qh-3": "Quigley–Hein (Turesky) = 3",
+    "qh-4": "Quigley–Hein (Turesky) = 4",
+    "qh-5": "Quigley–Hein (Turesky) = 5"
+   },
+   "olcut": {
+    "pli-0": "Dişeti bölgesinde plak yok",
+    "pli-1": "İnce plak; yalnız sonda ile görülür",
+    "pli-2": "Gözle görülen orta miktarda plak",
+    "pli-3": "Cepte ve kenarda bol birikinti",
+    "qh-0": "Plak yok",
+    "qh-1": "Servikalde ayrı plak lekeleri",
+    "qh-2": "Servikalde ≤ 1 mm kesintisiz ince bant",
+    "qh-3": "1 mm’den geniş, kronun 1/3’ünden az",
+    "qh-4": "Kronun 1/3–2/3’ü",
+    "qh-5": "Kronun 2/3’ü ve fazlası"
+   },
+   "plak": {
+    "pli-1": "Dental plak (biyofilm)",
+    "pli-2": "Dental plak (biyofilm)",
+    "pli-3": "Dental plak (biyofilm)",
+    "qh-1": "Boyanmış plak (eritrozin)",
+    "qh-2": "Boyanmış plak (eritrozin)",
+    "qh-3": "Boyanmış plak (eritrozin)",
+    "qh-4": "Boyanmış plak (eritrozin)",
+    "qh-5": "Boyanmış plak (eritrozin)"
+   }
   }
  },
  "gingival-indeks": {
@@ -759,6 +1021,34 @@
    "ulser": [
     "gi-3"
    ]
+  },
+  "adlar": {
+   "skor": {
+    "gi-0": "Löe–Silness GI = 0",
+    "gi-1": "Löe–Silness GI = 1",
+    "gi-2": "Löe–Silness GI = 2",
+    "gi-3": "Löe–Silness GI = 3"
+   },
+   "olcut": {
+    "gi-0": "Normal dişeti",
+    "gi-1": "Hafif iltihap, kanama yok",
+    "gi-2": "Orta iltihap, sondalamada kanama",
+    "gi-3": "Şiddetli iltihap, kendiliğinden kanama"
+   },
+   "renk": {
+    "gi-1": "Hafif kızarıklık",
+    "gi-2": "Kızarıklık",
+    "gi-3": "Belirgin kızarıklık"
+   },
+   "odem": {
+    "gi-1": "Hafif ödem",
+    "gi-2": "Ödem, kenar kalınlaşır",
+    "gi-3": "Belirgin ödem"
+   },
+   "kanama": {
+    "gi-2": "Sondalamada kanama",
+    "gi-3": "Kanama"
+   }
   }
  },
  "kayit-cizelgesi": {
@@ -788,6 +1078,48 @@
     "kanama-lokal",
     "kanama-yaygin"
    ]
+  },
+  "adlar": {
+   "cizelge": {
+    "plak-dusuk": "Her diş 4 yüzey (M, D, V, L/P)",
+    "plak-orta": "Her diş 4 yüzey (M, D, V, L/P)",
+    "plak-yuksek": "Her diş 4 yüzey (M, D, V, L/P)",
+    "kanama-saglik": "Her diş 6 nokta (3 vestibül, 3 oral)",
+    "kanama-lokal": "Her diş 6 nokta (3 vestibül, 3 oral)",
+    "kanama-yaygin": "Her diş 6 nokta (3 vestibül, 3 oral)"
+   },
+   "isaret": {
+    "plak-dusuk": "Boyanan yüzey işaretlenir",
+    "plak-orta": "Boyanan yüzey işaretlenir",
+    "plak-yuksek": "Boyanan yüzey işaretlenir",
+    "kanama-saglik": "Kanayan nokta işaretlenir",
+    "kanama-lokal": "Kanayan nokta işaretlenir",
+    "kanama-yaygin": "Kanayan nokta işaretlenir"
+   },
+   "formul": {
+    "plak-dusuk": "Skor = boyalı ÷ taranan yüzey × 100",
+    "plak-orta": "Skor = boyalı ÷ taranan yüzey × 100",
+    "plak-yuksek": "Skor = boyalı ÷ taranan yüzey × 100",
+    "kanama-saglik": "BOP = kanayan ÷ toplam nokta × 100",
+    "kanama-lokal": "BOP = kanayan ÷ toplam nokta × 100",
+    "kanama-yaygin": "BOP = kanayan ÷ toplam nokta × 100"
+   },
+   "sonuc": {
+    "plak-dusuk": "6 / 64 yüzey = %9",
+    "plak-orta": "24 / 64 yüzey = %38",
+    "plak-yuksek": "50 / 64 yüzey = %78",
+    "kanama-saglik": "7 / 96 nokta = %7",
+    "kanama-lokal": "19 / 96 nokta = %20",
+    "kanama-yaygin": "46 / 96 nokta = %48"
+   },
+   "yorum": {
+    "plak-dusuk": "Hedef düzeyde (≤ %10)",
+    "plak-orta": "Yetersiz; hijyen eğitimi yinelenir",
+    "plak-yuksek": "Yetersiz; hijyen eğitimi yinelenir",
+    "kanama-saglik": "Dişeti sağlığı (BOP < %10)",
+    "kanama-lokal": "Lokalize gingivitis (%10–30)",
+    "kanama-yaygin": "Yaygın gingivitis (> %30)"
+   }
   }
  },
  "on-maksilla": {
@@ -902,6 +1234,46 @@
    "kron": [
     "implant"
    ]
+  },
+  "adlar": {
+   "dis-eti": {
+    "kalin-fenotip": "Dişeti kalınlığı ≈ 1.5 mm",
+    "ince-fenotip": "Dişeti kalınlığı ≈ 0.7 mm",
+    "dehisens": "Dişeti kalınlığı ≈ 0.7 mm",
+    "fenestrasyon": "Dişeti kalınlığı ≈ 0.7 mm",
+    "cekilme": "Dişeti kalınlığı ≈ 0.7 mm",
+    "cekim-sonrasi": "Dişeti kalınlığı ≈ 1 mm",
+    "implant": "Dişeti kalınlığı ≈ 1.3 mm"
+   },
+   "bukkal-kemik": {
+    "kalin-fenotip": "Labial kemik plağı ≈ 1.2 mm",
+    "ince-fenotip": "Labial kemik plağı ≈ 0.5 mm",
+    "dehisens": "Labial kemik plağı ≈ 0.5 mm",
+    "fenestrasyon": "Labial kemik plağı ≈ 0.5 mm",
+    "cekilme": "Labial kemik plağı ≈ 0.5 mm",
+    "cekim-sonrasi": "Labial kemik plağı ≈ 0.5 mm",
+    "implant": "Labialde ≥ 2 mm kemik hedeflenir"
+   },
+   "kret": {
+    "kalin-fenotip": "Labial kret",
+    "ince-fenotip": "Labial kret",
+    "dehisens": "Labial kret",
+    "fenestrasyon": "Labial kret",
+    "cekilme": "Labial kret",
+    "cekim-sonrasi": "Çökmüş labial duvar",
+    "implant": "Alveol kreti"
+   },
+   "fenotip": {
+    "kalin-fenotip": "Kalın fenotip",
+    "ince-fenotip": "İnce fenotip",
+    "dehisens": "İnce fenotip",
+    "fenestrasyon": "İnce fenotip",
+    "cekilme": "İnce fenotip"
+   },
+   "dehisens": {
+    "dehisens": "Dehisens ≈ 4.5 mm",
+    "cekilme": "Dehisens ≈ 5 mm"
+   }
   }
  },
  "on-mandibula": {
@@ -986,6 +1358,25 @@
    "hematom": [
     "lingual-perforasyon"
    ]
+  },
+  "adlar": {
+   "kemik": {
+    "dis": "Simfiz yüksekliği ≈ 28.7 mm",
+    "cekim-sonrasi": "Simfiz yüksekliği ≈ 25.7 mm",
+    "atrofi": "Simfiz yüksekliği ≈ 18.7 mm",
+    "implant": "Simfiz yüksekliği ≈ 24.7 mm",
+    "lingual-perforasyon": "Simfiz yüksekliği ≈ 24.7 mm"
+   },
+   "kret": {
+    "cekim-sonrasi": "Alveol kreti",
+    "atrofi": "Atrofik kret",
+    "implant": "Alveol kreti",
+    "lingual-perforasyon": "Alveol kreti"
+   },
+   "implant": {
+    "implant": "İmplant (simfiz eksenine uygun)",
+    "lingual-perforasyon": "İmplant lingual korteksi deliyor"
+   }
   }
  },
  "yan-gorunum": {
@@ -1148,7 +1539,8 @@
    "on-loop": [
     "mental-foramen"
    ]
-  }
+  },
+  "adlar": {}
  },
  "fasiyal-bosluk": {
   "ad": "Fasiyal boşluklar ve odontojenik enfeksiyonun yayılımı",
@@ -1227,6 +1619,22 @@
    "sinus-enfeksiyonu": [
     "sinus"
    ]
+  },
+  "adlar": {
+   "alt-kok": {
+    "saglikli": "Kök ucu (apeks)",
+    "vestibuler-apse": "Apeks buccinator üstünde",
+    "bukkal": "Apeks buccinator altında",
+    "sublingual": "Apeks milohiyoid çizgi üstünde",
+    "submandibuler": "Apeks milohiyoid çizgi altında",
+    "palatinal": "Kök ucu (apeks)",
+    "bukkal-ust": "Kök ucu (apeks)",
+    "sinus": "Kök ucu (apeks)"
+   },
+   "bukkal-bosluk": {
+    "bukkal": "Bukkal boşluk apsesi",
+    "bukkal-ust": "Bukkal apse (üst azıdan)"
+   }
   }
  },
  "kontur-fasiyal": {
@@ -1236,7 +1644,8 @@
    "kritik-fazla",
    "kritik-az",
    "kritik-alti-konkav",
-   "kritik-alti-konveks"
+   "kritik-alti-konveks",
+   "kritik-alti-asiri-konveks"
   ],
   "parcalar": {
    "implant": "İmplant",
@@ -1251,7 +1660,9 @@
    "kritik": "Kritik kontur",
    "plan": "Planlanan kenar düzeyi",
    "kayma": "Kenar apikale kayar (yaklaşık)",
-   "hacim": "Yumuşak doku hacmi artar"
+   "hacim": "Yumuşak doku hacmi artar",
+   "kenar-duzeyi": "Kenar düzeyi belirgin değişmez",
+   "risk": "Ödem ve çekilme riski"
   },
   "ayrinti": [
    "dayanak",
@@ -1262,13 +1673,50 @@
     "kritik-fazla",
     "kritik-az",
     "kritik-alti-konkav",
-    "kritik-alti-konveks"
+    "kritik-alti-asiri-konveks"
    ],
    "hacim": [
     "kritik-alti-konkav",
+    "kritik-alti-konveks",
+    "kritik-alti-asiri-konveks"
+   ],
+   "kenar-duzeyi": [
     "kritik-alti-konveks"
+   ],
+   "risk": [
+    "kritik-alti-asiri-konveks"
    ]
-  }
+  },
+  "adlar": {
+   "kritik-alti": {
+    "duz": "Kritik altı kontur",
+    "kritik-fazla": "Kritik altı kontur",
+    "kritik-az": "Kritik altı kontur",
+    "kritik-alti-konkav": "Kritik altı kontur: iç bükey",
+    "kritik-alti-konveks": "Kritik altı kontur: dış bükey",
+    "kritik-alti-asiri-konveks": "Kritik altı kontur: aşırı dış bükey"
+   },
+   "kritik": {
+    "duz": "Kritik kontur",
+    "kritik-fazla": "Kritik kontur: fazla (dış bükey)",
+    "kritik-az": "Kritik kontur: azaltılmış",
+    "kritik-alti-konkav": "Kritik kontur",
+    "kritik-alti-konveks": "Kritik kontur",
+    "kritik-alti-asiri-konveks": "Kritik kontur"
+   },
+   "kayma": {
+    "kritik-fazla": "Kenar apikale kayar (yaklaşık)",
+    "kritik-az": "Kenar koronale kayabilir (yaklaşık)",
+    "kritik-alti-konkav": "Kenar koronale kayabilir (yaklaşık)",
+    "kritik-alti-asiri-konveks": "Kenar apikale kayabilir (yaklaşık)"
+   },
+   "hacim": {
+    "kritik-alti-konkav": "Yumuşak doku hacmi artar",
+    "kritik-alti-konveks": "Fasiyal profil dolgunlaşır",
+    "kritik-alti-asiri-konveks": "Mukoza gerilir ve incelir"
+   }
+  },
+  "not": "Planlanan kenar çizgisi (kesikli) ve kenar kaydığında kırmızı kayma oku durumun parçasıdır: labels listesinde olmasa da çizilir. Oksuz çizim için kenarı kaymayan bir durum seç (duz, kritik-alti-konveks)."
  },
  "papil": {
   "ad": "Papil: diş–implant arası kontur ve temas noktası (önden kesit)",
@@ -1288,8 +1736,8 @@
    "olcum": "Temas–kemik tepesi",
    "kret": "Kemik tepesi",
    "kemik": "Alveol kemiği",
-   "kuron": "Doğal diş (orta kesici)",
-   "kuron-sag": "Komşu doğal diş",
+   "dogal-dis": "Doğal diş (orta kesici)",
+   "dogal-dis-sag": "Komşu doğal diş",
    "siyah-ucgen": "Siyah üçgen",
    "kron-sag": "İmplant üstü kron",
    "implant": "İmplant",
@@ -1305,7 +1753,7 @@
    "dayanak-sag"
   ],
   "yalniz": {
-   "kuron": [
+   "dogal-dis": [
     "dis-dis",
     "duz",
     "konkav",
@@ -1313,7 +1761,7 @@
     "kare-kron",
     "ince-biyotip"
    ],
-   "kuron-sag": [
+   "dogal-dis-sag": [
     "dis-dis"
    ],
    "siyah-ucgen": [
@@ -1372,6 +1820,44 @@
    "kron-sol": [
     "implant-implant"
    ]
+  },
+  "adlar": {
+   "kret": {
+    "dis-dis": "Kemik tepesi",
+    "duz": "Kemik tepesi",
+    "konkav": "Kemik tepesi",
+    "konveks": "Kemik tepesi",
+    "kare-kron": "Kemik tepesi",
+    "ince-biyotip": "Kemik tepesi",
+    "implant-implant": "İmplantlar arası kemik tepesi"
+   },
+   "siyah-ucgen": {
+    "duz": "Siyah üçgen",
+    "konkav": "Siyah üçgen",
+    "konveks": "Siyah üçgen küçülür",
+    "ince-biyotip": "Siyah üçgen",
+    "implant-implant": "Siyah üçgen"
+   },
+   "kritik-alti": {
+    "duz": "Kritik altı kontur: düz",
+    "konkav": "Kritik altı kontur: iç bükey",
+    "konveks": "Kritik altı kontur: dış bükey",
+    "kare-kron": "Kritik altı kontur: düz",
+    "ince-biyotip": "Kritik altı kontur: düz",
+    "implant-implant": "Kritik altı kontur: düz"
+   },
+   "kritik": {
+    "duz": "Kritik kontur",
+    "konkav": "Kritik kontur",
+    "konveks": "Kritik kontur",
+    "kare-kron": "Kritik kontur: geniş (kare kron)",
+    "ince-biyotip": "Kritik kontur",
+    "implant-implant": "Kritik kontur"
+   }
+  },
+  "takma": {
+   "kuron": "dogal-dis",
+   "kuron-sag": "dogal-dis-sag"
   }
  }
 }

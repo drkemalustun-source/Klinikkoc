@@ -86,7 +86,8 @@ class PocketIsci:
         self.son_deneme = time.time()
         py = ortam_python()
         if not py:
-            self.durum = "Pocket ses ortamı yok (python tools/ses-uret.py --kur-pocket)"
+            import komut
+            self.durum = "Pocket ses ortamı yok (%s)" % komut.yazi("ses-uret.py", "--kur-pocket")
             self.hazir.set()
             return
         bayrak = getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -250,8 +251,9 @@ def uygun_python(yaz=print):
     return None
 
 
-PYTHON_YOK = ("Pocket sesi için Python 3.10–3.13 gerekir (bu bilgisayardaki Python: %d.%d).\n"
-              "python.org/downloads adresinden Python 3.12'yi kurup KUR'u yeniden çalıştırın.\n"
+PYTHON_YOK = ("Pocket sesi için Python 3.10–3.13 gerekir (bu bilgisayardaki Python: %d.%d).\n" + (
+              "KUR-Windows'u yeniden çalıştırın; uygun Python'u kendisi bulur ya da indirir.\n" if os.name == "nt" else
+              "python.org/downloads adresinden Python 3.12'yi kurup KUR'u yeniden çalıştırın.\n") +
               "Şimdilik daha basit bir yedek ses kullanılacak; ders yine çalışır.")
 
 

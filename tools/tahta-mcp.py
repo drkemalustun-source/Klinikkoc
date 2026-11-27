@@ -41,6 +41,7 @@ sys.path.insert(0, os.path.join(KOK, "tools"))
 import bilgi_bankasi  # noqa: E402
 import ders_paketi  # noqa: E402
 import ders_sonu  # noqa: E402
+import sinav as sinav_  # noqa: E402
 import degerlendirme  # noqa: E402
 import karne as karne_  # noqa: E402
 import kayit_aktar  # noqa: E402
@@ -577,6 +578,40 @@ def tekrar_zamani_gelenler(k):
                   key=lambda h: k["hedefler"][h]["sonraki_tekrar"])
 
 
+# ---------- Sürüm damgası ----------
+# Hangi oturumun hangi eğitmen metniyle yapıldığı kayıttan okunabilsin diye: programın sürümü, eğitmen ve eğitmen
+# metninin parmak izi (ortak.md + kişilik dosyası). Metin değişince iz kendiliğinden değişir; elle sürüm tutulmaz.
+# Değişikliklerin ne olduğu egitmenler/DEGISIKLIKLER.md'de yazar.
+_SON_EGITMEN = {}  # ders -> bu çalıştırmada egitmen_hazirla'nın seçtiği eğitmen
+
+
+def kural_izi(egitmen):
+    """ortak.md + <egitmen>.md metninin kısa parmak izi. Satır sonu biçimi ve satır sonundaki boşluk izi değiştirmez."""
+    h = hashlib.sha256()
+    for ad in ((egitmen,) if egitmen == "nilgun" else ("ortak", egitmen)):  # Nilgün ortak çekirdeği yüklemez
+        try:
+            m = _metin_oku(os.path.join(KOK, "egitmenler", ad + ".md"))
+        except OSError:
+            m = ""
+        duz = "\n".join(x.rstrip() for x in m.replace("\r\n", "\n").replace("\r", "\n").split("\n")).strip()
+        h.update((ad + "\x00" + duz + "\x00").encode("utf-8"))
+    return h.hexdigest()[:10]
+
+
+def surum_damgasi(ders, eg=None):
+    e = _SON_EGITMEN.get(ders) or (eg or {}).get("egitmen") or "inci"
+    return {"program": SURUM, "egitmen": e, "kural_izi": kural_izi(e)}
+
+
+def damgala(k, ders, eg, gun):
+    """Kayda sürüm damgasını işler: yalnız değiştiğinde yeni satır açar (bir damga, sonraki damgaya kadar geçerlidir)."""
+    d = surum_damgasi(ders, eg)
+    son = (k.get("surumler") or [None])[-1]
+    if not son or any(son.get(x) != d[x] for x in d):
+        k.setdefault("surumler", []).append(dict(d, tarih=gun))
+    return d
+
+
 def kayit_ozeti(k, eg):
     hedefler = {x["id"]: x for x in (eg or {}).get("hedefler", [])}
     ozet = {}
@@ -590,12 +625,18 @@ def kayit_ozeti(k, eg):
             "tekrar_zamani_gelen": tekrar_zamani_gelenler(k),
             "mola": k.get("mola"), "mod": k.get("mod"),
             "oturum_sayisi": len(k.get("oturumlar", [])),
+            # Öğrencinin son oturum kapanışında "en çok zorlandığım" dediği konu (ortak.md §9)
+            "son_zorlandigi": next(({"tarih": o.get("tarih"), "metin": o["zorlandigi"]}
+                                    for o in reversed(k.get("oturumlar", [])) if o.get("zorlandigi")), None),
+            # Nilgün'ün son sınavında zayıf kalan hedefler (ortak.md §11); puan bilerek verilmez.
+            "son_sinav": ({"tarih": k["sinavlar"][-1].get("tarih"), "zayif_hedefler": k["sinavlar"][-1].get("zayif") or []}
+                          if k.get("sinavlar") else None),
             "testler": [{"tur": t.get("tur"), "tarih": t.get("tarih"), "puan": t.get("puan"), "toplam": t.get("toplam"),
                          "secilen_yanilgilar": t.get("secilen_yanilgilar")} for t in k.get("testler", [])]}
 
 
 OGRENCI_TALIMAT = ("Sonraki bütün araçlarda (kayit_yaz, kayit_oku, karne, rapor_yaz, olcme_..., tekrar_listesi, "
-                   "sozlu_prova) ogrenci alanına bu kimliği yaz: %s")
+                   "sinav_...) ogrenci alanına bu kimliği yaz: %s")
 
 
 def ogrenci_sec(a):
@@ -658,6 +699,7 @@ def ar_egitmen_hazirla(a):
         secilen = eg.get("egitmen")
     if secilen not in EGITMENLER:
         raise ValueError("Bilinmeyen eğitmen: %s" % secilen)
+    _SON_EGITMEN[ders] = secilen
     kurallar = _metin_oku(os.path.join(KOK, "egitmenler", "ortak.md")) + "\n\n" + \
         _metin_oku(os.path.join(KOK, "egitmenler", secilen + ".md"))
     out = {"egitmen": EGITMENLER[secilen], "izinli_egitmenler": [EGITMENLER.get(x, x) for x in izinli],
@@ -827,8 +869,9 @@ def ar_kayit_yaz(a):
         k["mod"] = a["mod"]
     if "mola" in a:
         k["mola"] = a.get("mola")
+    damga = damgala(k, a.get("ders"), eg, b)
     if a.get("oturum"):
-        o = dict(a["oturum"], tarih=b)
+        o = dict(a["oturum"], tarih=b, surum=damga)
         if k["oturumlar"] and k["oturumlar"][-1].get("tarih") == b and not a["oturum"].get("yeni"):
             k["oturumlar"][-1].update(o)
         else:
@@ -845,10 +888,15 @@ def ar_rapor_yaz(a):
     k = kayit_yukle(a.get("ogrenci"), ders)
     eg = egitmen_json(ders) or {}
     hed = {x["id"]: x for x in eg.get("hedefler", [])}
+    dm = (k.get("surumler") or [{}])[-1]
     y = ["# Çalışma raporu — %s" % (eg.get("baslik") or ders), "",
          "Öğrenci: %s · Tarih: %s · Eğitmen: %s · Oturum sayısı: %d" % (
-             k["ogrenci"], bugun(), EGITMENLER.get(eg.get("egitmen"), "-"), len(k.get("oturumlar", []))),
-         "", "Bu rapor not için değildir. Öğrencinin bilgisayarında üretildi; otomatik gönderilmedi.", ""]
+             k["ogrenci"], bugun(), EGITMENLER.get(dm.get("egitmen") or eg.get("egitmen"), "-"),
+             len(k.get("oturumlar", []))),
+         ""]
+    if dm:
+        y += ["Program sürümü: %s · Eğitmen metni: %s" % (dm.get("program"), dm.get("kural_izi")), ""]
+    y += ["Bu rapor not için değildir. Öğrencinin bilgisayarında üretildi; otomatik gönderilmedi.", ""]
     if k.get("deneme"):
         y += ["> **DENEME KAYDI:** öğretmen denemesidir; araştırma verisine katılmaz.", ""]
     y += [
@@ -868,8 +916,8 @@ def ar_rapor_yaz(a):
                                               (" — " + v["not"]) if v.get("not") else ""))
     yanlis_emin = [g for g in k.get("guven", []) if g.get("guven") == "emin" and g.get("dogru") is False]
     if k.get("guven"):
-        y += ["", "## Güven ve doğruluk (olgu soruları)", "",
-              "Toplam %d olgu sorusu; emin ama yanlış: %d." % (len(k["guven"]), len(yanlis_emin))]
+        y += ["", "## Güven ve doğruluk (olgu ve yanılgı soruları)", "",
+              "Toplam %d güven sorusu; emin ama yanlış: %d." % (len(k["guven"]), len(yanlis_emin))]
         for g in yanlis_emin:
             y.append("- %s: %s" % (g.get("hedef", ""), g.get("soru", "")))
     if k.get("sorular"):
@@ -1091,43 +1139,105 @@ def ar_karne(a):
     return metin(uyari_ekle(out, k))
 
 
-# ---------- Sözlü sınav provası ----------
-SOZLU_TALIMAT = """Bu bir sözlü sınav provası. Sen sınav hocasısın; sakin, saygılı ve kısa konuş. Not vermezsin.
-- Başta söyle: kaç soru soracağını, her soruda önce sesli düşünmesinin serbest olduğunu, sonunda ayrıntılı
-  geri bildirim vereceğini. Sınav sırasında ders anlatma, ipucu verme, cevabı onaylama ya da düzeltme.
-- Soruyu tahtaya yaz (tahta: title + text) ve sesli sor; cevabı bekle aracıyla al. Sessiz kalırsa bir kez
-  "Acele etme, aklına gelenden başla." de; ikinci sessizlikte bir sonraki soruya geç ve bunu not al.
-- Cevap kısa kalırsa gerçek sınavdaki gibi en çok bir izleme sorusu sor ("Neden?", "Ayırıcı tanıda ne düşünürsün?",
-  "Bu hastada bunu hangi bulguya dayanarak söylüyorsun?"). İzleme sorusu yeni bilgi vermemeli.
-- Her cevabı sessizce rubrikle puanla (rubrik yoksa hedefin Bloom düzeyine göre 0–2). Hazır soru azsa hedefler
-  listesinden, hedefin Bloom düzeyinde yeni soru kur; bilgisini ders_oku ya da bilgi_ara ile dersten al ve
-  bu soruların senin kurduğun soru olduğunu kayda geçir (soru metninin başına "[eğitmen]" yaz).
-- Bütün sorular bitince sınav tarzı geri bildirim ver, her soru için üç kısa satır: ne iyiydi, neyi eksik bıraktı
-  (rubrik ölçütüyle), sınavda nasıl daha iyi söylenirdi (yapı: tanım → bulgu → karar → gerekçe; terimi doğru kullan).
-  Sonra genel izlenim: akıl yürütmenin düzeni, terim kullanımı, kendinden eminlik. En önemli tek öneriyi söyle.
-- Her cevabı kayit_yaz'ın cevaplar alanına tur "sozlu" ile işle (soru, hedef, bloom, puan, en_yuksek,
-  karsilanan_olcutler, eksik_olcutler, ilk_deneme: true). Hedef düzeyini (gozlemler) yalnız yardımsız ve
-  yeterli cevaplarda yükselt. Bitince öğrenci isterse karne aracını çağır."""
+# ---------- Sınav: Nilgün ----------
+# Nilgün yalnız öğrenci isteyince açılır; öğrencinin öz denetimi ve sınava hazırlığı içindir (Kemal Üstün,
+# 27 Kasım 2026). Sonuç öğrencinin bilgisayarında kalır: öğretmene gitmez, anonim araştırma aktarımına girmez,
+# ders kaydındaki hedef düzeylerini değiştirmez. Mantık tools/sinav.py'de; burada dosya ve araç işleri var.
+NILGUN = "nilgun"
+NILGUN_AD = "Nilgün (sınav)"
+
+SINAV_HAZIRLIK_TALIMAT = """Sen artık Nilgün'sün; 'kurallar' alanındaki metne uy. Sınavı şu sırayla hazırla:
+1. Öğrenciye hazırlığın birkaç dakika süreceğini söyle; tahtayi_ac ile tahtayı aç.
+2. Her hedefin kaynak sayfalarını ders_oku ile oku (hedefin 'kaynak' alanı sayfaları söyler). Okumadığın sayfadan
+   soru kurma; öğretmen notlarına uy.
+3. Her hedef için soru yaz: duzey 'hedef' (hedefin Bloom düzeyinde), 'alt' (bir alt düzeyde) ve tam sınavda 'ust'
+   (bir üst düzeyde; kısa sınavda yazma). 'onayli_sorular' içinde hedefe uyan soru varsa onu metnini değiştirmeden
+   kullan. Her soruya: anahtar (beklenen cevabın maddeleri; her maddenin kaynak sayfası; kaynağın sözlerine yakın
+   yaz), olcutler (2–6 ölçüt; olmazsa olmazlar zorunlu: true) ve istersen tam_icin (tam cevap için en az ölçüt sayısı).
+4. Soruları sinav_plani_kaydet ile gönder. Reddedilen soru olursa nedenini oku, düzelt ve planın TAMAMINI yeniden
+   gönder (en çok iki kez). Bir hedef için kaynağa dayanan soru kuramıyorsan o hedefi cikarilan_hedefler ile çıkar
+   ve nedenini yaz; raporda görünür. Kaynakta yazmayan şeyi sorma.
+5. Plan 'hazir' dönünce öğrenciye kaç hedef sorulacağını, yaklaşık süreyi ve kuralı söyle (ipucu yok, sonuçlar
+   sonda). "Yüz üzerinden kaç bekliyorsun?" diye sor ve cevabı sinav_baslat'a tahmin olarak ver.
+Cevap anahtarını, ölçütleri ve puanı sınav bitene kadar öğrenciye söyleme, tahtaya yazma."""
+
+SINAV_YURUTME_TALIMAT = """Sınav başladı. Her soruda:
+- Tahtaya yalnız soruyu yaz (tahta: clear, title, text) ve sesli sor; cevabı bekle ile al. Öğrencinin cevabı
+  kendiliğinden gönderilmez: düzeltip "Cevapla" dediği metin gelir.
+- Cevap gelince yalnız "Aldım." de. Cevap kısa kaldıysa en çok bir izleme sorusu sor ("Neden?"); yeni bilgi verme.
+- Güveni sor: soru_sor ile secenekler ["Tahmin", "Biraz", "Emin"], etiket "Ne kadar eminsin?" (dogru ve aciklama verme).
+- sinav_cevap çağır: no, cevap (öğrencinin sözü, kelimesi kelimesine), karsilanan (karşılanan ölçütlerin id'leri;
+  emin değilsen karşılanmadı say), guven. Sıradaki soruyu araç verir; soruyu kendin seçme, sırayı değiştirme.
+- "bitti: true" dönünce sinav_bitir çağır. Öğrenci bırakmak isterse sinav_bitir(yarim: true)."""
+
+SINAV_SONUC_TALIMAT = """Sınav bitti; tonun artık açık sözlü ve yapıcı. Şu sırayla söyle (tahtada table kullanabilirsin):
+1. Puan ve öğrencinin tahminiyle farkı. Puanı not gibi sunma; "bugünkü durumun" de.
+2. Emin ama yanlış cevaplar: beklenen cevabı sayfasıyla göster.
+3. Her soru için beklenen cevap, karşılanan ve eksik ölçütler (kısa).
+4. Güçlü ve zayıf hedefler; önceki sınavı varsa yalnız kendi önceki sonucuyla karşılaştır.
+5. Çalışma tavsiyesi: 'tavsiye' alanındaki hedefleri ve eğitmeni söyle, yeniden sınav gününü öner.
+6. Kaçırılan soruların tekrar kartına yazıldığını söyle. Rapor dosyası öğrencinin bilgisayarında durur.
+Ders anlatma; öğretimi dersin eğitmenine bırak. Öğrenci itiraz ederse ilgili kaynak sayfasını göster; haklıysa söyle."""
 
 
-def ar_sozlu_prova(a):
-    ders = a.get("ders")
-    n = max(1, min(int(a.get("soru_sayisi") or 5), 12))
-    d = ders_json(ders)
+def sinav_klasoru(kimlik):
+    return os.path.join(depo().klasor(kimlik), "sinavlar")  # alt klasörde: ders kaydı (*.json) sanılmasın
+
+
+def sinav_yolu(kimlik, no):
+    if not re.fullmatch(r"[0-9]{8}-[0-9]{6}(-[0-9]+)?", no or ""):
+        raise ValueError("Geçersiz sınav numarası")
+    return os.path.join(sinav_klasoru(kimlik), no + ".json")
+
+
+def sinav_oku(ogrenci, no):
+    kimlik = ogrenci_kimligi(ogrenci)
+    s, _ = kd.guvenli_oku(sinav_yolu(kimlik, no))
+    if not s or s.get("tur") != sinav_.TUR:
+        raise ValueError("Sınav bulunamadı: %s. Önce sinav_hazirla çağır." % no)
+    return kimlik, s
+
+
+def sinav_yaz(kimlik, s):
+    return kd.atomik_yaz(sinav_yolu(kimlik, s["no"]), s, yedekle=False)
+
+
+def bitmis_sinavlar(kimlik):
+    """Öğrencinin bitirdiği sınavların özetleri, eskiden yeniye."""
+    out = []
+    for yol in sorted(glob.glob(os.path.join(glob.escape(sinav_klasoru(kimlik)), "*.json"))):
+        try:
+            s, _ = kd.guvenli_oku(yol)
+        except (ValueError, OSError):
+            continue
+        if s and s.get("tur") == sinav_.TUR and s.get("sonuc_ozeti"):
+            out.append(dict(s["sonuc_ozeti"], no=s["no"], dersler=s.get("dersler")))
+    return out
+
+
+def sinav_modu(etiket=None, kapat=False):
+    """Tahtayı sınav görünümüne alır ya da çıkarır (tahta açık değilse sessizce geçer)."""
+    try:
+        _ham_istek("gonder", {"komut": {"tur": "sinav", "acik": not kapat, "etiket": etiket}, "bekle": 0.5}, 8)
+    except Exception:
+        pass
+
+
+def onayli_sorular(ders):
+    """Öğretmenin onayladığı açık uçlu sorular: soru bankası, hazır anlatımın soruları ve vakaların açık düğümleri."""
     eg = egitmen_json(ders) or {}
-    hedefler = karne_.ders_hedefleri(ders_yolu(ders))
-    oncelik = []
-    if a.get("ogrenci"):
-        k = kayit_yukle(a.get("ogrenci"), ders)
-        kr = karne_.hesapla(k, hedefler, bugun())
-        oncelik = list(dict.fromkeys(kr["gelistirilecek"] + kr["tekrar_zamani_gelen"] + kr["yoklanmayan"]))
-    maddeler = []
+    d = ders_json(ders)
+    out = []
+    for s in eg.get("soruBankasi") or []:
+        if s.get("tur") in (None, "acik") and not s.get("secenekler"):
+            out.append({"nereden": "soru bankası", "soru": s.get("metin"), "hedef": s.get("hedef"), "bloom": s.get("bloom"),
+                        "rubrik": s.get("rubrik"), "ornek_cevap": s.get("ornek_cevap")})
     for sec in d.get("sections", []):
         for st in sec.get("steps", []):
             q = st.get("question") or {}
             if q.get("type") == "open":
-                maddeler.append({"kaynak": "ders", "bolum": sec.get("id"), "soru": q.get("prompt"), "hedef": q.get("goal"),
-                                 "bloom": q.get("bloom"), "rubrik": q.get("rubric"), "ornek_cevap": q.get("modelAnswer")})
+                out.append({"nereden": "ders", "soru": q.get("prompt"), "hedef": q.get("goal"), "bloom": q.get("bloom"),
+                            "rubrik": q.get("rubric"), "ornek_cevap": q.get("modelAnswer")})
     for yol in sorted(glob.glob(ders_yolu(ders, "vakalar", "*.json"))):
         try:
             v = _json_oku(yol)
@@ -1135,18 +1245,245 @@ def ar_sozlu_prova(a):
             continue
         for nd in v.get("dugumler", []):
             if nd.get("tur") == "acik":
-                maddeler.append({"kaynak": "vaka", "vaka": v.get("id"), "vaka_ozeti": (v.get("basvuru") or {}).get("sikayet"),
-                                 "soru": nd.get("soru"), "hedef": nd.get("hedef"), "bloom": nd.get("bloom"),
-                                 "rubrik": nd.get("rubrik"), "ornek_cevap": nd.get("ornek_cevap")})
-    sira = {h: i for i, h in enumerate(oncelik)}
-    maddeler.sort(key=lambda m: (sira.get(m.get("hedef"), len(sira)),
-                                 -BLOOM.index(m["bloom"]) if m.get("bloom") in BLOOM else 0))
-    secilen = maddeler[:n]
-    return metin({"talimat": SOZLU_TALIMAT, "ders": ders, "soru_sayisi": n, "hazir_sorular": secilen,
-                  "eksik_soru": max(0, n - len(secilen)),
-                  "oncelikli_hedefler": oncelik[:8],
-                  "hedefler": [{"id": h["id"], "baslik": h.get("baslik"), "bloom": h.get("bloom")} for h in hedefler],
-                  "ogretmen_notlari": eg.get("ogretmenNotlari")})
+                out.append({"nereden": "vaka", "vaka_ozeti": (v.get("basvuru") or {}).get("sikayet"), "soru": nd.get("soru"),
+                            "hedef": nd.get("hedef"), "bloom": nd.get("bloom"), "rubrik": nd.get("rubrik"),
+                            "ornek_cevap": nd.get("ornek_cevap")})
+    return [{a: b for a, b in x.items() if b not in (None, "", [])} for x in out if (x.get("soru") or "").strip()]
+
+
+def olcme_sorulari(ders):
+    """Pilot ölçme formlarının soru metinleri (taslak olsa da): Nilgün'e kapalıdır, benzeri de kurulmaz."""
+    formlar = ((egitmen_json(ders) or {}).get("olcme") or {}).get("formlar") or {}
+    return [s.get("soru") for f in formlar.values() for s in f if s.get("soru")]
+
+
+def sinav_dersleri(a):
+    dersler_ = a.get("dersler") or ([a["ders"]] if a.get("ders") else [])
+    if not isinstance(dersler_, list) or not dersler_:
+        raise ValueError("dersler gerekli: sınavın yapılacağı ders ya da dersler")
+    out = []
+    for d in dict.fromkeys(dersler_):
+        ders_yolu(d)
+        if d == makale_bulucu.KENDI:
+            raise ValueError("Sınav şimdilik yalnız ders paketlerinden yapılır; öğrencinin kendi PDF'lerinden sınav "
+                             "sonraki sürümde.")
+        if not os.path.isdir(ders_yolu(d)):
+            raise ValueError("Ders bulunamadı: %s. dersler aracıyla listeye bak." % d)
+        if not karne_.ders_hedefleri(ders_yolu(d)):
+            raise ValueError("Bu derste öğrenme hedefi tanımlı değil; sınav planı kurulamaz: %s" % d)
+        out.append(d)
+    return out
+
+
+def sinav_hedefleri(kimlik, dersler_, sure):
+    """(sorulacak hedefler, kısa sınavda sorulmayanlar). Kısa sınavda zayıf kalan ve hiç yoklanmamış hedefler önce."""
+    hepsi, oncelik, ikincil = [], [], []
+    onceki = {}
+    for o in bitmis_sinavlar(kimlik):
+        for h in o.get("hedefler") or []:
+            onceki[sinav_.anahtar(h["ders"], h["hedef"])] = h.get("puan")
+    for d in dersler_:
+        eg = egitmen_json(d) or {}
+        ek = {h["id"]: h for h in eg.get("hedefler") or []}
+        hed = karne_.ders_hedefleri(ders_yolu(d))
+        for h in hed:
+            x = {"ders": d, "id": h["id"], "baslik": h.get("baslik"), "bloom": h.get("bloom")}
+            for alan in ("kaynak", "odak"):
+                if ek.get(h["id"], {}).get(alan):
+                    x[alan] = ek[h["id"]][alan]
+            hepsi.append(x)
+        kr = karne_.hesapla(kayit_yukle(kimlik, d), hed, bugun())
+        oncelik += [sinav_.anahtar(d, h) for h in kr["gelistirilecek"] + kr["tekrar_zamani_gelen"]]
+        ikincil += [sinav_.anahtar(d, h) for h in kr["yoklanmayan"]]
+    zayif = [a for a, p in onceki.items() if p is not None and p < 2]
+    oncelik = list(dict.fromkeys(zayif + oncelik))
+    ikincil = [a for a in ikincil if a not in onceki]  # sınavda da hiç sorulmamış olanlar
+    secilen = hepsi if sure == "tam" else sinav_.kisa_secim(hepsi, oncelik, ikincil)
+    sec = {sinav_.anahtar(h["ders"], h["id"]) for h in secilen}
+    return secilen, [h for h in hepsi if sinav_.anahtar(h["ders"], h["id"]) not in sec]
+
+
+def ar_sinav_hazirla(a):
+    dersler_ = sinav_dersleri(a)
+    sure = a.get("sure") or "kisa"
+    if sure not in sinav_.SURELER:
+        raise ValueError("sure 'kisa' ya da 'tam' olmalı")
+    kimlik, soru = ogrenci_sec(a)
+    if not kimlik:
+        soru = json.loads(json.dumps(soru, ensure_ascii=False).replace("egitmen_hazirla", "sinav_hazirla"))
+        return metin({"egitmen": NILGUN_AD, "ogrenci": soru,
+                      "sonraki_cagri": "Öğrenci kim olduğunu söyleyince sinav_hazirla'yı aynı dersler ve süreyle yeniden çağır."})
+    hedefler, sorulmayan = sinav_hedefleri(kimlik, dersler_, sure)
+    no = time.strftime("%Y%m%d-%H%M%S")
+    ek = 1
+    while os.path.exists(sinav_yolu(kimlik, no)):
+        ek += 1
+        no = "%s-%d" % (no[:15], ek)
+    s = {"tur": sinav_.TUR, "surum": sinav_.SURUM, "no": no, "durum": "hazirlaniyor", "dersler": dersler_, "sure": sure,
+         "olusturma": time.strftime("%Y-%m-%dT%H:%M:%S"), "hedefler": hedefler, "sorular": [], "cevaplar": [],
+         "surum_damgasi": {"program": SURUM, "egitmen": NILGUN, "kural_izi": kural_izi(NILGUN)}}
+    sinav_yaz(kimlik, s)
+    ders_bilgisi = []
+    for d in dersler_:
+        eg = egitmen_json(d) or {}
+        dj = ders_json(d)
+        kay = eg.get("kaynak") or dj.get("source") or {}
+        ders_bilgisi.append({
+            "ders": d, "baslik": eg.get("baslik") or dj.get("title"), "duzey": eg.get("duzey"),
+            "dersin_egitmeni": EGITMENLER.get(eg.get("egitmen") or "inci"),
+            "kaynak": {x: kay.get(x) for x in ("baslik", "tur", "sayfaSayisi", "okumaNotu") if isinstance(kay, dict) and kay.get(x)},
+            "ogretmen_notlari": eg.get("ogretmenNotlari"), "bilinen_yanilgilar": eg.get("yanilgilar"),
+            "onayli_sorular": onayli_sorular(d)})
+    onceki = [o for o in bitmis_sinavlar(kimlik) if sorted(o.get("dersler") or []) == sorted(dersler_)]
+    bilgi = depo().defter()["ogrenciler"].get(kimlik) or {}
+    out = {"egitmen": NILGUN_AD, "kurallar": _metin_oku(os.path.join(KOK, "egitmenler", NILGUN + ".md")),
+           "ogrenci": {"ad": bilgi.get("ad") or kimlik, "kimlik": kimlik, "not": OGRENCI_TALIMAT % kimlik},
+           "sinav": {"sinav": no, "sure": sure, "dersler": ders_bilgisi, "hedefler": hedefler,
+                     "hedef_sayisi": len(hedefler),
+                     "bu_sinavda_sorulmayan_hedefler": [sinav_.anahtar(h["ders"], h["id"]) for h in sorulmayan] or None,
+                     "onceki_sinav": ({"tarih": onceki[-1].get("tarih"), "yuzde": onceki[-1].get("yuzde")} if onceki else None),
+                     "bloom_sirasi": BLOOM},
+           "talimat": SINAV_HAZIRLIK_TALIMAT}
+    return metin(out)
+
+
+def _sinav_dayanak(ders, madde):
+    sonuclar, oz = bilgi_bankasi.ara_ve_dayanak(madde, ders, None, 4, model=anlam_modeli())
+    return oz["dayanak"], [x["sayfa"] for x in sonuclar if x.get("sayfa")]
+
+
+def ar_sinav_plani_kaydet(a):
+    kimlik, s = sinav_oku(a.get("ogrenci"), a.get("sinav"))
+    if s["durum"] != "hazirlaniyor":
+        raise ValueError("Bu sınavın planı kaydedildi; cevap anahtarı ve ölçütler artık değişmez. Sınavı sinav_baslat ile başlat.")
+    dersler_ = s["dersler"]
+    if _DIZIN_KILIDI.acquire(timeout=2):
+        try:
+            bilgi_bankasi.dizinle(sessiz=True)
+        finally:
+            _DIZIN_KILIDI.release()
+    sayfa = {}
+    for d in dersler_:
+        kay = (egitmen_json(d) or {}).get("kaynak") or {}
+        sayfa[d] = kay.get("sayfaSayisi") if isinstance(kay, dict) else None
+    r = sinav_.plan_denetle(a.get("sorular"), s["hedefler"], sayfa,
+                            onayli={d: [x["soru"] for x in onayli_sorular(d)] for d in dersler_},
+                            olcme={d: olcme_sorulari(d) for d in dersler_},
+                            dayanak_fn=_sinav_dayanak, cikarilan=a.get("cikarilan_hedefler"))
+    s["plan_denemesi"] = int(s.get("plan_denemesi") or 0) + 1
+    if r["eksik_hedefler"] or not r["sorular"]:
+        sinav_yaz(kimlik, s)
+        return metin({"durum": "eksik", "sinav": s["no"], "kaydedilmedi": True, "deneme": s["plan_denemesi"],
+                      "eksik_hedefler": r["eksik_hedefler"], "reddedilen": r["reddedilen"], "uyarilar": r["uyarilar"] or None,
+                      "not": "Plan kaydedilmedi. Eksik hedefler için kaynağa dayanan, hedef düzeyinde soru yaz ve planın "
+                             "tamamını yeniden gönder. İki denemede olmuyorsa hedefi cikarilan_hedefler ile çıkar."})
+    s.update(sorular=r["sorular"], cikarilan=r["cikarilan"], durum="hazir", plan_saati=time.strftime("%Y-%m-%dT%H:%M:%S"))
+    sinav_yaz(kimlik, s)
+    n = len(sinav_.sorulan_hedefler(s))
+    out = {"durum": "hazir", "sinav": s["no"], "hedef_sayisi": n, "soru_sayisi": len(s["sorular"]),
+           "yaklasik_sure_dk": max(5, int(round(n * 2.5))),
+           "not": "Plan kaydedildi; cevap anahtarı ve ölçütler artık değişmez. Öğrenciye hedef sayısını, yaklaşık süreyi ve "
+                  "kuralı söyle; \"Yüz üzerinden kaç bekliyorsun?\" diye sor; sonra sinav_baslat çağır."}
+    if r["reddedilen"]:
+        out["plana_girmeyen_sorular"] = r["reddedilen"]
+    if r["cikarilan"]:
+        out["cikarilan_hedefler"] = r["cikarilan"]
+    if r["uyarilar"]:
+        out["uyarilar"] = r["uyarilar"]
+    return metin(out)
+
+
+def _soru_gorunumu(s, q):
+    i, n = sinav_.hedef_sirasi(s, q)
+    return {"no": q["no"], "ders": q["ders"], "hedef": q["hedef"], "duzey": q["duzey"], "soru": q["soru"],
+            "olcutler": q["olcutler"], "tam_icin": q["tam_icin"], "anahtar": q["anahtar"], "hedef_sirasi": "%d / %d" % (i, n)}
+
+
+def ar_sinav_baslat(a):
+    kimlik, s = sinav_oku(a.get("ogrenci"), a.get("sinav"))
+    if s["durum"] == "hazirlaniyor":
+        raise ValueError("Sınav planı henüz kaydedilmedi; önce sinav_plani_kaydet.")
+    if s["durum"] in ("bitti", "yarim"):
+        raise ValueError("Bu sınav bitti. Yeni sınav için sinav_hazirla çağır.")
+    if s["durum"] == "hazir":
+        t = a.get("tahmin")
+        if isinstance(t, (int, float)) and not isinstance(t, bool) and 0 <= t <= 100:
+            s["tahmin"] = int(round(t))
+        s.update(durum="suruyor", baslama=time.strftime("%Y-%m-%dT%H:%M:%S"))
+        sinav_yaz(kimlik, s)
+    q = sinav_.sonraki(s)
+    if q is None:
+        return metin({"bitti": True, "not": "Sorulacak soru kalmadı; sinav_bitir çağır."})
+    sinav_modu("Hedef %s" % _soru_gorunumu(s, q)["hedef_sirasi"])
+    return metin({"sinav": s["no"], "tahmin": s.get("tahmin"), "soru": _soru_gorunumu(s, q), "talimat": SINAV_YURUTME_TALIMAT})
+
+
+def ar_sinav_cevap(a):
+    kimlik, s = sinav_oku(a.get("ogrenci"), a.get("sinav"))
+    if s["durum"] != "suruyor":
+        raise ValueError("Sınav sürmüyor (durum: %s). Başlatmak için sinav_baslat." % s["durum"])
+    try:
+        no = int(a.get("no"))
+    except (TypeError, ValueError):
+        raise ValueError("no gerekli: cevaplanan sorunun numarası")
+    c = sinav_.cevap_isle(s, no, a.get("karsilanan"), a.get("guven"), a.get("cevap"), time.strftime("%H:%M:%S"))
+    sinav_yaz(kimlik, s)
+    q = sinav_.sonraki(s)
+    out = {"kaydedildi": c["no"], "bitti": q is None}
+    if q is None:
+        out["not"] = "Sorular bitti; sinav_bitir çağır."
+    else:
+        out["soru"] = _soru_gorunumu(s, q)
+        sinav_modu("Hedef %s" % out["soru"]["hedef_sirasi"])
+    return metin(out)
+
+
+def ar_sinav_bitir(a):
+    kimlik, s = sinav_oku(a.get("ogrenci"), a.get("sinav"))
+    if s["durum"] in ("bitti", "yarim") and s.get("sonuc_ozeti"):
+        r = sinav_.sonuc(s)
+        return metin({"durum": s["durum"], "sinav": s["no"], "sonuc": r, "not": "Bu sınav daha önce bitirildi."})
+    if s["durum"] != "suruyor":
+        raise ValueError("Sınav başlamadı (durum: %s)." % s["durum"])
+    r = sinav_.sonuc(s)
+    if not r["tamamlandi"] and not a.get("yarim"):
+        q = sinav_.sonraki(s)
+        raise ValueError("Sınav bitmedi; sıradaki soru %d. Öğrenci bırakmak istiyorsa yarim: true ile çağır." % q["no"])
+    b = bugun()
+    onceki = [o for o in bitmis_sinavlar(kimlik) if sorted(o.get("dersler") or []) == sorted(s["dersler"])]
+    kars = sinav_.karsilastir(dict(r, hedefler=r["hedefler"]), onceki[-1] if onceki else None)
+    s.update(durum="bitti" if r["tamamlandi"] else "yarim", tarih=b, bitis=time.strftime("%Y-%m-%dT%H:%M:%S"),
+             sonuc_ozeti={"tarih": b, "yuzde": r["yuzde"], "puan": r["puan"], "en_yuksek": r["en_yuksek"],
+                          "hedefler": [{"ders": h["ders"], "hedef": h["hedef"], "puan": h["puan"]} for h in r["hedefler"]]})
+    adlar, tavsiye, kart_sayisi = {}, [], 0
+    yeniden = gun_ekle(b, 7)
+    for d in s["dersler"]:
+        eg = egitmen_json(d) or {}
+        adlar[d] = eg.get("baslik") or ders_json(d).get("title") or d
+        zayif = [h for h in r["zayif_hedefler"] if h["ders"] == d]
+        if zayif:
+            tavsiye.append({"ders": d, "ders_adi": adlar[d], "egitmen": (EGITMENLER.get(eg.get("egitmen") or "inci") or "").split(" (")[0],
+                            "hedefler": ["%s %s" % (h["hedef"], h.get("baslik") or "") for h in zayif]})
+        # Ders kaydına yalnız özet: eğitmen "sınavda zayıf kalan hedefler"i görür, puanı görmez (ortak.md §11).
+        k = kayit_yukle(kimlik, d)
+        k.setdefault("sinavlar", []).append({
+            "sinav": s["no"], "tarih": b, "sure": s["sure"], "yarim": not r["tamamlandi"],
+            "hedefler": {h["hedef"]: h["puan"] for h in r["hedefler"] if h["ders"] == d and h["puan"] is not None},
+            "zayif": [h["hedef"] for h in zayif]})
+        kayit_kaydet(k)
+        kartlar = [{"soru": x["soru"], "hedef": x["hedef"], "ornek_cevap": "; ".join(m["madde"] for m in x["beklenen"]),
+                    "sayfalar": sorted({m["sayfa"] for m in x["beklenen"] if m.get("sayfa")})}
+                   for x in r["sorular"] if x["ders"] == d and x["sonuc"] != "tam" and x["duzey"] != "ust"]
+        kart_sayisi += len(ders_sonu.sinav_kartlari_ekle(kimlik, d, kartlar)) if kartlar else 0
+    tavsiye_md = "\n".join("- %s: %s. %s ile çalış." % (t["ders_adi"], "; ".join(t["hedefler"]), t["egitmen"]) for t in tavsiye)
+    tavsiye_md = (tavsiye_md + "\n- Yeniden sınav: %s ya da sonrası." % yeniden) if tavsiye else \
+        "Bu sınavda sorulan bütün hedeflerde hedef düzeyine ulaştın. Sorulmayan hedefler için tam sınav olabilirsin."
+    sinav_yaz(kimlik, s)
+    rapor = depo().metin_yaz(kimlik, "sinavlar", s["no"] + ".md", sinav_.rapor_md(s, r, adlar, kars, tavsiye_md))
+    sinav_modu(kapat=True)
+    return metin({"durum": s["durum"], "sinav": s["no"], "sonuc": r, "onceki_sinavla_karsilastirma": kars,
+                  "tavsiye": {"calisilacak": tavsiye, "yeniden_sinav": yeniden}, "tekrar_karti": kart_sayisi,
+                  "rapor_dosyasi": rapor, "talimat": SINAV_SONUC_TALIMAT})
 
 
 # ---------- Dersler arası tekrar ----------
@@ -1391,6 +1728,7 @@ def ar_olcme_kaydet(a):
              "yarim_kaldi": bool(a.get("yarim_kaldi") or eksik), "yanitlar": ayrinti}
     if eksik:
         kayit["cevapsiz"] = eksik
+    damgala(k, ders, eg, bugun())
     k.setdefault("testler", []).append(kayit)
     yol = kayit_kaydet(k)
     out = {"durum": "kaydedildi", "dosya": yol, "test": TEST_AD[tur], "puan": puan,
@@ -1521,8 +1859,9 @@ def ar_tahtayi_ac(_):
             if d:
                 break
         if not d:
+            import komut
             return metin({"durum": "hata", "hata": "Yerel sunucu açılamadı. Bilgisayarda şunu çalıştırın: "
-                                                    "python tools/sunucu.py --sayfa canli.html"}, hata=True)
+                                                    + komut.yazi("sunucu.py", "--sayfa", "canli.html")}, hata=True)
     if not d.get("bagli"):
         webbrowser.open("http://localhost:%d/canli.html" % PORT)
         for _ in range(40):
@@ -1547,8 +1886,10 @@ def surum_bilgisi(d=None):
     sunucu = (d or {}).get("surum")
     if sunucu and sunucu != SURUM:
         out["sunucu"] = sunucu
-        out["uyari"] = ("Tahta sunucusu %s, bu araç %s. Kullanıcıdan KlinikKoç'u kapatıp yeniden başlatmasını iste." %
-                        (sunucu, SURUM))
+        out["uyari"] = ("Tahta sunucusu %s, bu araç %s: güncellemeden sonra Claude masaüstü uygulaması eski araçlarla "
+                        "çalışıyor. Kullanıcıdan Claude masaüstü uygulamasını TAMAMEN kapatıp yeniden açmasını iste; "
+                        "pencereyi kapatmak yetmez: Windows'ta saatin yanındaki simge alanında Claude simgesine sağ tıklayıp "
+                        "'Çıkış', Mac'te Claude › Çıkış (⌘Q)." % (sunucu, SURUM))
     try:
         g = surum_.denetle()
         if g.get("var") and not g.get("gelistirici"):
@@ -1622,11 +1963,20 @@ def sablon_ozeti(ad, varyant=None):
         out["ayrinti_parcalari"] = s["ayrinti"]
     if s.get("yalniz"):
         out["yalniz_bu_varyantlarda"] = s["yalniz"]
+    if s.get("not"):
+        out["not"] = s["not"]
+    if s.get("takma"):
+        out["eski_adlar"] = s["takma"]
     if varyant:
         if varyant not in s["varyantlar"]:
             out["uyari"] = "'%s' varyantı yok; geçerli: %s" % (varyant, ", ".join(s["varyantlar"]))
         else:
-            out["bu_varyantta"] = sorted(_sablon_parcalari(s, varyant))
+            # Bu durumda tahtada görünen gerçek etiket metinleri (bazı parçaların adı duruma göre değişir).
+            out["bu_varyantta"] = {p: (s.get("adlar", {}).get(p, {}).get(varyant) or s["parcalar"][p])
+                                   for p in sorted(_sablon_parcalari(s, varyant))}
+    elif s.get("adlar"):
+        out["adi_duruma_gore_degisen"] = s["adlar"]
+        out["adi_notu"] = "Bu parçaların tahtadaki etiketi duruma göre değişir; kesin metin için variant ile sor."
     return out
 
 
@@ -1651,7 +2001,7 @@ def sablon_uyarilari(c, yer):
                    % (yer, ad, v, s["varyantlar"][0], ", ".join(s["varyantlar"])))
         v = None
     v = v or s["varyantlar"][0]
-    var = _sablon_parcalari(s, v)
+    var = _sablon_parcalari(s, v) | set(s.get("takma") or {})
     istenen = []
     lab = c.get("labels")
     if isinstance(lab, list):
@@ -2152,6 +2502,12 @@ def ar_calisma_secimi(_):
     if not s["dersler"] and not s["pdfler"]:
         return metin({"secim": None, "not": "Ana ekranda işaretlenmiş bir ders ya da PDF yok. Öğrenciye hangi dersi "
                                             "çalışmak istediğini sor; dersler aracıyla listeyi görebilirsin."})
+    if s.get("sinav") and s["dersler"]:
+        return metin({"sinav": True, "sure": s["sinav"]["sure"], "secim_tarihi": s["tarih"],
+                      "dersler": [{"ders": d, "baslik": b} for d, b in zip(s["dersler"], s["ders_adlari"])],
+                      "not": "Öğrenci ana ekranda 'Sözlü sınav ol' düğmesine bastı: ders anlatma. "
+                             "sinav_hazirla(dersler=%s, sure='%s') çağır ve dönen kurallarla Nilgün ol."
+                             % (json.dumps(s["dersler"], ensure_ascii=False), s["sinav"]["sure"])})
     ana = s["dersler"][0] if s["dersler"] else makale_bulucu.KENDI
     diger = s["dersler"][1:]
     out = {"dersler": [{"ders": d, "baslik": b} for d, b in zip(s["dersler"], s["ders_adlari"])],
@@ -2306,7 +2662,9 @@ ISLEYICILER = {"egitmen_hazirla": ar_egitmen_hazirla, "kayit_oku": ar_kayit_oku,
                "tahta_durumu": ar_tahta_durumu, "dinle": ar_dinle, "bekle": ar_bekle, "durdur": ar_durdur,
                "anlatima_devam": ar_anlatima_devam, "videolar": ar_videolar,
                "bilgi_ara": ar_bilgi_ara, "vakalar": ar_vakalar, "vaka_oku": ar_vaka_oku, "karne": ar_karne,
-               "sozlu_prova": ar_sozlu_prova, "tekrar_listesi": ar_tekrar_listesi,
+               "sinav_hazirla": ar_sinav_hazirla, "sinav_plani_kaydet": ar_sinav_plani_kaydet,
+               "sinav_baslat": ar_sinav_baslat, "sinav_cevap": ar_sinav_cevap, "sinav_bitir": ar_sinav_bitir,
+               "tekrar_listesi": ar_tekrar_listesi,
                "kayit_disa_aktar": ar_kayit_disa_aktar, "kayit_ice_aktar": ar_kayit_ice_aktar,
                "kayit_anonim_aktar": ar_kayit_anonim_aktar, "makaleler": ar_makaleler,
                "makale_bul": ar_makale_bul, "makale_ekle": ar_makale_ekle,
@@ -2553,7 +2911,8 @@ def kur(kaldir=False):
         print("sağ tık → Çık (Mac'te Cmd+Q). Sonra yeniden açın.")
         print("Denetim: Claude'da Ayarlar › Geliştirici ekranında '%s' \"Çalışıyor\" görünmeli." % AD)
         print("Görünmüyorsa: aynı ekranda \"Yapılandırmayı düzenle\"ye basın, açılan dosyanın yolunu")
-        print("  python tools/tahta-mcp.py --kur --ayar \"<yol>\"  ile verin.")
+        import komut
+        print("  %s  ile verin." % komut.yazi("tahta-mcp.py", "--kur", "--ayar", '"<yol>"'))
         print("Sonra Claude'a şunu yazın:  Tahtayı aç ve bana Şekil 2'yi anlat.")
         kayit_yeri_hazirla()
 
@@ -2596,5 +2955,10 @@ if __name__ == "__main__":
         kayit_yeri_hazirla()
     elif "--dene" in sys.argv:
         kendini_dene()
+    elif "--kural-izi" in sys.argv:
+        # Eğitmen metinlerinin güncel parmak izleri (egitmenler/DEGISIKLIKLER.md'ye yazmak için)
+        print("KlinikKoç sürümü:", SURUM)
+        for _e in list(EGITMENLER) + [NILGUN]:
+            print("%s: %s" % (_e, kural_izi(_e)))
     else:
         calis()

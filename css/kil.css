@@ -224,3 +224,6 @@ pre.k-metin { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 5
   font-size: 14.5px; line-height: 1.45; }
 .k-ortak-uyari b { color: #4f2508; }
 @media (max-width: 760px) { .k-ortak-uyari { margin: 6px 12px 0; } }
+
+/* Sözlü sınav penceresi (Nilgün): süre seçimi */
+.k-sinav-sure { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 6px 0 14px; }

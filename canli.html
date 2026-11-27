@@ -16,7 +16,7 @@
     <header class="topbar">
       <span class="canli-dot" id="dot" title="Bağlantı"></span>
       <div class="topbar-titles">
-        <div class="lesson-name" id="dersAdi">Canlı tahta · Claude</div><span class="canli-surum" id="surumEtiket" title="KlinikKoç sürümü"></span>
+        <div class="lesson-name" id="dersAdi">Canlı tahta · Claude</div><span class="canli-surum" id="surumEtiket" title="KlinikKoç sürümü"></span><span class="canli-sinav-rozet" id="sinavRozet" role="status" hidden></span>
         <div class="section-name" id="durum">Bağlanıyor…</div>
       </div>
       <span class="canli-ses" id="sesMotor" role="status" hidden></span>
@@ -40,6 +40,12 @@
         <label><input type="radio" name="zemin" value="acik" id="zeminAcik"> <span>Açık (kırık beyaz)</span></label>
         <label><input type="radio" name="zemin" value="koyu" id="zeminKoyu"> <span>Koyu (lacivert)</span></label>
       </div>
+      <div class="canli-menu-baslik">Anlatıcı sesi</div>
+      <div class="canli-ayar-secim" role="radiogroup" aria-label="Anlatıcı sesi" id="anlaticiSecim">
+        <label><input type="radio" name="anlatici" value="female_3" id="sesKadin"> <span>Kadın</span></label>
+        <label><input type="radio" name="anlatici" value="male_2" id="sesErkek"> <span>Erkek</span></label>
+      </div>
+      <div class="canli-menu-not" id="anlaticiNot" hidden>Doğal ses hazır değil; yedek ses kullanılıyor.</div>
       <div class="canli-menu-baslik">Yan paneller</div>
       <label class="canli-ayar-kutu"><input type="checkbox" id="panelAkis"> <span><b>Ders akışı</b><small>Bu oturumda tahtaya gelen konular ve anlatımın neresinde olduğunuz</small></span></label>
       <label class="canli-ayar-kutu"><input type="checkbox" id="panelIlerleme"> <span><b>İlerleme</b><small>Dersin hedefleri ve her birinde nerede olduğunuz</small></span></label>
@@ -92,6 +98,7 @@
         <div class="canli-serit">
           <div class="canli-ileti eski" id="onceki" hidden></div>
           <div class="canli-ileti caption" id="caption" aria-live="polite"></div>
+          <div class="canli-ileti canli-sinav-ipucu" id="sinavIpucu" role="status" hidden>Cevabınız kendiliğinden gönderilmez. Klavyeyle düzeltebilirsiniz; göndermek için Cevapla’ya basın ya da “cevapla” deyin.</div>
           <div class="canli-durak" id="durakIsaret" role="status" hidden>⏸ Duraklatıldı · devam için ▶, P ya da Boşluk</div>
         </div>
         <div class="canli-satir">
@@ -114,12 +121,13 @@
               <span class="canli-komut" id="motorKomut" hidden><code id="motorKomutYazi"></code><button type="button" class="btn" id="motorKopyala">Kopyala</button></span></span></label>
             <label class="canli-secenek"><input type="radio" name="motor" id="motorTarayici">
               <span><b>Tarayıcı</b><small id="motorTarayiciDurum"></small></span></label>
-            <div class="canli-menu-not">Söylediğiniz terim sözlüğünden geçer ve göndermeden önce 2–3 sn kutuda görünür; düzeltmek için kutuya dokunun.</div>
+            <div class="canli-menu-not">Söylediğiniz terim sözlüğünden geçer ve göndermeden önce 2–3 sn kutuda görünür; düzeltmek için kutuya dokunun. Sınavda cevap kendiliğinden gönderilmez; “Cevapla” ile gönderilir.</div>
           </div>
           <div class="canli-kutu">
-            <input id="yazi" type="text" autocomplete="off" enterkeyhint="send" aria-label="Claude'a yazın">
+            <textarea id="yazi" rows="1" autocomplete="off" enterkeyhint="send" aria-label="Claude'a yazın"></textarea>
             <span class="canli-dalga" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
             <button class="canli-gonder" id="gonder" aria-label="Gönder" title="Gönder (Enter)" disabled>
+              <span class="canli-gonder-yazi">Cevapla</span>
               <svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
             </button>
           </div>

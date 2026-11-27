@@ -137,17 +137,23 @@ def secim_oku():
     s = _json_oku(secim_yolu(), {}) or {}
     kurulu = {d["ders"]: d["baslik"] for d in dersler()}
     var_pdf = {p["id"]: p["baslik"] for p in pdfler()}
+    sinav = s.get("sinav") if isinstance(s.get("sinav"), dict) and s["sinav"].get("sure") in ("kisa", "tam") else None
     return {"dersler": [d for d in s.get("dersler") or [] if d in kurulu],
             "pdfler": [p for p in s.get("pdfler") or [] if p in var_pdf],
-            "tarih": s.get("tarih"), "_adlar": dict(kurulu, **var_pdf)}
+            "sinav": sinav, "tarih": s.get("tarih"), "_adlar": dict(kurulu, **var_pdf)}
 
 
-def secim_yaz(dersler_, pdfler_):
+def secim_yaz(dersler_, pdfler_, sinav=None):
+    """sinav: {"sure": "kisa"|"tam"} verilirse öğrenci "Sözlü sınav ol" düğmesine basmıştır (Nilgün). Sınav şimdilik
+    yalnız ders paketlerinden yapılır; PDF seçimi sınava girmez."""
     kurulu = {d["ders"] for d in dersler()}
     var_pdf = {p["id"] for p in pdfler()}
     s = {"dersler": [d for d in list(dersler_ or [])[:EN_COK_SECIM] if d in kurulu],
          "pdfler": [p for p in list(pdfler_ or [])[:EN_COK_SECIM] if p in var_pdf],
          "tarih": time.strftime("%Y-%m-%d %H:%M")}
+    if isinstance(sinav, dict) and s["dersler"]:
+        s["sinav"] = {"sure": "tam" if sinav.get("sure") == "tam" else "kisa"}
+        s["pdfler"] = []
     _json_yaz(secim_yolu(), s)
     return secim_metni(s)
 
@@ -158,7 +164,11 @@ def secim_metni(s=None):
     adlar = s.get("_adlar") or secim_oku()["_adlar"]
     d_ad = [adlar.get(d, d) for d in s.get("dersler") or []]
     p_ad = [adlar.get(p, p) for p in s.get("pdfler") or []]
-    if d_ad and p_ad:
+    sinav = s.get("sinav") if d_ad else None
+    if sinav:
+        cumle = "Seçtiğim %s %s bir sözlü sınav olmak istiyorum." % (
+            "dersten" if len(d_ad) == 1 else "derslerden", "tam" if sinav.get("sure") == "tam" else "kısa")
+    elif d_ad and p_ad:
         cumle = "%s dersini çalışalım; şu makalelerimden de yararlan: %s." % (", ".join(d_ad), ", ".join(p_ad))
     elif d_ad:
         cumle = ("%s dersini çalışalım." % d_ad[0]) if len(d_ad) == 1 else \
@@ -168,7 +178,7 @@ def secim_metni(s=None):
     else:
         cumle = ""
     return {"dersler": s.get("dersler") or [], "pdfler": s.get("pdfler") or [], "tarih": s.get("tarih"),
-            "ders_adlari": d_ad, "pdf_adlari": p_ad, "claude_cumlesi": cumle}
+            "sinav": sinav or None, "ders_adlari": d_ad, "pdf_adlari": p_ad, "claude_cumlesi": cumle}
 
 
 def ozet(guncelleme=True):
